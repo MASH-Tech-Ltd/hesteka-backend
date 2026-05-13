@@ -62,7 +62,7 @@ const createStripeSetupIntent = async (
 
   const ephemeralKey = await stripe.ephemeralKeys.create(
     { customer: customerId },
-    { apiVersion: "2026-11-17.clover" },
+    { apiVersion: "2026-02-25.clover" },
   );
 
   const setupIntent = await stripe.setupIntents.create({
@@ -95,10 +95,11 @@ const getPaymentMethods = async (userId: string) => {
 
   return paymentMethods.data.map((pm) => ({
     id: pm.id,
-    type: pm.card?.brand === "visa" ? "visa" : "mastercard",
-    lastFour: pm.card?.last4,
-    cardholderName: pm.billing_details.name || "Card Holder",
-    expiryDate: `${pm.card?.exp_month}/${pm.card?.exp_year}`,
+    brand: pm.card?.brand ?? "",
+    last4: pm.card?.last4 ?? "",
+    cardholderName: pm.billing_details.name || null,
+    expMonth: pm.card?.exp_month ?? 0,
+    expYear: pm.card?.exp_year ?? 0,
     isDefault: pm.id === defaultMethod,
   }));
 };
