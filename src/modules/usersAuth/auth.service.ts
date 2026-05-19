@@ -90,14 +90,6 @@ export const authService = {
     if (!logo) {
       throw new CustomError(400, "Partner logo is required");
     }
-    if (
-      typeof payload.latitude !== "number" ||
-      typeof payload.longitude !== "number"
-    ) {
-      cleanupLogoFile();
-      throw new CustomError(400, "Latitude and longitude are required");
-    }
-
     emailValidator(payload.email);
 
     const email = payload.email.trim().toLowerCase();
@@ -133,17 +125,22 @@ export const authService = {
 
     try {
       const { latitude, longitude, locationAddress, ...partnerData } = payload;
+      const location =
+        typeof latitude === "number" && typeof longitude === "number"
+          ? {
+              type: "Point",
+              coordinates: [longitude, latitude],
+              ...(locationAddress !== undefined ? { address: locationAddress } : {}),
+            }
+          : undefined;
+
       const user = (await userModel.create({
         ...partnerData,
         email,
         phone,
         company,
         profileImage,
-        location: {
-          type: "Point",
-          coordinates: [longitude, latitude],
-          ...(locationAddress !== undefined ? { address: locationAddress } : {}),
-        },
+        ...(location !== undefined ? { location } : {}),
         role: role.PARTNERS,
         status: status.PENDING,
         provider: authProvider.LOCAL,

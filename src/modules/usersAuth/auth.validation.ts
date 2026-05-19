@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+const optionalCoordinate = (label: string, min: number, max: number) =>
+  z.preprocess(
+    (value) => (value === "" || value === undefined || value === null ? undefined : value),
+    z.coerce
+      .number({ message: `${label} must be a number` })
+      .min(min, `${label} must be at least ${min}`)
+      .max(max, `${label} must be at most ${max}`)
+      .optional(),
+  );
+
 export const registerUserSchema = z
   .object({
     firstName: z.string().min(1, "First name is required"),
@@ -29,16 +39,14 @@ export const registerPartnerSchema = registerUserSchema
       .string()
       .regex(/^\d{5}$/, "Postal code must be a valid 5-digit French postal code"),
     country: z.string().min(1, "Country is required").default("France").optional(),
-    latitude: z.coerce
-      .number({ message: "Latitude must be a number" })
-      .min(-90, "Latitude must be at least -90")
-      .max(90, "Latitude must be at most 90"),
-    longitude: z.coerce
-      .number({ message: "Longitude must be a number" })
-      .min(-180, "Longitude must be at least -180")
-      .max(180, "Longitude must be at most 180"),
-    locationAddress: z.string().min(1, "Location address is required"),
+    latitude: optionalCoordinate("Latitude", -90, 90),
+    longitude: optionalCoordinate("Longitude", -180, 180),
+    locationAddress: z.string().optional(),
     website: z.string().url("Invalid website URL").optional(),
+  })
+  .refine((data) => (data.latitude === undefined) === (data.longitude === undefined), {
+    message: "Latitude and longitude must be provided together",
+    path: ["longitude"],
   })
   .strict();
 
