@@ -510,11 +510,11 @@ export const donationService = {
             email: donation.donorEmail,
             subject: isFiscal
               ? "Official Fiscal Receipt - HESTEKA"
-              : "Donation Receipt - HESTEKA",
+              : "Support Receipt - HESTEKA",
             template: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e8ddd0; border-radius: 12px;">
                 <h2 style="color: #3a2a1a;">Thank you, ${donation.donorName}!</h2>
-                <p>Please find attached your ${isFiscal ? "official fiscal receipt" : "donation receipt"} for your contribution of <strong>${donation.amount}€</strong>.</p>
+                <p>Please find attached your ${isFiscal ? "official fiscal receipt" : "support receipt"} for your contribution of <strong>${donation.amount}€</strong>.</p>
                 <p style="font-size: 12px; color: #9a8a7a;">If you have any questions, please contact our support team.</p>
                 <hr style="border: none; border-top: 1px dashed #e8ddd0; margin: 20px 0;">
                 <p style="font-weight: bold; color: #3a2a1a;">HESTEKA ASSOCIATION</p>
@@ -595,7 +595,7 @@ export const donationService = {
         .text(
           isFiscal
             ? "This fiscal receipt is issued in accordance with current tax laws. It entitles the donor to a tax deduction for their charitable contribution."
-            : "Thank you for your generous donation. Your support helps us continue our mission to help animals in need.",
+            : "Thank you for your generous support. Your contribution helps us continue our mission to help animals in need.",
           { align: "center" },
         );
 
