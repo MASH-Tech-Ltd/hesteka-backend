@@ -85,6 +85,12 @@ export const updatePasswordSchema = z
     path: ["confirmPassword"],
   });
 
+export const deleteAccountSchema = z
+  .object({
+    password: z.string().min(1, "Password is required"),
+  })
+  .strict();
+
 export const updateFcmTokenSchema = z
   .object({
     fcmToken: z.string().min(1, "FCM token cannot be empty"),

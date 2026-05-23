@@ -106,6 +106,14 @@ export const updatePassword = asyncHandler(
   },
 );
 
+//: delete account
+export const deleteAccount = asyncHandler(
+  async (req: Request, res: Response) => {
+    await userService.deleteAccount(req);
+    ApiResponse.sendSuccess(res, 200, "Account deleted successfully");
+  },
+);
+
 //: update fcm token
 export const updateFcmToken = asyncHandler(
   async (req: Request, res: Response) => {

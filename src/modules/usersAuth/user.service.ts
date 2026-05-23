@@ -5,13 +5,32 @@ import CustomError from "../../helpers/CustomError";
 import { deleteCloudinary, uploadCloudinary } from "../../helpers/cloudinary";
 import { role, status, UpdateUserPayload } from "./user.interface";
 import { paginationHelper } from "../../utils/pagination";
-import { notificationService } from "../notifications/notification.service";
-import { NotificationType } from "../notifications/notification.interface";
 import { mailer } from "../../helpers/nodeMailer";
 import {
   partnerApprovalEmailTemplate,
   partnerRejectionEmailTemplate,
 } from "../../tempaletes/partner.templates";
+import { reportModel } from "../reports/report.models";
+import { commentModel } from "../comments/comment.models";
+import { storyModel } from "../stories/stories.models";
+import { chatModel } from "../community/chat/chat.models";
+import { chatLikeModel } from "../community/chatlike/chatlike.models";
+import { chatReportModel } from "../community/chatreport/chatreport.models";
+import {
+  conversationModel,
+  privateMessageModel,
+} from "../community/privatechat/privatechat.models";
+import { localMissionModel } from "../localMissions/localMission.models";
+import { localMissionParticipationModel } from "../localMissions/localMissionParticipation.models";
+import { partnerAdModel } from "../partnerAds/partnerAd.models";
+import { pointTransactionModel } from "../points/point.models";
+import { redemptionModel } from "../rewards/reward.models";
+import { notificationModel } from "../notifications/notification.models";
+import { paymentModel } from "../payment/payment.models";
+import { donationModel } from "../donation/donation.models";
+import { donationProofModel } from "../donationProofs/donationProof.models";
+import { myanimalModel } from "../myanimal/myanimal.models";
+import { SupportMessageModel } from "../supportMessages/supportMessage.models";
 
 export const userService = {
   //get all users
@@ -393,6 +412,152 @@ export const userService = {
 
     await user.updatePassword(currentPassword, newPassword);
     await user.save();
+
+    return true;
+  },
+
+  //delete my account
+  async deleteAccount(req: any) {
+    const userId = req.user?._id;
+    const { password } = req.body as { password: string };
+
+    if (!userId) {
+      throw new CustomError(401, "Unauthorized");
+    }
+
+    const user = await userModel.findById(userId).select("+password");
+    if (!user) {
+      throw new CustomError(404, "User not found");
+    }
+
+    const passwordMatches = await user.comparePassword(password);
+    if (!passwordMatches) {
+      throw new CustomError(401, "Password is incorrect");
+    }
+
+    const anonymizedEmail = `deleted-user-${user._id.toString()}@anonymous.local`;
+    const anonymizedName = "Deleted User";
+
+    const [reportIds, userCommentIds, userChatIds, conversationIds, missionIds, partnerAdIds] =
+      await Promise.all([
+        reportModel.find({ author: user._id }).distinct("_id"),
+        commentModel.find({ author: user._id }).distinct("_id"),
+        chatModel.find({ user: user._id }).distinct("_id"),
+        conversationModel.find({ participants: user._id }).distinct("_id"),
+        localMissionModel.find({ partner: user._id }).distinct("_id"),
+        partnerAdModel.find({ partner: user._id }).distinct("_id"),
+      ]);
+
+    const commentIdsToDelete = new Set<string>(
+      userCommentIds.map((id) => id.toString()),
+    );
+
+    const reportCommentIds = await commentModel
+      .find({ report: { $in: reportIds } })
+      .distinct("_id");
+    reportCommentIds.forEach((id) => commentIdsToDelete.add(id.toString()));
+
+    let parentIds = Array.from(commentIdsToDelete);
+    while (parentIds.length > 0) {
+      const childIds = await commentModel
+        .find({ parent: { $in: parentIds } })
+        .distinct("_id");
+      const newChildIds = childIds
+        .map((id) => id.toString())
+        .filter((id) => !commentIdsToDelete.has(id));
+
+      newChildIds.forEach((id) => commentIdsToDelete.add(id));
+      parentIds = newChildIds;
+    }
+
+    const deletedCommentIds = Array.from(commentIdsToDelete).map(
+      (id) => new Types.ObjectId(id),
+    );
+
+    await Promise.all([
+      paymentModel.updateMany(
+        {
+          $or: [{ user: user._id }, { payerEmail: user.email }],
+        },
+        {
+          $set: {
+            payerEmail: anonymizedEmail,
+            payerName: anonymizedName,
+            metadata: { anonymized: true },
+          },
+          $unset: { user: "" },
+        },
+      ),
+      donationModel.updateMany(
+        { donorEmail: user.email },
+        {
+          $set: {
+            donorEmail: anonymizedEmail,
+            donorName: anonymizedName,
+          },
+          $unset: { companyInfo: "" },
+        },
+      ),
+    ]);
+
+    await Promise.all([
+      reportModel.updateMany(
+        { comments: { $in: deletedCommentIds } },
+        { $pull: { comments: { $in: deletedCommentIds } } },
+      ),
+      chatLikeModel.deleteMany({
+        $or: [{ user: user._id }, { chat: { $in: userChatIds } }],
+      }),
+      chatReportModel.deleteMany({
+        $or: [
+          { reporter: user._id },
+          { reportedUser: user._id },
+          { conversation: { $in: conversationIds } },
+        ],
+      }),
+      privateMessageModel.deleteMany({
+        $or: [{ sender: user._id }, { conversation: { $in: conversationIds } }],
+      }),
+      localMissionParticipationModel.deleteMany({
+        $or: [{ user: user._id }, { mission: { $in: missionIds } }],
+      }),
+      donationProofModel.deleteMany({
+        $or: [
+          { user: user._id },
+          { donorEmail: user.email },
+          { collectionPoint: { $in: partnerAdIds } },
+        ],
+      }),
+      pointTransactionModel.deleteMany({ user: user._id }),
+      redemptionModel.deleteMany({ user: user._id }),
+      notificationModel.deleteMany({ user: user._id }),
+      SupportMessageModel.deleteMany({ user: user._id }),
+    ]);
+
+    await Promise.all([
+      commentModel.deleteMany({ _id: { $in: deletedCommentIds } }),
+      reportModel.deleteMany({ _id: { $in: reportIds } }),
+      storyModel.deleteMany({ user: user._id }),
+      chatModel.deleteMany({
+        $or: [{ user: user._id }, { replyTo: { $in: userChatIds } }],
+      }),
+      conversationModel.deleteMany({ _id: { $in: conversationIds } }),
+      localMissionModel.deleteMany({ _id: { $in: missionIds } }),
+      partnerAdModel.deleteMany({ _id: { $in: partnerAdIds } }),
+      myanimalModel.deleteMany({ user: user._id }),
+      userModel.updateMany(
+        { blockedUsers: user._id },
+        { $pull: { blockedUsers: user._id } },
+      ),
+    ]);
+
+    if (user.profileImage?.public_id) {
+      deleteCloudinary(user.profileImage.public_id).catch((error) =>
+        console.error("Cloudinary deletion error:", error),
+      );
+    }
+
+    await userModel.deleteOne({ _id: user._id });
 
     return true;
   },

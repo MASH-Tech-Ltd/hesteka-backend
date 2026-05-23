@@ -8,6 +8,7 @@ import {
   approvePartner,
   rejectPartner,
   updatePassword,
+  deleteAccount,
   updateUser,
   updateFcmToken,
   blockUser,
@@ -19,6 +20,7 @@ import { upload } from "../../middleware/multer.midleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
 import {
   updatePasswordSchema,
+  deleteAccountSchema,
   updateStatusSchema,
   updateUserSchema,
   updateFcmTokenSchema,
@@ -76,6 +78,14 @@ router.patch(
   authGuard,
   validateRequest(updatePasswordSchema),
   updatePassword,
+);
+
+router.delete(
+  "/delete-account",
+  rateLimiter(1, 5),
+  authGuard,
+  validateRequest(deleteAccountSchema),
+  deleteAccount,
 );
 
 router.patch(
