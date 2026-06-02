@@ -197,6 +197,7 @@ export const contactService = {
         location: user.location,
         status: user.status,
         company: user.company,
+        website: user.website,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       }));
@@ -257,6 +258,7 @@ export const contactService = {
         location: user.location,
         status: user.status,
         company: user.company,
+        website: user.website,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       }));
@@ -353,6 +355,7 @@ export const contactService = {
         location: user.location,
         status: user.status,
         company: user.company,
+        website: user.website,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       }));

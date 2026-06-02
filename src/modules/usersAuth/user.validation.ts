@@ -39,6 +39,7 @@ export const updateUserSchema = z
     country: z.string().optional(),
     status: statusSchema.optional(),
     image: z.any().optional(),
+    website: z.string().url("Invalid website URL").optional().or(z.literal("")),
     latitude: optionalCoordinate("Latitude", -90, 90),
     longitude: optionalCoordinate("Longitude", -180, 180),
     locationAddress: z.string().optional(),
