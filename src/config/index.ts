@@ -88,7 +88,16 @@ const config = {
   firebase: {
     projectId: process.env.FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    privateKey: (() => {
+      let key = process.env.FIREBASE_PRIVATE_KEY;
+      if (key) {
+        // Fix literal '\n' strings that sometimes don't get parsed on Linux
+        key = key.replace(/\\n/g, "\n");
+        // Remove any accidental surrounding quotes or trailing windows hidden returns (\r)
+        key = key.replace(/^"|"$|'/g, "").trim();
+      }
+      return key;
+    })(),
     databaseUrl: process.env.FIREBASE_DATABASE_URL,
   },
 
