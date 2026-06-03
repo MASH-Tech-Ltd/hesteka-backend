@@ -138,12 +138,14 @@ export const generateAccessToken = asyncHandler(async (req, res) => {
     throw new CustomError(401, "Refresh token not found");
   }
 
-  const { accessToken, rememberMe } = await authService.generateAccessToken(refreshToken);
+  const { accessToken, refreshToken: newRefreshToken, rememberMe } = await authService.generateAccessToken(refreshToken);
 
+  res.cookie("refreshToken", newRefreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
   res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(rememberMe)));
 
   ApiResponse.sendSuccess(res, 201, "New access token generated", {
-    accessToken
+    accessToken,
+    refreshToken: newRefreshToken,
   });
 });
 

@@ -335,7 +335,12 @@ export const authService = {
     }
 
     const accessToken = user.createAccessToken();
-    return { accessToken, rememberMe: user.rememberMe };
+    const newRefreshToken = user.createRefreshToken();
+    
+    user.refreshToken = newRefreshToken;
+    await user.save();
+
+    return { accessToken, refreshToken: newRefreshToken, rememberMe: user.rememberMe };
   },
 
   //google login callback logic
@@ -390,6 +395,8 @@ export const authService = {
             : `Your account is ${user.status}. Access denied.`;
       throw new CustomError(403, message);
     }
+
+    user.rememberMe = true;
 
     const accessToken = user.createAccessToken();
     const refreshToken = user.createRefreshToken();
@@ -448,6 +455,8 @@ export const authService = {
             : `Your account is ${user.status}. Access denied.`;
       throw new CustomError(403, message);
     }
+
+    user.rememberMe = true;
 
     const accessToken = user.createAccessToken();
     const refreshToken = user.createRefreshToken();
