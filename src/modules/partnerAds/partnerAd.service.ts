@@ -27,10 +27,11 @@ const getPartnerAccount = async (userId?: unknown) => {
 
   const partner = await userModel.findById(userId).select("_id role company status");
   if (!partner) throw new CustomError(404, "Partner account not found");
-  if (partner.role !== role.PARTNERS) {
+  if (partner.role !== role.PARTNERS && partner.role !== role.ADMIN) {
     throw new CustomError(403, "Only partners can manage partner ads");
   }
-  if (!partner.company) {
+  // Admins are allowed to manage ads without a company association
+  if (partner.role !== role.ADMIN && !partner.company) {
     throw new CustomError(400, "Partner account must have a company");
   }
 
