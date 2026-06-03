@@ -340,14 +340,20 @@ export const authService = {
 
   //google login callback logic
   async googleLogin(idToken: string) {
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: [
-        config.provider.googleClientId as string,
-        config.provider.googleIosClientId as string,
-        config.provider.googleAndroidClientId as string,
-      ],
-    });
+    let ticket;
+    try {
+      ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: [
+          config.provider.googleClientId as string,
+          config.provider.googleIosClientId as string,
+          config.provider.googleAndroidClientId as string,
+        ],
+      });
+    } catch (error: any) {
+      console.error("[Auth] Google token verification failed:", error.message);
+      throw new CustomError(401, "Invalid Google token");
+    }
 
     const payload = ticket.getPayload();
     if (!payload || !payload.email) {
@@ -396,9 +402,19 @@ export const authService = {
 
   //apple login logic
   async appleLogin(idToken: string, firstName?: string, lastName?: string) {
-    const { sub: appleId, email } = await appleSignin.verifyIdToken(idToken, {
-      audience: config.provider.appleClientId as string,
-    });
+    let appleId: string;
+    let email: string | undefined;
+
+    try {
+      const decoded = await appleSignin.verifyIdToken(idToken, {
+        audience: config.provider.appleClientId as string,
+      });
+      appleId = decoded.sub;
+      email = decoded.email;
+    } catch (error: any) {
+      console.error("[Auth] Apple token verification failed:", error.message);
+      throw new CustomError(401, "Invalid Apple token");
+    }
 
     if (!email) {
       throw new CustomError(400, "Email not found in Apple token");
