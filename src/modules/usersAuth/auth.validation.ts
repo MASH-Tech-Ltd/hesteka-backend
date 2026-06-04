@@ -42,7 +42,27 @@ export const registerPartnerSchema = registerUserSchema
     latitude: optionalCoordinate("Latitude", -90, 90),
     longitude: optionalCoordinate("Longitude", -180, 180),
     locationAddress: z.string().optional(),
-    website: z.string().url("Invalid website URL").optional(),
+    website: z.preprocess(
+      (val) => (val === "" || val === undefined || val === null ? undefined : val),
+      z.string().url("Invalid website URL").optional(),
+    ),
+    description: z.string().optional(),
+    facebook: z.preprocess(
+      (val) => (val === "" || val === undefined || val === null ? undefined : val),
+      z.string().optional(),
+    ),
+    instagram: z.preprocess(
+      (val) => (val === "" || val === undefined || val === null ? undefined : val),
+      z.string().optional(),
+    ),
+    twitter: z.preprocess(
+      (val) => (val === "" || val === undefined || val === null ? undefined : val),
+      z.string().optional(),
+    ),
+    linkedin: z.preprocess(
+      (val) => (val === "" || val === undefined || val === null ? undefined : val),
+      z.string().optional(),
+    ),
   })
   .refine((data) => (data.latitude === undefined) === (data.longitude === undefined), {
     message: "Latitude and longitude must be provided together",

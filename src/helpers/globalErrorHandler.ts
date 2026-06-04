@@ -43,6 +43,7 @@ const productionError = (error: CustomError, res: Response): Response => {
     success: false,
     status: error.status,
     statusCode: error.statusCode,
+    ...(error.data ? { data: error.data } : {}),
   });
 };
 

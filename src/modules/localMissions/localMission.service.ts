@@ -38,10 +38,11 @@ const getPartnerAccount = async (userId?: unknown) => {
 
   const partner = await userModel.findById(userId).select("_id role company status");
   if (!partner) throw new CustomError(404, "Partner account not found");
-  if (partner.role !== role.PARTNERS) {
+  if (partner.role !== role.PARTNERS && partner.role !== role.ADMIN) {
     throw new CustomError(403, "Only partners can manage local missions");
   }
-  if (!partner.company) {
+  // Only partners must have a company; admins are exempt
+  if (partner.role === role.PARTNERS && !partner.company) {
     throw new CustomError(400, "Partner account must have a company");
   }
 

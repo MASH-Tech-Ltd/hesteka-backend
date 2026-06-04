@@ -17,12 +17,12 @@ const router = Router();
 router.get("/get-all-partner-ads", getAllPartnerAds);
 router.get("/get-single-partner-ad/:adId", getPartnerAdById);
 
-router.use(authGuard, allowRole("partners"));
+router.use(authGuard, allowRole("partners", "admin"));
 
 router.get("/get-my-partner-ads", getMyPartnerAds);
 
 router.post(
-  "/create-collection-point",
+  "/create-partner-ad",
   upload.single("image"),
   validateRequest(partnerAdValidation.createCollectionPointSchema),
   createCollectionPoint,

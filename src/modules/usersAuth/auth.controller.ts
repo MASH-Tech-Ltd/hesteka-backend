@@ -34,9 +34,14 @@ export const registration = asyncHandler(async (req, res) => {
 
 //: Register partner
 export const partnerRegistration = asyncHandler(async (req, res) => {
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+  const logo = files?.logo?.[0];
+  const partnerImage = files?.partnerImage?.[0];
+
   const user = await authService.registerPartner(
     req.body,
-    req.file as Express.Multer.File | undefined,
+    logo,
+    partnerImage,
   );
   ApiResponse.sendSuccess(res, 201, "Partner registered successfully", {
     email: user.email,

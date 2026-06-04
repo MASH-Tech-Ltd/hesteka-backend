@@ -1,5 +1,6 @@
 // modules/user/user.service.ts
 import { Types } from "mongoose";
+import fs from "fs";
 import { userModel } from "./user.models";
 import CustomError from "../../helpers/CustomError";
 import { deleteCloudinary, uploadCloudinary } from "../../helpers/cloudinary";
@@ -291,6 +292,39 @@ export const userService = {
       updateData["location.address"] = locationAddress;
     }
 
+    const existingUser = await userModel.findById(userId);
+    if (!existingUser) throw new CustomError(400, "User not found");
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const logoFile = files?.logo?.[0];
+    const partnerImageFile = files?.partnerImage?.[0];
+
+    if (logoFile) {
+      if (existingUser.logo?.public_id) {
+        await deleteCloudinary(existingUser.logo.public_id).catch((err) =>
+          console.error("Cloudinary logo cleanup error:", err),
+        );
+      }
+      const logoResult = await uploadCloudinary(logoFile.path);
+      updateData.logo = logoResult;
+      if (fs.existsSync(logoFile.path)) {
+        fs.unlinkSync(logoFile.path);
+      }
+    }
+
+    if (partnerImageFile) {
+      if (existingUser.partnerImage?.public_id) {
+        await deleteCloudinary(existingUser.partnerImage.public_id).catch((err) =>
+          console.error("Cloudinary partnerImage cleanup error:", err),
+        );
+      }
+      const partnerImageResult = await uploadCloudinary(partnerImageFile.path);
+      updateData.partnerImage = partnerImageResult;
+      if (fs.existsSync(partnerImageFile.path)) {
+        fs.unlinkSync(partnerImageFile.path);
+      }
+    }
+
     const user = await userModel.findOneAndUpdate(
       { _id: userId },
       { $set: updateData },
@@ -300,7 +334,6 @@ export const userService = {
       },
     );
 
-    if (!user) throw new CustomError(400, "User not found");
     return user;
   },
 

@@ -139,6 +139,36 @@ const userSchema = new Schema<IUser>(
       type: String,
       required: false,
     },
+    description: {
+      type: String,
+      required: false,
+    },
+    facebook: {
+      type: String,
+      required: false,
+    },
+    instagram: {
+      type: String,
+      required: false,
+    },
+    twitter: {
+      type: String,
+      required: false,
+    },
+    linkedin: {
+      type: String,
+      required: false,
+    },
+    logo: {
+      public_id: String,
+      secure_url: String,
+      _id: false,
+    },
+    partnerImage: {
+      public_id: String,
+      secure_url: String,
+      _id: false,
+    },
   },
   {
     timestamps: true,

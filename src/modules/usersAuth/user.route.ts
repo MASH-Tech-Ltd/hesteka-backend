@@ -55,6 +55,10 @@ router.patch(
   "/update-user-admin/:userId",
   authGuard,
   allowRole("admin"),
+  upload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "partnerImage", maxCount: 1 },
+  ]),
   updateUserByAdmin,
 );
 

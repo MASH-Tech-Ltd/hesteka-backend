@@ -38,7 +38,10 @@ router.post(
 
 router.post(
   "/register-partner",
-  upload.single("logo"),
+  upload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "partnerImage", maxCount: 1 },
+  ]),
   validateRequest(registerPartnerSchema),
   partnerRegistration,
 );

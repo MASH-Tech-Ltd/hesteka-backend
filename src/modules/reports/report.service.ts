@@ -605,7 +605,7 @@ export const reportService = {
   },
 
   // Delete a report
-  async deleteReport(authorId: string, reportId: string) {
+  async deleteReport(authorId: string, reportId: string, userRole?: string) {
     const session = await mongoose.startSession();
     session.startTransaction();
     const publicIdsToDelete: string[] = [];
@@ -617,7 +617,7 @@ export const reportService = {
       }
 
       // Verify ownership
-      if (report.author.toString() !== authorId) {
+      if (report.author.toString() !== authorId && userRole !== "admin") {
         throw new CustomError(403, "You are not authorized to delete this report");
       }
 

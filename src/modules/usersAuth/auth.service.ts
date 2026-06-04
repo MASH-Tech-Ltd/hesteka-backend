@@ -68,26 +68,31 @@ export const authService = {
   async registerPartner(
     payload: RegisterPartnerPayload,
     logo?: Express.Multer.File,
+    partnerImage?: Express.Multer.File,
   ): Promise<IUser> {
-    const cleanupLogoFile = () => {
+    const cleanupFiles = () => {
       if (logo?.path && fs.existsSync(logo.path)) {
         fs.unlinkSync(logo.path);
+      }
+      if (partnerImage?.path && fs.existsSync(partnerImage.path)) {
+        fs.unlinkSync(partnerImage.path);
       }
     };
 
     if (!payload.company) {
-      cleanupLogoFile();
+      cleanupFiles();
       throw new CustomError(400, "Company is required");
     }
     if (!payload.email) {
-      cleanupLogoFile();
+      cleanupFiles();
       throw new CustomError(400, "Email is required");
     }
     if (!payload.phone) {
-      cleanupLogoFile();
+      cleanupFiles();
       throw new CustomError(400, "Phone number is required");
     }
     if (!logo) {
+      cleanupFiles();
       throw new CustomError(400, "Partner logo is required");
     }
     emailValidator(payload.email);
@@ -107,21 +112,35 @@ export const authService = {
     ]);
 
     if (existingEmail) {
-      cleanupLogoFile();
+      cleanupFiles();
       throw new CustomError(409, "Email already exists");
     }
 
     if (existingPhone) {
-      cleanupLogoFile();
+      cleanupFiles();
       throw new CustomError(409, "Phone number already exists");
     }
 
     if (existingPartner) {
-      cleanupLogoFile();
+      cleanupFiles();
       throw new CustomError(409, "A partner account already exists for this company");
     }
 
     const profileImage = await uploadCloudinary(logo.path);
+    let uploadedPartnerImage;
+    if (partnerImage) {
+      try {
+        uploadedPartnerImage = await uploadCloudinary(partnerImage.path);
+      } catch (err) {
+        cleanupFiles();
+        if (profileImage?.public_id) {
+          await deleteCloudinary(profileImage.public_id).catch((err) =>
+            console.error("Cloudinary cleanup error:", err),
+          );
+        }
+        throw err;
+      }
+    }
 
     try {
       const { latitude, longitude, locationAddress, ...partnerData } = payload;
@@ -140,11 +159,15 @@ export const authService = {
         phone,
         company,
         profileImage,
+        logo: profileImage,
+        ...(uploadedPartnerImage ? { partnerImage: uploadedPartnerImage } : {}),
         ...(location !== undefined ? { location } : {}),
         role: role.PARTNERS,
         status: status.PENDING,
         provider: authProvider.LOCAL,
       })) as IUser;
+
+      cleanupFiles();
 
       notificationService.notifyAdmins(
         "Nouvelle inscription partenaire",
@@ -154,8 +177,14 @@ export const authService = {
 
       return user;
     } catch (error) {
+      cleanupFiles();
       if (profileImage?.public_id) {
         await deleteCloudinary(profileImage.public_id).catch((err) =>
+          console.error("Cloudinary cleanup error:", err),
+        );
+      }
+      if (uploadedPartnerImage?.public_id) {
+        await deleteCloudinary(uploadedPartnerImage.public_id).catch((err) =>
           console.error("Cloudinary cleanup error:", err),
         );
       }

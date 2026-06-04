@@ -71,6 +71,19 @@ export interface IUser extends Document {
   lastLogin: Date;
   stripeCustomerId?: string;
   blockedUsers: Types.ObjectId[]; // users blocked by this user
+  description?: string;
+  facebook?: string;
+  instagram?: string;
+  twitter?: string;
+  linkedin?: string;
+  logo?: {
+    public_id: string;
+    secure_url: string;
+  };
+  partnerImage?: {
+    public_id: string;
+    secure_url: string;
+  };
   comparePassword: (password: string) => Promise<boolean>;
   createAccessToken: () => string;
   createRefreshToken: () => string;
@@ -98,4 +111,9 @@ export interface UpdateUserPayload {
   latitude?: number;
   longitude?: number;
   locationAddress?: string;
+  description?: string;
+  facebook?: string;
+  instagram?: string;
+  twitter?: string;
+  linkedin?: string;
 }

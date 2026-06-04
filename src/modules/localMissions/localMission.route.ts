@@ -21,7 +21,7 @@ router.get("/get-all-local-missions", getAllLocalMissions);
 router.get("/get-single-local-mission/:missionId", getLocalMissionById);
 router.post("/join-local-mission/:missionId", authGuard, allowRole("user"), joinLocalMission);
 
-router.use(authGuard, allowRole("partners"));
+router.use(authGuard, allowRole("partners", "admin"));
 
 router.get("/get-my-local-missions", getMyLocalMissions);
 router.get("/get-local-mission-participants/:missionId", getLocalMissionParticipants);

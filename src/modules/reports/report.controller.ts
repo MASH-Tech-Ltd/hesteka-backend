@@ -41,12 +41,13 @@ export const updateReport = asyncHandler(async (req: Request, res: Response) => 
 
 export const deleteReport = asyncHandler(async (req: Request, res: Response) => {
   const authorId = req.user?._id;
+  const userRole = req.user?.role;
   if (!authorId) {
     throw new Error("User ID not found in request");
   }
 
   const { reportId } = req.params as { reportId: string };
-  await reportService.deleteReport(authorId.toString(), reportId);
+  await reportService.deleteReport(authorId.toString(), reportId, userRole);
   ApiResponse.sendSuccess(res, 200, "Report deleted successfully");
 });
 
