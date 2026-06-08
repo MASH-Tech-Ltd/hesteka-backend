@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { notificationService } from "../modules/notifications/notification.service";
 import { NotificationType } from "../modules/notifications/notification.interface";
+import { pointService } from "../modules/points/point.service";
 import config from "../config";
 import { paymentModel } from "../modules/payment/payment.models";
 import { donationModel } from "../modules/donation/donation.models";
@@ -148,6 +149,19 @@ export const paypalWebhookHandler = async (
             { $set: { status: "completed" } }, // Lowercase matches schema enum
             { session },
           );
+
+          // 🎁 Award points for donation if user ID is available
+          if (payment.user) {
+            try {
+              await pointService.awardPointsForDonation(
+                payment.user.toString(),
+                payment.amount,
+              );
+            } catch (err) {
+              console.error("Error awarding points for donation:", err);
+              // Don't fail the webhook if points awarding fails
+            }
+          }
 
           notificationService.notifyAdmins(
             "Payment Received",

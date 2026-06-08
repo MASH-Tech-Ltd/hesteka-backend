@@ -186,4 +186,75 @@ export const pointService = {
       expired: 0, // expiration logic not yet implemented
     };
   },
+
+  async awardPointsForDonation(
+    userId: string,
+    amount: number,
+    source: PointTransactionSource = PointTransactionSource.ONLINE_DONATION,
+  ) {
+    const config = await pointConfigModel.findOne();
+    
+    // Check if points on donations are enabled
+    if (!config?.isPointsOnDonationsActive) {
+      return { awarded: false, reason: "Points on donations are disabled" };
+    }
+
+    // Check if promotion is expired (if times are set)
+    const now = new Date();
+    const isPromotionActive =
+      config.isDoublePointsActive &&
+      (!config.promotionStartTime || config.promotionStartTime <= now) &&
+      (!config.promotionEndTime || config.promotionEndTime > now);
+
+    // Auto-disable if expired
+    if (config.isDoublePointsActive && config.promotionEndTime && config.promotionEndTime <= now) {
+      await pointConfigModel.findOneAndUpdate(
+        {},
+        { isDoublePointsActive: false, promotionEndTime: null },
+      );
+    }
+
+    const basePoints = config.pointsPerDonation || 15;
+    const pointsToAward = isPromotionActive ? basePoints * 2 : basePoints;
+
+    if (!userId) {
+      return {
+        awarded: true,
+        points: pointsToAward,
+        reason: "Anonymous donation - points not awarded to user",
+      };
+    }
+
+    try {
+      // Award points to user
+      const user = await userModel.findByIdAndUpdate(
+        userId,
+        { $inc: { pointsBalance: pointsToAward } },
+        { new: true },
+      );
+
+      if (!user) {
+        throw new CustomError(404, "User not found");
+      }
+
+      // Create transaction record
+      await pointTransactionModel.create({
+        user: userId,
+        type: PointTransactionType.EARN,
+        source,
+        points: pointsToAward,
+        note: `Points awarded for donation of ${amount}. ${isPromotionActive ? "2x multiplier applied." : ""}`,
+      });
+
+      return {
+        awarded: true,
+        points: pointsToAward,
+        multiplierApplied: isPromotionActive,
+        newBalance: user.pointsBalance,
+      };
+    } catch (error) {
+      console.error("Error awarding points for donation:", error);
+      throw error;
+    }
+  },
 };

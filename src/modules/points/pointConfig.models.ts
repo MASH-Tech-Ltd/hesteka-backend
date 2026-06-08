@@ -27,6 +27,14 @@ const pointConfigSchema = new Schema<IPointConfig>(
       type: Boolean,
       default: false,
     },
+    promotionStartTime: {
+      type: Date,
+      default: null,
+    },
+    promotionEndTime: {
+      type: Date,
+      default: null,
+    },
     isPointsOnDonationsActive: {
       type: Boolean,
       default: true,

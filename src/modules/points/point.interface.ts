@@ -10,6 +10,7 @@ export enum PointTransactionSource {
   REDEEM = "redeem",
   REWARD_ITEM = "reward_item",
   PHYSICAL_DONATION = "physical_donation",
+  ONLINE_DONATION = "online_donation",
   ANIMAL_REPORT = "animal_report",
 }
 

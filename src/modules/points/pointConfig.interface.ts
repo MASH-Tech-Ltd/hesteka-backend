@@ -7,6 +7,8 @@ export interface IPointConfig extends Document {
   validityMonths: number;
   monthlyCeiling: number;
   isDoublePointsActive: boolean;
+  promotionStartTime?: Date | null;
+  promotionEndTime?: Date | null;
   isPointsOnDonationsActive: boolean;
   isValidityDurationActive: boolean;
   isMonthlyCeilingActive: boolean;
@@ -21,6 +23,8 @@ export interface UpdatePointConfigPayload {
   validityMonths?: number;
   monthlyCeiling?: number;
   isDoublePointsActive?: boolean;
+  promotionStartTime?: Date | null;
+  promotionEndTime?: Date | null;
   isPointsOnDonationsActive?: boolean;
   isValidityDurationActive?: boolean;
   isMonthlyCeilingActive?: boolean;

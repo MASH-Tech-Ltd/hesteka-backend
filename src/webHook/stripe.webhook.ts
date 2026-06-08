@@ -5,6 +5,7 @@ import Stripe from "stripe";
 import { paymentService } from "../modules/payment/payment.service";
 import { PaymentStatus } from "../modules/payment/payment.interface";
 import { donationService } from "../modules/donation/donation.service";
+import { pointService } from "../modules/points/point.service";
 import config from "../config";
 import { getIo } from "../socket/server";
 import mongoose from "mongoose";
@@ -59,6 +60,19 @@ export const stripeWebhookHandler = async (
             { $set: { status: "COMPLETED" } },
             { session },
           );
+
+          // 🎁 Award points for donation if user ID is available
+          if (payment.user) {
+            try {
+              await pointService.awardPointsForDonation(
+                payment.user.toString(),
+                paymentIntent.amount / 100,
+              );
+            } catch (err) {
+              console.error("Error awarding points for donation:", err);
+              // Don't fail the webhook if points awarding fails
+            }
+          }
 
           notificationService.notifyAdmins(
             "Payment Received",
