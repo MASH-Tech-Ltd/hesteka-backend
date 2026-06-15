@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
+import fs from "fs";
 import CustomError from "./CustomError";
 
 const developmentError = (error: CustomError, res: Response): Response => {
@@ -53,6 +54,30 @@ export const globalErrorHandler = (
   res: Response,
   next: NextFunction
 ): Response | void => {
+  // Clean up any uploaded files if an error occurs
+  if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+    try { fs.unlinkSync(req.file.path); } catch (e) { console.error("Failed to delete temp file:", e); }
+  }
+
+  if (req.files) {
+    const files = req.files as Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
+    if (Array.isArray(files)) {
+      files.forEach((file) => {
+        if (file.path && fs.existsSync(file.path)) {
+           try { fs.unlinkSync(file.path); } catch (e) {}
+        }
+      });
+    } else {
+      Object.values(files).forEach((fileArray) => {
+        fileArray.forEach((file) => {
+          if (file.path && fs.existsSync(file.path)) {
+             try { fs.unlinkSync(file.path); } catch (e) {}
+          }
+        });
+      });
+    }
+  }
+
   let err: CustomError = error instanceof CustomError
     ? error
     : new CustomError(500, error.message);
