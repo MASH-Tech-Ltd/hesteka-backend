@@ -415,14 +415,18 @@ export const localMissionService = {
 
     const mission = await localMissionModel.findById(missionId);
     if (!mission) throw new CustomError(404, "Local mission not found");
-    if (mission.partner.toString() !== partner._id.toString()) {
+    if (partner.role !== role.ADMIN && mission.partner.toString() !== partner._id.toString()) {
       throw new CustomError(403, "You can only update your own local missions");
     }
 
     const oldPublicIdToDelete = image ? mission.photo?.public_id : undefined;
     let newPublicIdToDeleteOnFailure: string | undefined;
 
+    const location = normalizeLocation(data.location);
     Object.assign(mission, data);
+    if (location) {
+      mission.location = location as any;
+    }
 
     if (image) {
       const uploaded = await uploadCloudinary(image.path);
@@ -447,7 +451,7 @@ export const localMissionService = {
 
     const mission = await localMissionModel.findById(missionId);
     if (!mission) throw new CustomError(404, "Local mission not found");
-    if (mission.partner.toString() !== partner._id.toString()) {
+    if (partner.role !== role.ADMIN && mission.partner.toString() !== partner._id.toString()) {
       throw new CustomError(403, "You can only delete your own local missions");
     }
 

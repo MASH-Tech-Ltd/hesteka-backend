@@ -1,5 +1,5 @@
 // modules/user/user.service.ts
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import fs from "fs";
 import { userModel } from "./user.models";
 import CustomError from "../../helpers/CustomError";
@@ -34,6 +34,12 @@ import { myanimalModel } from "../myanimal/myanimal.models";
 import { SupportMessageModel } from "../supportMessages/supportMessage.models";
 
 export const userService = {
+  // get unique cities for targeting
+  async getUniqueCities() {
+    const cities = await userModel.distinct("city", { status: "active", city: { $nin: [null, ""] } });
+    return cities;
+  },
+
   //get all users
   async getAllUsers(req: any) {
     const {
@@ -183,7 +189,7 @@ export const userService = {
     const user = await userModel
       .findOne({ _id: userId })
       .select(
-        "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -createdAt -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
+        "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
       );
     if (!user) throw new CustomError(400, "User not found");
     return user;
@@ -298,6 +304,20 @@ export const userService = {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
     const logoFile = files?.logo?.[0];
     const partnerImageFile = files?.partnerImage?.[0];
+    const profileImageFile = files?.profileImage?.[0];
+
+    if (profileImageFile) {
+      if (existingUser.profileImage?.public_id) {
+        await deleteCloudinary(existingUser.profileImage.public_id).catch((err) =>
+          console.error("Cloudinary profileImage cleanup error:", err),
+        );
+      }
+      const profileImageResult = await uploadCloudinary(profileImageFile.path);
+      updateData.profileImage = profileImageResult;
+      if (fs.existsSync(profileImageFile.path)) {
+        fs.unlinkSync(profileImageFile.path);
+      }
+    }
 
     if (logoFile) {
       if (existingUser.logo?.public_id) {
@@ -593,6 +613,175 @@ export const userService = {
     await userModel.deleteOne({ _id: user._id });
 
     return true;
+  },
+
+  //delete user by admin
+  async deleteUserByAdmin(targetUserId: string) {
+    if (!targetUserId) {
+      throw new CustomError(400, "User ID is required");
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const user = await userModel.findById(targetUserId).session(session);
+      if (!user) {
+        throw new CustomError(404, "User not found");
+      }
+
+      const anonymizedEmail = `deleted-user-${user._id.toString()}@anonymous.local`;
+      const anonymizedName = "Deleted User";
+
+      const [reportIds, userCommentIds, userChatIds, conversationIds, missionIds, partnerAdIds] =
+        await Promise.all([
+          reportModel.find({ author: user._id }).session(session).distinct("_id"),
+          commentModel.find({ author: user._id }).session(session).distinct("_id"),
+          chatModel.find({ user: user._id }).session(session).distinct("_id"),
+          conversationModel.find({ participants: user._id }).session(session).distinct("_id"),
+          localMissionModel.find({ partner: user._id }).session(session).distinct("_id"),
+          partnerAdModel.find({ partner: user._id }).session(session).distinct("_id"),
+        ]);
+
+      const commentIdsToDelete = new Set<string>(
+        userCommentIds.map((id) => id.toString()),
+      );
+
+      const reportCommentIds = await commentModel
+        .find({ report: { $in: reportIds } })
+        .session(session)
+        .distinct("_id");
+      reportCommentIds.forEach((id) => commentIdsToDelete.add(id.toString()));
+
+      let parentIds = Array.from(commentIdsToDelete);
+      while (parentIds.length > 0) {
+        const childIds = await commentModel
+          .find({ parent: { $in: parentIds } })
+          .session(session)
+          .distinct("_id");
+        const newChildIds = childIds
+          .map((id) => id.toString())
+          .filter((id) => !commentIdsToDelete.has(id));
+
+        newChildIds.forEach((id) => commentIdsToDelete.add(id));
+        parentIds = newChildIds;
+      }
+
+      const deletedCommentIds = Array.from(commentIdsToDelete).map(
+        (id) => new Types.ObjectId(id),
+      );
+
+      await Promise.all([
+        paymentModel.updateMany(
+          {
+            $or: [{ user: user._id }, { payerEmail: user.email }],
+          },
+          {
+            $set: {
+              payerEmail: anonymizedEmail,
+              payerName: anonymizedName,
+              metadata: { anonymized: true },
+            },
+            $unset: { user: "" },
+          },
+          { session }
+        ),
+        donationModel.updateMany(
+          { donorEmail: user.email },
+          {
+            $set: {
+              donorEmail: anonymizedEmail,
+              donorName: anonymizedName,
+            },
+            $unset: { companyInfo: "" },
+          },
+          { session }
+        ),
+      ]);
+
+      await Promise.all([
+        reportModel.updateMany(
+          { comments: { $in: deletedCommentIds } },
+          { $pull: { comments: { $in: deletedCommentIds } } },
+          { session }
+        ),
+        chatLikeModel.deleteMany({
+          $or: [{ user: user._id }, { chat: { $in: userChatIds } }],
+        }, { session }),
+        chatReportModel.deleteMany({
+          $or: [
+            { reporter: user._id },
+            { reportedUser: user._id },
+            { conversation: { $in: conversationIds } },
+          ],
+        }, { session }),
+        privateMessageModel.deleteMany({
+          $or: [{ sender: user._id }, { conversation: { $in: conversationIds } }],
+        }, { session }),
+        localMissionParticipationModel.deleteMany({
+          $or: [{ user: user._id }, { mission: { $in: missionIds } }],
+        }, { session }),
+        donationProofModel.deleteMany({
+          $or: [
+            { user: user._id },
+            { donorEmail: user.email },
+            { collectionPoint: { $in: partnerAdIds } },
+          ],
+        }, { session }),
+        pointTransactionModel.deleteMany({ user: user._id }, { session }),
+        redemptionModel.deleteMany({ user: user._id }, { session }),
+        notificationModel.deleteMany({ user: user._id }, { session }),
+        SupportMessageModel.deleteMany({ user: user._id }, { session }),
+      ]);
+
+      await Promise.all([
+        commentModel.deleteMany({ _id: { $in: deletedCommentIds } }, { session }),
+        reportModel.deleteMany({ _id: { $in: reportIds } }, { session }),
+        storyModel.deleteMany({ user: user._id }, { session }),
+        chatModel.deleteMany({
+          $or: [{ user: user._id }, { replyTo: { $in: userChatIds } }],
+        }, { session }),
+        conversationModel.deleteMany({ _id: { $in: conversationIds } }, { session }),
+        localMissionModel.deleteMany({ _id: { $in: missionIds } }, { session }),
+        partnerAdModel.deleteMany({ _id: { $in: partnerAdIds } }, { session }),
+        myanimalModel.deleteMany({ user: user._id }, { session }),
+        userModel.updateMany(
+          { blockedUsers: user._id },
+          { $pull: { blockedUsers: user._id } },
+          { session }
+        ),
+      ]);
+
+      await userModel.deleteOne({ _id: user._id }, { session });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      // Cloudinary deletion can happen outside the transaction
+      if (user.profileImage?.public_id) {
+        deleteCloudinary(user.profileImage.public_id).catch((error) =>
+          console.error("Cloudinary deletion error:", error),
+        );
+      }
+      
+      if (user.logo?.public_id) {
+        deleteCloudinary(user.logo.public_id).catch((error) =>
+          console.error("Cloudinary deletion error:", error),
+        );
+      }
+      
+      if (user.partnerImage?.public_id) {
+        deleteCloudinary(user.partnerImage.public_id).catch((error) =>
+          console.error("Cloudinary deletion error:", error),
+        );
+      }
+
+      return true;
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      throw error;
+    }
   },
 
   //update fcm token

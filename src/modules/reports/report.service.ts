@@ -516,8 +516,9 @@ export const reportService = {
       throw new CustomError(404, "Report not found");
     }
 
+    const userRole = req.user?.role;
     // Verify ownership
-    if (report.author.toString() !== authorId?.toString()) {
+    if (userRole !== "admin" && report.author.toString() !== authorId?.toString()) {
       throw new CustomError(403, "You are not authorized to update this report");
     }
 

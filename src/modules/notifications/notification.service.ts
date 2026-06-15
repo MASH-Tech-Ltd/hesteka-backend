@@ -252,14 +252,19 @@ export const notificationService = {
       query.role = { $in: ["user", "partner"] };
     }
 
-    if (geoTarget === "paca") {
-      // PACA roughly around Marseille
-      query.location = {
-        $nearSphere: {
-          $geometry: { type: "Point", coordinates: [5.3698, 43.2965] }, // Lng, Lat
-          $maxDistance: 150000 // 150 km
-        }
-      };
+    if (geoTarget !== "all_france" && geoTarget !== "all") {
+      if (geoTarget === "paca") {
+        // PACA roughly around Marseille
+        query.location = {
+          $nearSphere: {
+            $geometry: { type: "Point", coordinates: [5.3698, 43.2965] }, // Lng, Lat
+            $maxDistance: 150000 // 150 km
+          }
+        };
+      } else {
+        // Dynamically match exact city string
+        query.city = geoTarget;
+      }
     }
 
     const targetUsers = await userModel.find(query).select("_id fcmTokens");

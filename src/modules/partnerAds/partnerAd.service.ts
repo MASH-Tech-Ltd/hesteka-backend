@@ -245,7 +245,7 @@ export const partnerAdService = {
       .findOne({ _id: adId, type: PartnerAdType.COLLECTION_POINT })
       .select("-company");
     if (!ad) throw new CustomError(404, "Partner ad not found");
-    if (ad.partner.toString() !== partner._id.toString()) {
+    if (ad.partner.toString() !== partner._id.toString() && partner.role !== role.ADMIN) {
       throw new CustomError(403, "You can only update your own partner ads");
     }
 
@@ -284,7 +284,7 @@ export const partnerAdService = {
 
     const ad = await partnerAdModel.findOne({ _id: adId, type: PartnerAdType.COLLECTION_POINT });
     if (!ad) throw new CustomError(404, "Partner ad not found");
-    if (ad.partner.toString() !== partner._id.toString()) {
+    if (ad.partner.toString() !== partner._id.toString() && partner.role !== role.ADMIN) {
       throw new CustomError(403, "You can only delete your own partner ads");
     }
 

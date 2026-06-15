@@ -12,6 +12,12 @@ export const getalluser = asyncHandler(async (req, res) => {
   ApiResponse.sendSuccess(res, 200, "User fetched successfully", users, meta);
 });
 
+//: get unique locations
+export const getUniqueLocations = asyncHandler(async (req, res) => {
+  const cities = await userService.getUniqueCities();
+  ApiResponse.sendSuccess(res, 200, "Locations fetched successfully", cities);
+});
+
 //: get single user
 export const getSingleUser = asyncHandler(async (req, res) => {
   const { userId } = req?.params as { userId: string };
@@ -119,6 +125,15 @@ export const updateFcmToken = asyncHandler(
   async (req: Request, res: Response) => {
     await userService.updateFcmToken(req);
     ApiResponse.sendSuccess(res, 200, "FCM Token registered successfully");
+  },
+);
+
+//: delete user by admin
+export const deleteUserByAdmin = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    await userService.deleteUserByAdmin(userId as string);
+    ApiResponse.sendSuccess(res, 200, "User deleted successfully");
   },
 );
 

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getalluser,
+  getUniqueLocations,
   getmyprofile,
   getSingleUser,
   updateStatus,
@@ -14,6 +15,7 @@ import {
   blockUser,
   unblockUser,
   getBlockedUsers,
+  deleteUserByAdmin,
 } from "./user.controller";
 import { allowRole, authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
@@ -30,6 +32,8 @@ import { rateLimiter } from "../../middleware/rateLimiter.middleware";
 const router = Router();
 
 router.get("/get-all-user", authGuard, allowRole("admin"), getalluser);
+
+router.get("/get-unique-locations", authGuard, allowRole("admin"), getUniqueLocations);
 
 router.get("/get-single-user/:userId", authGuard, getSingleUser);
 
@@ -58,6 +62,7 @@ router.patch(
   upload.fields([
     { name: "logo", maxCount: 1 },
     { name: "partnerImage", maxCount: 1 },
+    { name: "profileImage", maxCount: 1 },
   ]),
   updateUserByAdmin,
 );
@@ -98,6 +103,10 @@ router.patch(
   validateRequest(updateFcmTokenSchema),
   updateFcmToken,
 );
+
+// ─── Admin User Actions ────────────────────────────────────────────────────────
+
+router.delete("/delete-user/:userId", authGuard, allowRole("admin"), deleteUserByAdmin);
 
 // ─── Block System ─────────────────────────────────────────────────────────────
 

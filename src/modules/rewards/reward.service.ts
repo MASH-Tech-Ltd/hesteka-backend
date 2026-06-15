@@ -36,9 +36,6 @@ export const rewardService = {
     const image = req.file;
 
     // Validation
-    if (data.type === RewardItemType.GIFTCARD && !data.amount) {
-      throw new CustomError(400, "Amount is required for gift card");
-    }
     if (data.type === RewardItemType.PRODUCT && !data.stock) {
       throw new CustomError(400, "Stock is required for product");
     }
