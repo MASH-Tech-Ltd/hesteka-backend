@@ -5,16 +5,25 @@ import { donationModel } from "../donation/donation.models";
 import { donationProofModel } from "../donationProofs/donationProof.models";
 import { pointTransactionModel } from "../points/point.models";
 import { adminConfigModel } from "./admin.models";
-import { status as UserStatus, role as UserRole } from "../usersAuth/user.interface";
+import {
+  status as UserStatus,
+  role as UserRole,
+} from "../usersAuth/user.interface";
 import { ReportStatus } from "../reports/report.interface";
 import { DonationProofStatus } from "../donationProofs/donationProof.interface";
-import { PointTransactionType, PointTransactionSource } from "../points/point.interface";
+import {
+  PointTransactionType,
+  PointTransactionSource,
+} from "../points/point.interface";
 import { UpdateAdminConfigPayload } from "./admin.interface";
 import CustomError from "../../helpers/CustomError";
 import { paymentModel } from "../payment/payment.models";
 import { localMissionModel } from "../localMissions/localMission.models";
 import { localMissionParticipationModel } from "../localMissions/localMissionParticipation.models";
-import { LocalMissionStatus, LocalMissionParticipationStatus } from "../localMissions/localMission.interface";
+import {
+  LocalMissionStatus,
+  LocalMissionParticipationStatus,
+} from "../localMissions/localMission.interface";
 import { partnerAdModel } from "../partnerAds/partnerAd.models";
 import { rewardItemModel, redemptionModel } from "../rewards/reward.models";
 
@@ -24,11 +33,27 @@ export const adminService = {
 
     // Current Month
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
 
     // Last Month
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    const endOfLastMonth = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
 
     // Last Week
     const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -67,17 +92,24 @@ export const adminService = {
 
       // Reports
       reportModel.countDocuments(),
-      reportModel.countDocuments({ status: { $in: [ReportStatus.FOUND, ReportStatus.RESCUED] } }),
-      reportModel.countDocuments({ status: { $in: [ReportStatus.LOST, ReportStatus.SIGHTED] } }),
-      reportModel.aggregate([
-        { $group: { _id: "$status", count: { $sum: 1 } } }
-      ]),
-      reportModel.find({
+      reportModel.countDocuments({
+        status: { $in: [ReportStatus.FOUND, ReportStatus.RESCUED] },
+      }),
+      reportModel.countDocuments({
         status: { $in: [ReportStatus.LOST, ReportStatus.SIGHTED] },
-        "location.coordinates": { $ne: [0, 0] }
-      })
+      }),
+      reportModel.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+      reportModel
+        .find({
+          status: { $in: [ReportStatus.LOST, ReportStatus.SIGHTED] },
+          "location.coordinates": { $ne: [0, 0] },
+        })
         .sort({ createdAt: -1 })
-        .select("location status animalName species breed gender age title images description author eventDate")
+        .select(
+          "location status animalName species breed gender age title images description author eventDate",
+        )
         .populate("author", "firstName lastName profileImage")
         .limit(5),
 
@@ -87,43 +119,71 @@ export const adminService = {
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]),
       donationModel.aggregate([
-        { $match: { createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
+        {
+          $match: {
+            createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
+          },
+        },
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]),
 
       // Points
       pointTransactionModel.aggregate([
-        { $match: { type: PointTransactionType.EARN, createdAt: { $gte: startOfMonth } } },
+        {
+          $match: {
+            type: PointTransactionType.EARN,
+            createdAt: { $gte: startOfMonth },
+          },
+        },
         { $group: { _id: null, total: { $sum: "$points" } } },
       ]),
       pointTransactionModel.aggregate([
-        { $match: { type: PointTransactionType.REDEEM, createdAt: { $gte: startOfMonth } } },
+        {
+          $match: {
+            type: PointTransactionType.REDEEM,
+            createdAt: { $gte: startOfMonth },
+          },
+        },
         { $group: { _id: null, total: { $sum: { $abs: "$points" } } } },
       ]),
       // Pending Points from Donation Proofs
       donationProofModel.aggregate([
         { $match: { status: DonationProofStatus.PENDING } },
-        { $group: { _id: null, total: { $sum: "$pointsAwarded" } } }
+        { $group: { _id: null, total: { $sum: "$pointsAwarded" } } },
       ]),
-      donationProofModel.countDocuments({ status: DonationProofStatus.PENDING }),
+      donationProofModel.countDocuments({
+        status: DonationProofStatus.PENDING,
+      }),
 
       // Partners
       userModel.countDocuments({ role: UserRole.PARTNERS }),
-      userModel.countDocuments({ role: UserRole.PARTNERS, status: UserStatus.ACTIVE }),
-      userModel.countDocuments({ role: UserRole.PARTNERS, status: UserStatus.PENDING }),
+      userModel.countDocuments({
+        role: UserRole.PARTNERS,
+        status: UserStatus.ACTIVE,
+      }),
+      userModel.countDocuments({
+        role: UserRole.PARTNERS,
+        status: UserStatus.PENDING,
+      }),
 
       // Missions
       localMissionModel.countDocuments(),
       localMissionModel.countDocuments({ status: "active" }),
 
       // Activity Feed Data
-      reportModel.find().sort({ createdAt: -1 }).limit(3).populate("author", "firstName lastName"),
-      userModel.find().sort({ createdAt: -1 }).limit(3),
-      donationModel.find().sort({ createdAt: -1 }).limit(3),
+      reportModel
+        .find()
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .populate("author", "firstName lastName"),
+      userModel.find().sort({ createdAt: -1 }).limit(10),
+      donationModel.find().sort({ createdAt: -1 }).limit(10),
 
       // Missions detail stats for global
-      localMissionParticipationModel.countDocuments({ status: LocalMissionParticipationStatus.PENDING }),
-      donationModel.distinct("donorName").then(res => res.length),
+      localMissionParticipationModel.countDocuments({
+        status: LocalMissionParticipationStatus.PENDING,
+      }),
+      donationModel.distinct("donorName").then((res) => res.length),
 
       // Config
       this.getConfig(),
@@ -141,24 +201,32 @@ export const adminService = {
 
     // Format Activity
     const activity: any[] = [];
-    recentReports.forEach((r: any) => activity.push({
-      type: "report",
-      text: `${r.animalName || r.species} \u2014 ${r.status} report, ${r.location?.address?.split(',')[0] || "Unknown"}`,
-      time: r.createdAt,
-      user: `${r.author?.firstName || "User"} ${r.author?.lastName || ""}`
-    }));
-    recentUsers.forEach((u: any) => activity.push({
-      type: "user",
-      text: `${u.firstName} ${u.lastName} \u2014 just registered`,
-      time: u.createdAt
-    }));
-    recentDonations.forEach((d: any) => activity.push({
-      type: "donation",
-      text: `${d.amount}\u20AC donation received \u2013 ${d.method || "Stripe"}`,
-      time: d.createdAt,
-      user: d.donorName
-    }));
-    activity.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+    recentReports.forEach((r: any) =>
+      activity.push({
+        type: "report",
+        text: `${r.animalName || r.species} \u2014 ${r.status} report, ${r.location?.address?.split(",")[0] || "Unknown"}`,
+        time: r.createdAt,
+        user: `${r.author?.firstName || "User"} ${r.author?.lastName || ""}`,
+      }),
+    );
+    recentUsers.forEach((u: any) =>
+      activity.push({
+        type: "user",
+        text: `${u.firstName} ${u.lastName} \u2014 just registered`,
+        time: u.createdAt,
+      }),
+    );
+    recentDonations.forEach((d: any) =>
+      activity.push({
+        type: "donation",
+        text: `${d.amount}\u20AC donation received \u2013 ${d.method || "Stripe"}`,
+        time: d.createdAt,
+        user: d.donorName,
+      }),
+    );
+    activity.sort(
+      (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime(),
+    );
 
     return {
       users: {
@@ -170,7 +238,10 @@ export const adminService = {
         total: totalReports,
         resolved: resolvedReports,
         pending: pendingReports,
-        resolutionRate: totalReports > 0 ? Math.round((resolvedReports / totalReports) * 100) : 0,
+        resolutionRate:
+          totalReports > 0
+            ? Math.round((resolvedReports / totalReports) * 100)
+            : 0,
         breakdown: {
           lost: breakdownObj[ReportStatus.LOST] || 0,
           found: breakdownObj[ReportStatus.FOUND] || 0,
@@ -191,10 +262,10 @@ export const adminService = {
           eventDate: r.eventDate,
           author: {
             name: `${r.author?.firstName || "User"} ${r.author?.lastName || ""}`.trim(),
-            image: r.author?.profileImage?.secure_url
+            image: r.author?.profileImage?.secure_url,
           },
-          address: r.location?.address
-        }))
+          address: r.location?.address,
+        })),
       },
       donations: {
         collectedThisMonth,
@@ -227,12 +298,16 @@ export const adminService = {
         totalCollected: config.crowdfundingTotal,
         goalAmount: config.crowdfundingGoal,
         donors: totalDonors || 0,
-        percentage: config.crowdfundingGoal > 0
-          ? Math.min(100, (config.crowdfundingTotal / config.crowdfundingGoal) * 100)
-          : 0,
-        left: config.crowdfundingGoal - config.crowdfundingTotal
+        percentage:
+          config.crowdfundingGoal > 0
+            ? Math.min(
+                100,
+                (config.crowdfundingTotal / config.crowdfundingGoal) * 100,
+              )
+            : 0,
+        left: config.crowdfundingGoal - config.crowdfundingTotal,
       },
-      activity: activity.slice(0, 5)
+      activity: activity.slice(0, 9),
     };
   },
 
@@ -249,7 +324,9 @@ export const adminService = {
     if (!config) {
       config = await adminConfigModel.create(payload);
     } else {
-      config = await adminConfigModel.findOneAndUpdate({}, payload, { new: true });
+      config = await adminConfigModel.findOneAndUpdate({}, payload, {
+        new: true,
+      });
     }
     return config;
   },
@@ -259,9 +336,13 @@ export const adminService = {
     return {
       totalCollected: config.crowdfundingTotal,
       goalAmount: config.crowdfundingGoal,
-      percentage: config.crowdfundingGoal > 0
-        ? Math.min(100, (config.crowdfundingTotal / config.crowdfundingGoal) * 100)
-        : 0
+      percentage:
+        config.crowdfundingGoal > 0
+          ? Math.min(
+              100,
+              (config.crowdfundingTotal / config.crowdfundingGoal) * 100,
+            )
+          : 0,
     };
   },
 
@@ -278,7 +359,10 @@ export const adminService = {
 
       // 2. Check if already approved
       if (report.isPointApproved) {
-        throw new CustomError(400, "Points for this report have already been approved");
+        throw new CustomError(
+          400,
+          "Points for this report have already been approved",
+        );
       }
 
       // 3. Get point value from config
@@ -289,7 +373,7 @@ export const adminService = {
       const user = await userModel.findByIdAndUpdate(
         report.author,
         { $inc: { pointsBalance: pointsToAdd } },
-        { session, new: true }
+        { session, new: true },
       );
 
       if (!user) {
@@ -307,7 +391,7 @@ export const adminService = {
             note: `Reward for report: ${report.title || report.animalName}`,
           },
         ],
-        { session }
+        { session },
       );
 
       // 6. Mark report as approved
@@ -331,20 +415,26 @@ export const adminService = {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [total, active, suspended, newThisMonth, pendingPartners] = await Promise.all([
-      userModel.countDocuments(),
-      userModel.countDocuments({ status: UserStatus.ACTIVE }),
-      userModel.countDocuments({ status: { $in: ["blocked", "banned"] } }),
-      userModel.countDocuments({ createdAt: { $gte: startOfMonth } }),
-      userModel.countDocuments({ role: UserRole.PARTNERS, status: UserStatus.PENDING }),
-    ]);
+    const [total, active, suspended, newThisMonth, pendingPartners] =
+      await Promise.all([
+        userModel.countDocuments(),
+        userModel.countDocuments({ status: UserStatus.ACTIVE }),
+        userModel.countDocuments({ status: { $in: ["blocked", "banned"] } }),
+        userModel.countDocuments({ createdAt: { $gte: startOfMonth } }),
+        userModel.countDocuments({
+          role: UserRole.PARTNERS,
+          status: UserStatus.PENDING,
+        }),
+      ]);
     return { total, active, suspended, newThisMonth, pendingPartners };
   },
 
   async getReportStats() {
     const [total, resolved, lost, sighted] = await Promise.all([
       reportModel.countDocuments(),
-      reportModel.countDocuments({ status: { $in: [ReportStatus.FOUND, ReportStatus.RESCUED] } }),
+      reportModel.countDocuments({
+        status: { $in: [ReportStatus.FOUND, ReportStatus.RESCUED] },
+      }),
       reportModel.countDocuments({ status: ReportStatus.LOST }),
       reportModel.countDocuments({ status: ReportStatus.SIGHTED }),
     ]);
@@ -355,8 +445,14 @@ export const adminService = {
   async getPartnerStats() {
     const [total, active, pending] = await Promise.all([
       userModel.countDocuments({ role: UserRole.PARTNERS }),
-      userModel.countDocuments({ role: UserRole.PARTNERS, status: UserStatus.ACTIVE }),
-      userModel.countDocuments({ role: UserRole.PARTNERS, status: UserStatus.PENDING }),
+      userModel.countDocuments({
+        role: UserRole.PARTNERS,
+        status: UserStatus.ACTIVE,
+      }),
+      userModel.countDocuments({
+        role: UserRole.PARTNERS,
+        status: UserStatus.PENDING,
+      }),
     ]);
     return { total, active, pending };
   },
@@ -365,12 +461,16 @@ export const adminService = {
     const [all, active, inProgress, finished, points] = await Promise.all([
       localMissionModel.countDocuments(),
       localMissionModel.countDocuments({ status: LocalMissionStatus.ACTIVE }),
-      localMissionParticipationModel.countDocuments({ status: LocalMissionParticipationStatus.PENDING }),
-      localMissionParticipationModel.countDocuments({ status: LocalMissionParticipationStatus.COMPLETED }),
+      localMissionParticipationModel.countDocuments({
+        status: LocalMissionParticipationStatus.PENDING,
+      }),
+      localMissionParticipationModel.countDocuments({
+        status: LocalMissionParticipationStatus.COMPLETED,
+      }),
       localMissionParticipationModel.aggregate([
         { $match: { status: LocalMissionParticipationStatus.COMPLETED } },
-        { $group: { _id: null, total: { $sum: "$pointsAwarded" } } }
-      ])
+        { $group: { _id: null, total: { $sum: "$pointsAwarded" } } },
+      ]),
     ]);
 
     return {
@@ -379,18 +479,22 @@ export const adminService = {
       inProgress,
       toCome: active, // Current logic: active missions are to come
       finished,
-      pointsAttributed: points[0]?.total || 0
+      pointsAttributed: points[0]?.total || 0,
     };
   },
 
   async getDonationStats() {
     const [totalCollected, pendingAmount, avgBasket] = await Promise.all([
-      donationModel.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
+      donationModel.aggregate([
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
       paymentModel.aggregate([
         { $match: { status: "pending" } },
-        { $group: { _id: null, total: { $sum: "$amount" } } }
+        { $group: { _id: null, total: { $sum: "$amount" } } },
       ]),
-      donationModel.aggregate([{ $group: { _id: null, avg: { $avg: "$amount" } } }]),
+      donationModel.aggregate([
+        { $group: { _id: null, avg: { $avg: "$amount" } } },
+      ]),
     ]);
 
     return {
@@ -402,23 +506,39 @@ export const adminService = {
   },
 
   async getPhysicalItemStats() {
-    const [totalItems, totalRedemptions, pendingRedemptions] = await Promise.all([
-      rewardItemModel.countDocuments(),
-      redemptionModel.countDocuments(),
-      redemptionModel.countDocuments({ status: "pending" }),
-    ]);
+    const [totalItems, totalRedemptions, pendingRedemptions] =
+      await Promise.all([
+        rewardItemModel.countDocuments(),
+        redemptionModel.countDocuments(),
+        redemptionModel.countDocuments({ status: "pending" }),
+      ]);
     return { totalItems, totalRedemptions, pendingRedemptions };
   },
 
   async getCollectionPointStats() {
-    const total = await partnerAdModel.countDocuments({ type: "collection_point" });
+    const total = await partnerAdModel.countDocuments({
+      type: "collection_point",
+    });
     return { total };
   },
 
   async getAnalytics() {
     const now = new Date();
     const months: { month: string; date: Date; count: number }[] = [];
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
 
     // Get last 6 months
     for (let i = 5; i >= 0; i--) {
@@ -426,7 +546,7 @@ export const adminService = {
       months.push({
         month: monthNames[d.getMonth()]!,
         date: d,
-        count: 0
+        count: 0,
       });
     }
 
@@ -435,23 +555,25 @@ export const adminService = {
     const reportStats = await reportModel.aggregate([
       {
         $match: {
-          createdAt: { $gte: startOfPeriod }
-        }
+          createdAt: { $gte: startOfPeriod },
+        },
       },
       {
         $group: {
           _id: {
             month: { $month: "$createdAt" },
-            year: { $year: "$createdAt" }
+            year: { $year: "$createdAt" },
           },
-          count: { $sum: 1 }
-        }
-      }
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
     // Map stats to months array
-    months.forEach(m => {
-      const stat = reportStats.find(s => (s._id.month - 1) === monthNames.indexOf(m.month));
+    months.forEach((m) => {
+      const stat = reportStats.find(
+        (s) => s._id.month - 1 === monthNames.indexOf(m.month),
+      );
       if (stat) m.count = stat.count;
     });
 
@@ -461,16 +583,23 @@ export const adminService = {
         sessionsMonth: { value: 8420, trend: 10 },
         retention: { value: 67, trend: -5 },
         avgDuration: "4m32s",
-        conversion: 12
+        conversion: 12,
       },
-      reportsPerMonth: months.map(m => ({ name: m.month, reports: m.count })),
+      reportsPerMonth: months.map((m) => ({ name: m.month, reports: m.count })),
       activeZones: [
-        { name: "Provence-Alpes-Côte d'Azur", percentage: 38, color: "bg-orange-600" },
+        {
+          name: "Provence-Alpes-Côte d'Azur",
+          percentage: 38,
+          color: "bg-orange-600",
+        },
         { name: "Île-de-France", percentage: 24, color: "bg-green-600" },
         { name: "Occitanie", percentage: 18, color: "bg-blue-600" },
-        { name: "Auvergne-Rhône-Alpes", percentage: 12, color: "bg-purple-600" }
-      ]
+        {
+          name: "Auvergne-Rhône-Alpes",
+          percentage: 12,
+          color: "bg-purple-600",
+        },
+      ],
     };
-  }
+  },
 };
-

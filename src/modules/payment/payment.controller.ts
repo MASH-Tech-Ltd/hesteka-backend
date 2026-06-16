@@ -13,9 +13,10 @@ const createStripePaymentIntent = asyncHandler(
   async (req: Request, res: Response) => {
     const payload: CreateStripePaymentIntentPayload = req.body;
 
-    const result = await paymentService.createStripePaymentIntent(
-      payload as any,
-    );
+    const result = await paymentService.createStripePaymentIntent({
+      ...payload,
+      userId: req.user?._id as string,
+    });
 
     return ApiResponse.sendSuccess(
       res,
@@ -29,7 +30,10 @@ const createStripePaymentIntent = asyncHandler(
 const createPayPalOrder = asyncHandler(async (req: Request, res: Response) => {
   const payload: CreatePayPalOrderPayload = req.body;
 
-  const result = await paymentService.createPayPalOrder(payload);
+  const result = await paymentService.createPayPalOrder({
+    ...payload,
+    userId: req.user?._id as string,
+  });
 
   return ApiResponse.sendSuccess(
     res,

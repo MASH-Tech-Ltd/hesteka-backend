@@ -242,46 +242,77 @@ export const contactService = {
         ];
       }
 
-      const [contacts, users] = await Promise.all([
-        contactModel.find(filter).lean(),
-        userModel.find(userFilter).lean(),
-      ]);
-
-      const mappedPartners = users.map((user: any) => ({
-        _id: user._id,
-        name: `${user.firstName} ${user.lastName}`,
-        type: ContactType.PARTNER,
-        address: user.address,
-        phone: user.phone,
-        email: user.email,
-        photo: user.profileImage,
-        location: user.location,
-        status: user.status,
-        company: user.company,
-        website: user.website,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      }));
-
-      const all = [...contacts, ...mappedPartners];
-      
-      // Sort in memory
-      all.sort((a: any, b: any) => {
-        let valA = a[sortField] || "";
-        let valB = b[sortField] || "";
-        
-        if (sortField === "createdAt") {
-          valA = new Date(a.createdAt).getTime();
-          valB = new Date(b.createdAt).getTime();
+      const pipeline: any[] = [
+        { $match: filter },
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            type: 1,
+            address: 1,
+            phone: 1,
+            email: 1,
+            photo: 1,
+            location: 1,
+            status: 1,
+            company: 1,
+            website: 1,
+            city: 1,
+            country: 1,
+            description: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            sortFieldVal: sortField === "createdAt" ? "$createdAt" : { $ifNull: [`$${sortField}`, ""] }
+          }
+        },
+        {
+          $unionWith: {
+            coll: "users",
+            pipeline: [
+              { $match: userFilter },
+              {
+                $project: {
+                  _id: 1,
+                  name: { $concat: ["$firstName", " ", "$lastName"] },
+                  type: { $literal: "partner" },
+                  address: 1,
+                  phone: 1,
+                  email: 1,
+                  photo: "$profileImage",
+                  location: 1,
+                  status: 1,
+                  company: 1,
+                  website: 1,
+                  city: 1,
+                  country: 1,
+                  description: 1,
+                  createdAt: 1,
+                  updatedAt: 1,
+                  sortFieldVal: sortField === "name" 
+                    ? { $concat: ["$firstName", " ", "$lastName"] } 
+                    : (sortField === "createdAt" ? "$createdAt" : { $ifNull: [`$${sortField}`, ""] })
+                }
+              }
+            ]
+          }
+        },
+        { $sort: { sortFieldVal: sortOrder, _id: 1 } },
+        {
+          $facet: {
+            metadata: [{ $count: "total" }],
+            data: [{ $skip: skip }, { $limit: limit }]
+          }
         }
+      ];
 
-        if (valA < valB) return -1 * sortOrder;
-        if (valA > valB) return 1 * sortOrder;
-        return 0;
+      const aggResult = await contactModel.aggregate(pipeline);
+      const allContacts = aggResult[0]?.data || [];
+      totalCount = aggResult[0]?.metadata[0]?.total || 0;
+      
+      combinedContacts = allContacts.map((c: any) => {
+        delete c.sortFieldVal;
+        return c;
       });
-
-      totalCount = all.length;
-      combinedContacts = all.slice(skip, skip + limit);
     }
 
     return {
