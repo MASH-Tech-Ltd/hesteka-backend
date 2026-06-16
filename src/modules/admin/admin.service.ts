@@ -348,7 +348,8 @@ export const adminService = {
       reportModel.countDocuments({ status: ReportStatus.LOST }),
       reportModel.countDocuments({ status: ReportStatus.SIGHTED }),
     ]);
-    return { total, resolved, lost, sighted };
+    const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+    return { total, resolved, lost, sighted, resolutionRate };
   },
 
   async getPartnerStats() {
