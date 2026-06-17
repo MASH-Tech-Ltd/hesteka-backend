@@ -79,7 +79,7 @@ export const notificationService = {
     return result.deletedCount > 0;
   },
 
-  async notifyUsersNearby(title: string, body: string, type: NotificationType, lat?: number, lng?: number, radiusKm: number = 15) {
+  async notifyUsersNearby(title: string, body: string, type: NotificationType, lat?: number, lng?: number, radiusKm: number = 15, data?: Record<string, any>) {
     try {
       let filter: any = { status: "active", role: { $ne: "admin" } };
 
@@ -109,6 +109,7 @@ export const notificationService = {
         description: body,
         type,
         isRead: false,
+        ...(data ? { data } : {}),
       }));
 
       // 1. Save to database
@@ -147,7 +148,7 @@ export const notificationService = {
 
       // 3. Send Push Notifications via FCM
       if (allTokens.length > 0) {
-        await sendPushNotification(allTokens, title, body, { type });
+        await sendPushNotification(allTokens, title, body, { type, ...data });
       }
 
     } catch (error) {

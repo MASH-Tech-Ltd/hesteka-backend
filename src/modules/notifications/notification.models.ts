@@ -25,6 +25,10 @@ const notificationSchema = new Schema<INotification>(
       type: Boolean,
       default: false,
     },
+    data: {
+      type: Schema.Types.Mixed,
+      required: false,
+    },
   },
   {
     timestamps: true,

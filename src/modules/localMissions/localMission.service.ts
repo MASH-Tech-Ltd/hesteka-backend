@@ -95,11 +95,19 @@ export const localMissionService = {
       if (mission.location && mission.location.coordinates && mission.location.coordinates.length >= 2) {
         const lng = mission.location.coordinates[0] as number;
         const lat = mission.location.coordinates[1] as number;
-        notificationService.notifyUsersNearby(baseTitle, baseDesc, NotificationType.NEW_MISSION, lat, lng, 15)
-          .catch((err) => console.error("Notification Error:", err));
-      } else {
-        notificationService.notifyUsersNearby(baseTitle, baseDesc, NotificationType.NEW_MISSION)
-          .catch((err) => console.error("Notification Error:", err));
+        notificationService.notifyUsersNearby(
+          baseTitle,
+          baseDesc,
+          NotificationType.NEW_MISSION,
+          lat,
+          lng,
+          20,
+          {
+            missionId: mission._id.toString(),
+            latitude: String(lat),
+            longitude: String(lng),
+          }
+        ).catch((err) => console.error("Notification Error:", err));
       }
 
       notificationService.notifyAdmins(
