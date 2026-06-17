@@ -48,6 +48,20 @@ export const sendPushNotification = async (tokens: string[], title: string, body
         }
       });
       console.log(' Failed to send FCM push to tokens:', failedTokens);
+
+      if (failedTokens.length > 0) {
+        // Clean up expired or unused tokens from the database
+        try {
+          const { userModel } = require('../modules/usersAuth/user.models');
+          await userModel.updateMany(
+            { fcmTokens: { $in: failedTokens } },
+            { $pullAll: { fcmTokens: failedTokens } }
+          );
+          console.log('✅ Cleaned up expired/failed FCM tokens from database');
+        } catch (dbError) {
+          console.error('⚠️ Failed to clean up FCM tokens:', dbError);
+        }
+      }
     }
   } catch (error) {
     console.error(' Error sending FCM Broadcast:', error);

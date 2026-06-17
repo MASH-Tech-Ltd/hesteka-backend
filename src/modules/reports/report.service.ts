@@ -233,7 +233,11 @@ export const reportService = {
 
     // Category (Species) filter
     if (species) {
-      filter.species = species;
+      if (species === "Other") {
+        filter.species = { $nin: ["Dog", "Cat", "Bird"] };
+      } else {
+        filter.species = species;
+      }
     }
 
     // Date range filter

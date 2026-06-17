@@ -789,27 +789,26 @@ export const userService = {
     const { email } = req?.user as { email: string };
     const { fcmToken } = req.body as { fcmToken: string };
 
-    const user = await userModel.findOne({ email: email });
-    if (!user) {
-      throw new CustomError(404, "User not found");
-    }
-
-    if (!user.fcmTokens.includes(fcmToken)) {
-      user.fcmTokens.push(fcmToken);
-      await user.save();
-    }
-    //in database save multiple fcm i want when i add new fcm token old token will be deleted
-    const user2 = await userModel.findOneAndUpdate(
+    const user = await userModel.findOneAndUpdate(
       { email: email },
-      { $set: { fcmTokens: [fcmToken] } },
+      { $addToSet: { fcmTokens: fcmToken } },
       {
         returnDocument: "after",
         runValidators: true,
       },
     );
-    if (!user2) throw new CustomError(400, "User not found");
 
-    return user2;
+    if (!user) {
+      throw new CustomError(404, "User not found");
+    }
+
+    // Optional: limit to last 5 tokens to prevent array from growing too large
+    if (user.fcmTokens.length > 5) {
+      user.fcmTokens = user.fcmTokens.slice(-5);
+      await user.save();
+    }
+
+    return user;
   },
 
   // ─── Block System ──────────────────────────────────────────────────────────
