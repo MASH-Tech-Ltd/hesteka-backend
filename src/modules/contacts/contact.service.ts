@@ -198,6 +198,14 @@ export const contactService = {
         status: user.status,
         company: user.company,
         website: user.website,
+        description: user.description,
+        facebook: user.facebook,
+        instagram: user.instagram,
+        twitter: user.twitter,
+        linkedin: user.linkedin,
+        postalCode: user.postalCode,
+        city: user.city,
+        country: user.country,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       }));
@@ -286,6 +294,11 @@ export const contactService = {
                   city: 1,
                   country: 1,
                   description: 1,
+                  facebook: 1,
+                  instagram: 1,
+                  twitter: 1,
+                  linkedin: 1,
+                  postalCode: 1,
                   createdAt: 1,
                   updatedAt: 1,
                   sortFieldVal: sortField === "name" 
@@ -375,7 +388,7 @@ export const contactService = {
         userModel.countDocuments(filter),
       ]);
 
-      const mappedContacts = users.map((user: any) => ({
+       const mappedContacts = users.map((user: any) => ({
         _id: user._id,
         name: `${user.firstName} ${user.lastName}`,
         type: ContactType.PARTNER,
@@ -387,6 +400,14 @@ export const contactService = {
         status: user.status,
         company: user.company,
         website: user.website,
+        description: user.description,
+        facebook: user.facebook,
+        instagram: user.instagram,
+        twitter: user.twitter,
+        linkedin: user.linkedin,
+        postalCode: user.postalCode,
+        city: user.city,
+        country: user.country,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       }));
