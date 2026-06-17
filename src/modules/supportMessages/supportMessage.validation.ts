@@ -7,6 +7,11 @@ export const createSupportMessageSchema = z.object({
   message: z.string().min(1, "Message is required"),
 }).strict();
 
+export const replySupportMessageSchema = z.object({
+  replyMessage: z.string().min(1, "Reply message is required"),
+}).strict();
+
 export const supportMessageValidation = {
   createSupportMessageSchema,
+  replySupportMessageSchema,
 };

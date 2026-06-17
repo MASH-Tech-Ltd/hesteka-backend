@@ -34,6 +34,10 @@ const supportMessageSchema = new Schema<ISupportMessage>(
       enum: Object.values(SupportMessageStatus),
       default: SupportMessageStatus.PENDING,
     },
+    adminReply: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,

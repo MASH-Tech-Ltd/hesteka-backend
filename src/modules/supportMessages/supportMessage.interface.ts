@@ -13,6 +13,7 @@ export interface ISupportMessage extends Document {
   subject: string;
   message: string;
   status: SupportMessageStatus;
+  adminReply?: string;
 }
 
 export interface CreateSupportMessagePayload {

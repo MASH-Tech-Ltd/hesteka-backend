@@ -1,7 +1,8 @@
 import { Request } from "express";
+import { mailer } from "../../helpers/nodeMailer";
 import CustomError from "../../helpers/CustomError";
 import { paginationHelper } from "../../utils/pagination";
-import { CreateSupportMessagePayload, ISupportMessage } from "./supportMessage.interface";
+import { CreateSupportMessagePayload, ISupportMessage, SupportMessageStatus } from "./supportMessage.interface";
 import { SupportMessageModel } from "./supportMessage.models";
 
 export const supportMessageService = {
@@ -69,6 +70,39 @@ export const supportMessageService = {
     if (!message) {
       throw new CustomError(404, "Support message not found");
     }
+    return message;
+  },
+
+  async replyToSupportMessage(id: string, replyMessage: string) {
+    const message = await SupportMessageModel.findById(id);
+    if (!message) {
+      throw new CustomError(404, "Support message not found");
+    }
+
+    if (message.status === SupportMessageStatus.CLOSED) {
+      throw new CustomError(400, "This support ticket is already closed");
+    }
+
+    message.adminReply = replyMessage;
+    message.status = SupportMessageStatus.CLOSED;
+    await message.save();
+
+    await mailer({
+      email: message.email,
+      subject: `Re: ${message.subject}`,
+      template: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <h2 style="color: #4A90E2;">Support Reply</h2>
+          <p>Hi ${message.name},</p>
+          <p>An admin has replied to your recent support ticket regarding <strong>"${message.subject}"</strong>:</p>
+          <div style="padding: 15px; background-color: #f5f5f5; border-left: 4px solid #4A90E2; margin: 20px 0;">
+            <p style="white-space: pre-wrap; margin: 0;">${replyMessage}</p>
+          </div>
+          <p>Best regards,<br/>Sokas Support Team</p>
+        </div>
+      `,
+    });
+
     return message;
   },
 

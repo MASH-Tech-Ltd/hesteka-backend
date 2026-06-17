@@ -12486,6 +12486,59 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "FAQ",
+      "item": [
+        { "name": "get-all-faqs(Public)", "request": { "method": "GET", "url": { "raw": "{{domain}}/{{baseapi}}/faq", "host": ["{{domain}}"], "path": ["{{baseapi}}", "faq"] } }, "response": [] },
+        { "name": "get-faq-by-id(Public)", "request": { "method": "GET", "url": { "raw": "{{domain}}/{{baseapi}}/faq/:id", "host": ["{{domain}}"], "path": ["{{baseapi}}", "faq", ":id"], "variable": [{"key":"id","value":""}] } }, "response": [] },
+        { "name": "create-faq(Admin)", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "body": { "mode": "raw", "raw": "{\"question\":\"Q?\",\"answer\":\"A!\"}" }, "url": { "raw": "{{domain}}/{{baseapi}}/faq", "host": ["{{domain}}"], "path": ["{{baseapi}}", "faq"] } }, "response": [] },
+        { "name": "reorder-faqs(Admin)", "request": { "method": "PATCH", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "body": { "mode": "raw", "raw": "{\"items\":[]}" }, "url": { "raw": "{{domain}}/{{baseapi}}/faq/reorder", "host": ["{{domain}}"], "path": ["{{baseapi}}", "faq", "reorder"] } }, "response": [] },
+        { "name": "update-faq(Admin)", "request": { "method": "PATCH", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "body": { "mode": "raw", "raw": "{\"question\":\"Q?\"}" }, "url": { "raw": "{{domain}}/{{baseapi}}/faq/:id", "host": ["{{domain}}"], "path": ["{{baseapi}}", "faq", ":id"], "variable": [{"key":"id","value":""}] } }, "response": [] },
+        { "name": "delete-faq(Admin)", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/faq/:id", "host": ["{{domain}}"], "path": ["{{baseapi}}", "faq", ":id"], "variable": [{"key":"id","value":""}] } }, "response": [] }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        { "name": "create-stripe-payment-intent(User)", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "body": { "mode": "raw", "raw": "{\"amount\":100}" }, "url": { "raw": "{{domain}}/{{baseapi}}/payments/stripe/create-payment-intent", "host": ["{{domain}}"], "path": ["{{baseapi}}", "payments", "stripe", "create-payment-intent"] } }, "response": [] },
+        { "name": "create-stripe-setup-intent(User)", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/payments/stripe/create-setup-intent", "host": ["{{domain}}"], "path": ["{{baseapi}}", "payments", "stripe", "create-setup-intent"] } }, "response": [] },
+        { "name": "create-paypal-order(User)", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "body": { "mode": "raw", "raw": "{\"amount\":100}" }, "url": { "raw": "{{domain}}/{{baseapi}}/payments/paypal/create-order", "host": ["{{domain}}"], "path": ["{{baseapi}}", "payments", "paypal", "create-order"] } }, "response": [] },
+        { "name": "capture-paypal-order(User)", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "body": { "mode": "raw", "raw": "{\"orderId\":\"123\"}" }, "url": { "raw": "{{domain}}/{{baseapi}}/payments/paypal/capture-order", "host": ["{{domain}}"], "path": ["{{baseapi}}", "payments", "paypal", "capture-order"] } }, "response": [] },
+        { "name": "get-payment-methods(User)", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/payments", "host": ["{{domain}}"], "path": ["{{baseapi}}", "payments"] } }, "response": [] },
+        { "name": "delete-payment-method(User)", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/payments/:id", "host": ["{{domain}}"], "path": ["{{baseapi}}", "payments", ":id"], "variable": [{"key":"id","value":""}] } }, "response": [] },
+        { "name": "set-default-payment-method(User)", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/payments/:id/default", "host": ["{{domain}}"], "path": ["{{baseapi}}", "payments", ":id", "default"], "variable": [{"key":"id","value":""}] } }, "response": [] }
+      ]
+    },
+    {
+      "name": "Settings",
+      "item": [
+        { "name": "get-settings(Public)", "request": { "method": "GET", "url": { "raw": "{{domain}}/{{baseapi}}/settings", "host": ["{{domain}}"], "path": ["{{baseapi}}", "settings"] } }, "response": [] },
+        { "name": "update-settings(Admin)", "request": { "method": "PATCH", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "body": { "mode": "raw", "raw": "{}" }, "url": { "raw": "{{domain}}/{{baseapi}}/settings", "host": ["{{domain}}"], "path": ["{{baseapi}}", "settings"] } }, "response": [] }
+      ]
+    },
+    {
+      "name": "Support_Messages",
+      "item": [
+        { "name": "create-support-message(Public)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"name\":\"John\",\"email\":\"test@test.com\",\"message\":\"Help\"}" }, "url": { "raw": "{{domain}}/{{baseapi}}/support-messages", "host": ["{{domain}}"], "path": ["{{baseapi}}", "support-messages"] } }, "response": [] },
+        { "name": "get-all-support-messages(Admin)", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/support-messages", "host": ["{{domain}}"], "path": ["{{baseapi}}", "support-messages"] } }, "response": [] },
+        { "name": "get-single-support-message(Admin)", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/support-messages/:id", "host": ["{{domain}}"], "path": ["{{baseapi}}", "support-messages", ":id"], "variable": [{"key":"id","value":""}] } }, "response": [] },
+        { "name": "delete-support-message(Admin)", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/support-messages/:id", "host": ["{{domain}}"], "path": ["{{baseapi}}", "support-messages", ":id"], "variable": [{"key":"id","value":""}] } }, "response": [] }
+      ]
+    },
+    {
+      "name": "Friends",
+      "item": [
+        { "name": "send-friend-request(User)", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/friends/send/:userId", "host": ["{{domain}}"], "path": ["{{baseapi}}", "friends", "send", ":userId"], "variable": [{"key":"userId","value":""}] } }, "response": [] },
+        { "name": "accept-friend-request(User)", "request": { "method": "PATCH", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/friends/accept/:requestId", "host": ["{{domain}}"], "path": ["{{baseapi}}", "friends", "accept", ":requestId"], "variable": [{"key":"requestId","value":""}] } }, "response": [] },
+        { "name": "reject-friend-request(User)", "request": { "method": "PATCH", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/friends/reject/:requestId", "host": ["{{domain}}"], "path": ["{{baseapi}}", "friends", "reject", ":requestId"], "variable": [{"key":"requestId","value":""}] } }, "response": [] },
+        { "name": "block-user(User)", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/friends/block/:userId", "host": ["{{domain}}"], "path": ["{{baseapi}}", "friends", "block", ":userId"], "variable": [{"key":"userId","value":""}] } }, "response": [] },
+        { "name": "unblock-user(User)", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/friends/unblock/:userId", "host": ["{{domain}}"], "path": ["{{baseapi}}", "friends", "unblock", ":userId"], "variable": [{"key":"userId","value":""}] } }, "response": [] },
+        { "name": "remove-friend(User)", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/friends/remove/:userId", "host": ["{{domain}}"], "path": ["{{baseapi}}", "friends", "remove", ":userId"], "variable": [{"key":"userId","value":""}] } }, "response": [] },
+        { "name": "get-my-friends(User)", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/friends/my-friends", "host": ["{{domain}}"], "path": ["{{baseapi}}", "friends", "my-friends"] } }, "response": [] },
+        { "name": "get-pending-requests(User)", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/friends/pending-requests", "host": ["{{domain}}"], "path": ["{{baseapi}}", "friends", "pending-requests"] } }, "response": [] },
+        { "name": "search-friends(User)", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}], "url": { "raw": "{{domain}}/{{baseapi}}/friends/search?q=test", "host": ["{{domain}}"], "path": ["{{baseapi}}", "friends", "search"], "query": [{"key":"q","value":"test"}] } }, "response": [] }
+      ]
     }
   ],
   "variable": [

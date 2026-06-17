@@ -29,6 +29,14 @@ router.get(
   supportMessageController.getSupportMessageById
 );
 
+router.post(
+  "/:id/reply",
+  authGuard,
+  allowRole("admin"),
+  validateRequest(supportMessageValidation.replySupportMessageSchema),
+  supportMessageController.replyToSupportMessage
+);
+
 router.delete(
   "/:id",
   authGuard,

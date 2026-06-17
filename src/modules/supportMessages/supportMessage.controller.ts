@@ -18,6 +18,14 @@ export const getSupportMessageById = asyncHandler(async (req: Request, res: Resp
   ApiResponse.sendSuccess(res, 200, "Support message fetched successfully", message);
 });
 
+export const replyToSupportMessage = asyncHandler(async (req: Request, res: Response) => {
+  const message = await supportMessageService.replyToSupportMessage(
+    req.params.id as string,
+    req.body.replyMessage
+  );
+  ApiResponse.sendSuccess(res, 200, "Reply sent successfully", message);
+});
+
 export const deleteSupportMessage = asyncHandler(async (req: Request, res: Response) => {
   await supportMessageService.deleteSupportMessage(req.params.id as string);
   ApiResponse.sendSuccess(res, 200, "Support message deleted successfully");
@@ -27,5 +35,6 @@ export const supportMessageController = {
   createSupportMessage,
   getAllSupportMessages,
   getSupportMessageById,
+  replyToSupportMessage,
   deleteSupportMessage,
 };
