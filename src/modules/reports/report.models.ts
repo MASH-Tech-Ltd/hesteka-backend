@@ -31,7 +31,6 @@ const reportSchema = new Schema<IReport>(
     },
     species: {
       type: String,
-      enum: Object.values(AnimalSpecies),
       required: true,
     },
     breed: {

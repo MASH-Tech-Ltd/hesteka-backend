@@ -42,7 +42,7 @@ export interface IReport extends Document {
   title: string;
   author: Types.ObjectId | string;
   sourceAnimal?: Types.ObjectId | string;
-  species: AnimalSpecies;
+  species: string;
   breed: string;
   gender: AnimalGender;
   age: AnimalAge;

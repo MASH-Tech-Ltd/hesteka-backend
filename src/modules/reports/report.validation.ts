@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ReportStatus, AnimalSpecies, AnimalAge, AnimalGender, YesNoUnknown } from "./report.interface";
+import { ReportStatus, AnimalAge, AnimalGender, YesNoUnknown } from "./report.interface";
 
 const locationSchema = z.object({
   type: z.literal("Point"),
@@ -18,7 +18,7 @@ export const createReportSchema = z
     animalName: z.string().min(1, "Animal name is required"),
     title: z.string().optional(),
     myAnimalId: z.string().min(1).optional(),
-    species: z.enum(Object.values(AnimalSpecies) as [string, ...string[]]),
+    species: z.string().min(1, "Species is required"),
     breed: z.string().min(1, "Breed is required"),
     gender: z.enum(Object.values(AnimalGender) as [string, ...string[]]),
     age: z.enum(Object.values(AnimalAge) as [string, ...string[]]),
