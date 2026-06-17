@@ -539,6 +539,15 @@ export const contactService = {
     const s = standardStats[0] || { total: 0, active: 0, shelter: 0, vet: 0, csrf: 0 };
     const p = partnerStats[0] || { total: 0, active: 0 };
 
+      console.log({
+        all: s.total + p.total,
+        active: s.active + p.active,
+        shelter: s.shelter,
+        vet: s.vet,
+        csrf: s.csrf,
+        partner: p.total,
+      })
+
     return {
       all: s.total + p.total,
       active: s.active + p.active,
