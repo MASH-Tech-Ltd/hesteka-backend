@@ -59,6 +59,7 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
     isVerified: result.isVerified,
     location: result.location,
     profileImage: result.profileImage,
+    provider: result.provider,
   });
 });
 
