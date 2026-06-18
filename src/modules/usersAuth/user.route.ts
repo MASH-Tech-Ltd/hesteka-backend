@@ -3,6 +3,7 @@ import {
   getalluser,
   getUniqueLocations,
   getmyprofile,
+  getPartnerStats,
   getSingleUser,
   updateStatus,
   updateUserByAdmin,
@@ -38,6 +39,8 @@ router.get("/get-unique-locations", authGuard, allowRole("admin"), getUniqueLoca
 router.get("/get-single-user/:userId", authGuard, getSingleUser);
 
 router.get("/get-my-profile", authGuard, getmyprofile);
+
+router.get("/get-partner-stats", authGuard, allowRole("partners"), getPartnerStats);
 
 router.patch(
   "/update-user",

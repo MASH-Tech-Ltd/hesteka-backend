@@ -47,7 +47,10 @@ export const authGuard = async (
     }
 
     if (user.status !== status.ACTIVE) {
-      throw new CustomError(403, `Your account is ${user.status}. Access denied.`);
+      throw new CustomError(
+        403,
+        `Your account is ${user.status}. Access denied.`,
+      );
     }
 
     req.user = {

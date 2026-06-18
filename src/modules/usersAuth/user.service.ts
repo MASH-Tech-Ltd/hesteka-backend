@@ -207,6 +207,67 @@ export const userService = {
     return user;
   },
 
+  //get partner stats
+  async getPartnerStats(req: any) {
+    const partnerId = req.user?._id;
+    if (!partnerId) throw new CustomError(401, "Unauthorized");
+
+    const [totalMissions, activeMissions, totalCollectionPoints, activeCollectionPoints] = await Promise.all([
+      localMissionModel.countDocuments({ partner: partnerId }),
+      localMissionModel.countDocuments({ partner: partnerId, status: "active" }),
+      partnerAdModel.countDocuments({ partner: partnerId }),
+      partnerAdModel.countDocuments({ partner: partnerId, status: "active" })
+    ]);
+
+    const missions = await localMissionModel.find({ partner: partnerId }).select("_id");
+    const missionIds = missions.map(m => m._id);
+
+    const [totalParticipants, completedParticipants] = await Promise.all([
+      localMissionParticipationModel.countDocuments({ mission: { $in: missionIds } }),
+      localMissionParticipationModel.countDocuments({ mission: { $in: missionIds }, status: "completed" })
+    ]);
+
+    const last6Months = Array.from({ length: 6 }).map((_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      return {
+        month: d.getMonth(),
+        year: d.getFullYear(),
+        name: d.toLocaleString('en-US', { month: 'short' })
+      };
+    }).reverse();
+
+    const participations = await localMissionParticipationModel.aggregate([
+      { $match: { mission: { $in: missionIds } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" }
+          },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const participationsPerMonth = last6Months.map(m => {
+      const match = participations.find(p => p._id.year === m.year && p._id.month === m.month + 1);
+      return {
+        name: m.name,
+        participants: match ? match.count : 0
+      };
+    });
+
+    return {
+      overview: {
+        missions: { value: totalMissions, active: activeMissions },
+        collectionPoints: { value: totalCollectionPoints, active: activeCollectionPoints },
+        participants: { value: totalParticipants, completed: completedParticipants }
+      },
+      participationsPerMonth
+    };
+  },
+
   //update user
   async updateUser(req: any) {
     const { latitude, longitude, locationAddress, ...data } =

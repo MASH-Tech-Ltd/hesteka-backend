@@ -261,10 +261,20 @@ export const localMissionService = {
 
   async getMyLocalMissions(req: Request) {
     const partner = await getPartnerAccount(req.user?._id);
-    return await localMissionModel
+    const missions = await localMissionModel
       .find({ partner: partner._id })
       .populate("partner", partnerPopulate)
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const missionsWithStats = await Promise.all(
+      missions.map(async (mission) => {
+        const participantsCount = await localMissionParticipationModel.countDocuments({ mission: mission._id });
+        return { ...mission, participantsCount };
+      })
+    );
+
+    return missionsWithStats;
   },
 
   async getLocalMissionParticipants(req: Request) {

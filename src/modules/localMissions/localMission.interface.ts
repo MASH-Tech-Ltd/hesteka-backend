@@ -28,6 +28,7 @@ export interface ILocalMission extends Document {
     secure_url: string;
   };
   status: LocalMissionStatus;
+  missionDate?: Date;
 }
 
 export interface CreateLocalMissionPayload {
@@ -37,6 +38,7 @@ export interface CreateLocalMissionPayload {
   location?: IGeoPoint;
   duration: string;
   points?: number;
+  missionDate?: Date;
 }
 
 export interface UpdateLocalMissionPayload {
@@ -47,6 +49,7 @@ export interface UpdateLocalMissionPayload {
   duration?: string;
   points?: number;
   status?: LocalMissionStatus;
+  missionDate?: Date;
 }
 
 export interface ILocalMissionParticipation extends Document {

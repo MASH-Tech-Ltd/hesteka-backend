@@ -52,6 +52,10 @@ const localMissionSchema = new Schema<ILocalMission>(
       enum: Object.values(LocalMissionStatus),
       default: LocalMissionStatus.ACTIVE,
     },
+    missionDate: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

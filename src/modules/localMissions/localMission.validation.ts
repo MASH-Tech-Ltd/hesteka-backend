@@ -27,6 +27,7 @@ export const createLocalMissionSchema = z
     location: locationField,
     duration: z.string().min(1, "Local mission duration is required"),
     points: pointsSchema,
+    missionDate: z.coerce.date().optional(),
     image: z.any().optional(),
     createdAt: z.any().optional(),
   })
@@ -41,6 +42,7 @@ export const updateLocalMissionSchema = z
     duration: z.string().min(1, "Duration cannot be empty").optional(),
     points: pointsSchema,
     status: z.enum(Object.values(LocalMissionStatus) as [string, ...string[]]).optional(),
+    missionDate: z.coerce.date().optional(),
     image: z.any().optional(),
     createdAt: z.any().optional(),
   })

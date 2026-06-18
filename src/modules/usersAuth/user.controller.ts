@@ -31,6 +31,12 @@ export const getmyprofile = asyncHandler(async (req, res) => {
   ApiResponse.sendSuccess(res, 200, "Profile data fetched successfully", user);
 });
 
+//: get partner stats
+export const getPartnerStats = asyncHandler(async (req, res) => {
+  const stats = await userService.getPartnerStats(req);
+  ApiResponse.sendSuccess(res, 200, "Partner stats fetched successfully", stats);
+});
+
 //: update user also profile image
 export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   const result = await userService.updateUser(req);
