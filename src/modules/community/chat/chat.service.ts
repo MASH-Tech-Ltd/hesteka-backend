@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { chatModel } from "./chat.models";
+import { chatLikeModel } from "../chatlike/chatlike.models";
 import {
   CreateChatPayload,
   GetLocalChatQuery,
@@ -225,6 +226,18 @@ const getLocalChat = async (query: GetLocalChatQuery) => {
     chatModel.countDocuments(geoFilter),
   ]);
 
+  const chatIds = messages.map((msg) => msg._id);
+  const userLikes = user
+    ? await chatLikeModel.find({
+        user: user,
+        chat: { $in: chatIds },
+      }).select("chat").lean()
+    : [];
+
+  const likedChatIds = new Set(
+    userLikes.map((like) => (like.chat as any).toString()),
+  );
+
   const userCoords = {
     lat: resolvedLocation.lat,
     lng: resolvedLocation.lng,
@@ -235,7 +248,11 @@ const getLocalChat = async (query: GetLocalChatQuery) => {
       userCoords as Coordinates,
       msgCoords,
     );
-    return { ...msg, distanceKm: Number(distanceKm.toFixed(2)) };
+    return {
+      ...msg,
+      distanceKm: Number(distanceKm.toFixed(2)),
+      liked: user ? likedChatIds.has(msg._id.toString()) : false,
+    };
   });
 
   return {
