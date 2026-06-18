@@ -190,6 +190,7 @@ const syncPhysicalDonation = async (payload: {
     type: DonationType.ONE_TIME,
     referenceId: payload.referenceId,
     receiptId: generateReceiptId(),
+    transactionId: generateReceiptId(),
   });
 };
 
@@ -328,32 +329,137 @@ const getAllDonations = async (req: any) => {
 };
 
 const getSingleDonation = async (id: string) => {
-  const donation = await donationModel.findById(id).populate("payment").lean();
+  const pipeline: any[] = [
+    { $match: { _id: new mongoose.Types.ObjectId(id) } },
+    {
+      $lookup: {
+        from: "payments",
+        localField: "payment",
+        foreignField: "_id",
+        as: "payment",
+      },
+    },
+    { $unwind: { path: "$payment", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "donationproofs",
+        let: { refId: "$referenceId" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $ne: ["$$refId", null] },
+                  { $ne: ["$$refId", ""] },
+                  { $eq: ["$_id", { $toObjectId: "$$refId" }] },
+                ],
+              },
+            },
+          },
+        ],
+        as: "proof",
+      },
+    },
+    { $unwind: { path: "$proof", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "partnerads",
+        localField: "proof.collectionPoint",
+        foreignField: "_id",
+        as: "collectionPoint",
+      },
+    },
+    { $unwind: { path: "$collectionPoint", preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        method: { $ifNull: ["$method", "$payment.provider"] },
+        status: {
+          $cond: {
+            if: { $and: ["$payment", { $ne: ["$payment", null] }] },
+            then: "$payment.status",
+            else: "$status",
+          },
+        },
+        association: { $ifNull: ["$collectionPoint.title", "HESTEKA"] },
+      },
+    },
+  ];
+
+  const results = await donationModel.aggregate(pipeline);
+  const donation = results[0];
+
   if (!donation) {
     throw new CustomError(404, "Donation not found");
   }
 
-  // Ensure consistency with the list view logic
-  return {
-    ...donation,
-    method: donation.method || (donation.payment as any)?.provider,
-    status: (donation.payment as any)?.status || donation.status || "pending",
-  };
+  return donation;
 };
 
 const getDonationByReceiptId = async (receiptId: string) => {
-  const donation = await donationModel
-    .findOne({ receiptId })
-    .populate("payment")
-    .lean();
+  const pipeline: any[] = [
+    { $match: { receiptId } },
+    {
+      $lookup: {
+        from: "payments",
+        localField: "payment",
+        foreignField: "_id",
+        as: "payment",
+      },
+    },
+    { $unwind: { path: "$payment", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "donationproofs",
+        let: { refId: "$referenceId" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $ne: ["$$refId", null] },
+                  { $ne: ["$$refId", ""] },
+                  { $eq: ["$_id", { $toObjectId: "$$refId" }] },
+                ],
+              },
+            },
+          },
+        ],
+        as: "proof",
+      },
+    },
+    { $unwind: { path: "$proof", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "partnerads",
+        localField: "proof.collectionPoint",
+        foreignField: "_id",
+        as: "collectionPoint",
+      },
+    },
+    { $unwind: { path: "$collectionPoint", preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        method: { $ifNull: ["$method", "$payment.provider"] },
+        status: {
+          $cond: {
+            if: { $and: ["$payment", { $ne: ["$payment", null] }] },
+            then: "$payment.status",
+            else: "$status",
+          },
+        },
+        association: { $ifNull: ["$collectionPoint.title", "HESTEKA"] },
+      },
+    },
+  ];
+
+  const results = await donationModel.aggregate(pipeline);
+  const donation = results[0];
+
   if (!donation) {
     throw new CustomError(404, "Donation not found");
   }
-  return {
-    ...donation,
-    method: donation.method || (donation.payment as any)?.provider,
-    status: (donation.payment as any)?.status || donation.status || "pending",
-  };
+
+  return donation;
 };
 
 const getMyDonations = async (email: string) => {

@@ -116,6 +116,27 @@ export const adminService = {
       // Donations (This Month vs Last Month)
       donationModel.aggregate([
         { $match: { createdAt: { $gte: startOfMonth, $lte: endOfMonth } } },
+        {
+          $lookup: {
+            from: "payments",
+            localField: "payment",
+            foreignField: "_id",
+            as: "paymentInfo",
+          },
+        },
+        { $unwind: { path: "$paymentInfo", preserveNullAndEmptyArrays: true } },
+        {
+          $addFields: {
+            realStatus: {
+              $cond: {
+                if: "$paymentInfo",
+                then: "$paymentInfo.status",
+                else: "$status",
+              },
+            },
+          },
+        },
+        { $match: { realStatus: "completed" } },
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]),
       donationModel.aggregate([
@@ -124,6 +145,27 @@ export const adminService = {
             createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
           },
         },
+        {
+          $lookup: {
+            from: "payments",
+            localField: "payment",
+            foreignField: "_id",
+            as: "paymentInfo",
+          },
+        },
+        { $unwind: { path: "$paymentInfo", preserveNullAndEmptyArrays: true } },
+        {
+          $addFields: {
+            realStatus: {
+              $cond: {
+                if: "$paymentInfo",
+                then: "$paymentInfo.status",
+                else: "$status",
+              },
+            },
+          },
+        },
+        { $match: { realStatus: "completed" } },
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]),
 
@@ -484,24 +526,60 @@ export const adminService = {
   },
 
   async getDonationStats() {
-    const [totalCollected, pendingAmount, avgBasket] = await Promise.all([
-      donationModel.aggregate([
-        { $group: { _id: null, total: { $sum: "$amount" } } },
-      ]),
-      paymentModel.aggregate([
-        { $match: { status: "pending" } },
-        { $group: { _id: null, total: { $sum: "$amount" } } },
-      ]),
-      donationModel.aggregate([
-        { $group: { _id: null, avg: { $avg: "$amount" } } },
-      ]),
+    const [stats] = await donationModel.aggregate([
+      {
+        $lookup: {
+          from: "payments",
+          localField: "payment",
+          foreignField: "_id",
+          as: "paymentInfo",
+        },
+      },
+      { $unwind: { path: "$paymentInfo", preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          realStatus: {
+            $cond: {
+              if: "$paymentInfo",
+              then: "$paymentInfo.status",
+              else: "$status",
+            },
+          },
+        },
+      },
+      {
+        $facet: {
+          completedStats: [
+            { $match: { realStatus: "completed" } },
+            {
+              $group: {
+                _id: null,
+                totalCollected: { $sum: "$amount" },
+                avgBasket: { $avg: "$amount" },
+              },
+            },
+          ],
+          pendingStats: [
+            { $match: { realStatus: "pending" } },
+            {
+              $group: {
+                _id: null,
+                totalPending: { $sum: "$amount" },
+              },
+            },
+          ],
+        },
+      },
     ]);
 
+    const completed = stats.completedStats[0] || { totalCollected: 0, avgBasket: 0 };
+    const pending = stats.pendingStats[0] || { totalPending: 0 };
+
     return {
-      totalCollected: totalCollected[0]?.total || 0,
-      pendingAmount: pendingAmount[0]?.total || 0,
-      averageBasket: avgBasket[0]?.avg || 0,
-      returnedToAsso: (totalCollected[0]?.total || 0) * 0.9, // Demo logic: 90% goes to association
+      totalCollected: completed.totalCollected,
+      pendingAmount: pending.totalPending,
+      averageBasket: completed.avgBasket,
+      returnedToAsso: completed.totalCollected * 0.9,
     };
   },
 

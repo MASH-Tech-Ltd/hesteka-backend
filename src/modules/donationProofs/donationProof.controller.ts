@@ -4,14 +4,19 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import ApiResponse from "../../utils/apiResponse";
 import { donationProofService } from "./donationProof.service";
 
-//: get accepted values for categories and refusal reasons
+import { pointConfigModel } from "../points/pointConfig.models";
+
 export const getAcceptedValues = asyncHandler(async (req: Request, res: Response) => {
   const categories = Object.values(DonationCategory);
   const refusalReasons = Object.values(RefusalReason);
   
+  const config = await pointConfigModel.findOne();
+  const pointsPerDonation = config ? (config.isDoublePointsActive ? config.pointsPerDonation * 2 : config.pointsPerDonation) : 15;
+  
   ApiResponse.sendSuccess(res, 200, "Accepted values fetched successfully", {
     categories,
-    refusalReasons
+    refusalReasons,
+    pointsPerDonation
   });
 });
 

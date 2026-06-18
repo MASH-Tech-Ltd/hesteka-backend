@@ -23,6 +23,7 @@ export interface IDonation extends Document {
   referenceId?: string;
   status: "pending" | "completed" | "cancelled";
   receiptId: string;
+  transactionId?: string;
   createdAt: Date;
   updatedAt: Date;
 }

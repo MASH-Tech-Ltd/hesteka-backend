@@ -56,6 +56,11 @@ const donationSchema = new Schema<IDonation>(
       unique: true,
       // required: true,
     },
+    transactionId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
   },
   {
     timestamps: true,
