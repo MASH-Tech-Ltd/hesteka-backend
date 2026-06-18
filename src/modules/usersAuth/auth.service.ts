@@ -41,25 +41,26 @@ export const authService = {
 
     const adminEmails = config.adminEmails;
     const role = adminEmails.includes(payload.email!) ? "admin" : "user";
-    const otp = generateOTP();
-    console.log(`\n\n[DEV OTP] Registration OTP for ${payload.email}: ${otp}\n\n`);
+    // const otp = generateOTP();
+    // console.log(`\n\n[DEV OTP] Registration OTP for ${payload.email}: ${otp}\n\n`);
     const user = await userModel.create({
       ...payload,
       role: role,
       provider: authProvider.LOCAL,
-      verificationOtp: otp,
-      verificationOtpExpire: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      isVerified: true, // Direct register bypasses OTP
+      // verificationOtp: otp,
+      // verificationOtpExpire: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
     });
 
-    try {
-      await mailer({
-        email: user.email,
-        subject: "Your HESTEKA verification code",
-        template: verificationOtpEmailTemplate(user.firstName, otp),
-      });
-    } catch (error) {
-      console.error("[Auth] Failed to send verification email:", error);
-    }
+    // try {
+    //   await mailer({
+    //     email: user.email,
+    //     subject: "Your HESTEKA verification code",
+    //     template: verificationOtpEmailTemplate(user.firstName, otp),
+    //   });
+    // } catch (error) {
+    //   console.error("[Auth] Failed to send verification email:", error);
+    // }
 
     return user;
   },
