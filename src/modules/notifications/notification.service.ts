@@ -313,5 +313,66 @@ export const notificationService = {
     if (allTokens.length > 0) {
       await sendPushNotification(allTokens, title, message, { type });
     }
+  },
+
+  async notifyFriends(userId: string, title: string, body: string, type: NotificationType, data?: Record<string, any>) {
+    try {
+      const { FriendModel } = await import("../friends/friend.models");
+      const { FriendStatus } = await import("../friends/friend.interface");
+
+      const relations = await FriendModel.find({
+        $or: [{ requester: userId }, { recipient: userId }],
+        status: FriendStatus.ACCEPTED
+      }).populate("requester recipient", "_id fcmTokens");
+
+      if (!relations.length) return;
+
+      const friendsToNotify = relations.map(r => {
+        return r.requester._id.toString() === userId.toString() ? r.recipient : r.requester;
+      });
+
+      const notificationsToSave = friendsToNotify.map(friend => ({
+        user: friend._id,
+        title,
+        description: body,
+        type,
+        isRead: false,
+        ...(data ? { data } : {}),
+      }));
+
+      const savedNotifications = await notificationModel.insertMany(notificationsToSave);
+
+      const allTokens: string[] = [];
+      let io: any;
+      try {
+        io = getIo();
+      } catch (err) { }
+
+      for (let idx = 0; idx < friendsToNotify.length; idx++) {
+        const friend = friendsToNotify[idx] as any;
+        if (!friend) continue;
+
+        const friendIdStr = friend._id.toString();
+        let isOnline = false;
+
+        if (io) {
+          const sockets = await io.in(friendIdStr).fetchSockets();
+          if (sockets.length > 0) {
+            isOnline = true;
+            io.to(friendIdStr).emit("notification:new", savedNotifications[idx]);
+          }
+        }
+
+        if (!isOnline && friend.fcmTokens && Array.isArray(friend.fcmTokens)) {
+          allTokens.push(...friend.fcmTokens);
+        }
+      }
+
+      if (allTokens.length > 0) {
+        await sendPushNotification(allTokens, title, body, { type, ...data });
+      }
+    } catch (error) {
+      console.error(" Failed in notifyFriends:", error);
+    }
   }
 };

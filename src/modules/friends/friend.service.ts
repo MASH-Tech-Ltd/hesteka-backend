@@ -4,6 +4,7 @@ import { FriendModel } from "./friend.models";
 import { FriendStatus } from "./friend.interface";
 import { userModel } from "../usersAuth/user.models";
 import { Types } from "mongoose";
+import { getIo } from "../../socket/server";
 
 export const friendService = {
   async sendFriendRequest(req: Request) {
@@ -41,15 +42,20 @@ export const friendService = {
         existingRelation.recipient = new Types.ObjectId(recipientId);
         existingRelation.status = FriendStatus.PENDING;
         await existingRelation.save();
+        
+        getIo().to(recipientId).emit("friend_request_received", existingRelation);
         return existingRelation;
       }
     }
 
-    return await FriendModel.create({
+    const newRequest = await FriendModel.create({
       requester: requesterId,
       recipient: recipientId,
       status: FriendStatus.PENDING,
     });
+
+    getIo().to(recipientId).emit("friend_request_received", newRequest);
+    return newRequest;
   },
 
   async acceptFriendRequest(req: Request) {
@@ -68,6 +74,8 @@ export const friendService = {
 
     request.status = FriendStatus.ACCEPTED;
     await request.save();
+    
+    getIo().to(request.requester.toString()).emit("friend_request_accepted", request);
     return request;
   },
 
@@ -87,6 +95,8 @@ export const friendService = {
 
     request.status = FriendStatus.REJECTED;
     await request.save();
+    
+    getIo().to(request.requester.toString()).emit("friend_request_rejected", request);
     return request;
   },
 
@@ -156,6 +166,8 @@ export const friendService = {
     }
 
     await relation.deleteOne();
+    
+    getIo().to(targetUserId).emit("friend_removed", { friendId: userId });
     return true;
   },
 

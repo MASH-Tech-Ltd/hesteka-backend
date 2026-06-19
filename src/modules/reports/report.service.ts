@@ -136,16 +136,22 @@ export const reportService = {
     }
 
     // Fire & Forget Notification
-    const baseTitle = "Nouveau signalement à proximité !";
-    const baseDesc = `Un nouveau signalement "${newReport.title}" vient d'être créé près de chez vous.`;
+    const friendTitle = "Nouveau signalement !";
+    const friendDesc = `Votre ami a créé un nouveau signalement "${newReport.title}".`;
+    
+    notificationService.notifyFriends(authorId.toString(), friendTitle, friendDesc, NotificationType.NEW_REPORT, { reportId: newReport._id.toString() })
+      .catch((err) => console.error("Friend Notification Error:", err));
+
+    const nearbyTitle = "Nouveau signalement à proximité !";
+    const nearbyDesc = `Un nouveau signalement "${newReport.title}" vient d'être créé près de chez vous.`;
     
     if (newReport.location && newReport.location.coordinates && newReport.location.coordinates.length >= 2) {
       const lng = newReport.location.coordinates[0] as number;
       const lat = newReport.location.coordinates[1] as number;
-      notificationService.notifyUsersNearby(baseTitle, baseDesc, NotificationType.NEW_REPORT, lat, lng, 15)
+      notificationService.notifyUsersNearby(nearbyTitle, nearbyDesc, NotificationType.NEW_REPORT, lat, lng, 15)
         .catch((err) => console.error("Notification Error:", err));
     } else {
-      notificationService.notifyUsersNearby(baseTitle, baseDesc, NotificationType.NEW_REPORT)
+      notificationService.notifyUsersNearby(nearbyTitle, nearbyDesc, NotificationType.NEW_REPORT)
         .catch((err) => console.error("Notification Error:", err));
     }
 

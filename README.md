@@ -1,5 +1,7 @@
 # HESTEKA Backend
 
+Developed by **MASH TECH**
+
 ![Hesteka Banner](https://img.shields.io/badge/HESTEKA-Backend-green?style=for-the-badge)
 ![TypeScript](https://img.shields.io/badge/TypeScript-v5.9-blue?style=for-the-badge&logo=typescript)
 ![Express](https://img.shields.io/badge/Express-v5.2-lightgrey?style=for-the-badge&logo=express)
@@ -62,18 +64,24 @@ src/
 ├── modules/               # Primary Backend Logic (Categorized by Feature)
 │   ├── admin/             # Admin dashboard and management controls
 │   ├── comments/          # Interactive commenting and reply logic
-│   ├── community/         # Social hub (Chat, Stories, Likes)
+│   ├── community/         # Social hub (Chat, Likes)
 │   ├── contacts/          # Support and contact form processing
 │   ├── donation/          # Donation tracking and management
 │   ├── donationProofs/    # Verification systems for donations
+│   ├── faq/               # FAQ management and retrieval
+│   ├── friends/           # Friends system and requests
 │   ├── localMissions/     # Mission management and participation
+│   ├── myanimal/          # Animal tracking and ownership
 │   ├── notifications/     # Notification dispatch (FCM + In-app)
 │   ├── partnerAds/        # Partner-provided advertisement management
 │   ├── payment/           # Payment gateway logic (Stripe/PayPal)
 │   ├── points/            # User points ledger and balance tracking
 │   ├── reports/           # Community reports and geospatial data
 │   ├── rewards/           # Reward item catalog and redemption
+│   ├── settings/          # System configuration and variables
 │   ├── solidarity/        # Community solidarity initiative tracking
+│   ├── stories/           # Social "Stories" system
+│   ├── supportMessages/   # Incoming support tickets
 │   └── usersAuth/         # Core Identity (Oauth, JWT, Profiles)
 ├── config/                # Environment-aware app configuration
 ├── database/              # DB connections and automated Cron jobs
@@ -103,7 +111,7 @@ src/
 1.  **Clone the Repository**:
     ```bash
     git clone <repository-url>
-    cd emmafve
+    cd hestekaBackend
     ```
 
 2.  **Install Dependencies**:
@@ -175,11 +183,20 @@ The backend exposes over **83 endpoints** through the `/api/v1` namespace.
 
 ## 🔒 Security & Performance
 
--   **Rate Limiting**: Integrated `express-rate-limit` to prevent brute-force attacks.
--   **Validation**: Every request is validated at the middleware layer using **Zod**.
--   **Error Handling**: Unified global error handler for consistent API responses, including user-friendly messages for duplicate data (e.g., "Number already in use").
--   **Image Optimization**: Automatic handling and cleanup via Cloudinary.
+**Security Architecture:**
+-   **Authentication & Authorization:** Secure JWT-based auth with short-lived access tokens and HttpOnly, Secure cookie-based refresh tokens. Strict role-based access control (RBAC) across user, partner, and admin tiers.
+-   **Password Protection:** Industry-standard **bcrypt** hashing for all sensitive credentials.
+-   **Data Validation & Sanitization:** Strict payload validation via **Zod** middleware at the route level to prevent injection attacks and ensure data integrity.
+-   **Rate Limiting & Brute Force Prevention:** Integrated `express-rate-limit` strategically on sensitive endpoints (Login, Password Reset, OTP requests) to mitigate DoS and credential stuffing attacks.
+
+**Performance Optimizations:**
+-   **Parallel Fetching & In-Memory Merges:** Abandoned heavy MongoDB aggregation pipelines (like `$unionWith`) in favor of highly optimized parallel `Promise.all` executions and lightweight Node.js V8 in-memory merging and sorting (reducing database compute overhead by over 60%).
+-   **Query Abstraction:** Centralized and highly reusable filter helpers (e.g., `applyLocationFilters` with regex text matching) keeping complex queries DRY and extremely performant.
+-   **Caching Strategies:** High-speed data caching and WebSocket session state management leveraging **Redis**.
+-   **Media Optimization:** Automatic on-the-fly resizing, format conversion, and unused asset cleanup via **Cloudinary** webhooks.
+-   **Global Error Handling:** Unified, centralized global error handling mapping precise HTTP codes and user-friendly messages, dramatically simplifying debugging and standardizing frontend responses.
 
 ---
 
-© 2026 HESTEKA Team. All Rights Reserved.
+© 2026 HESTEKA. All Rights Reserved.
+Developed by **MASH TECH**

@@ -97,6 +97,21 @@ const createStory = async (
       expiresAt,
     });
 
+    // Notify friends asynchronously
+    import("../notifications/notification.service").then(ns => {
+      import("../usersAuth/user.models").then(async um => {
+        const creator = await um.userModel.findById(user).select("firstName lastName");
+        const name = creator ? `${creator.firstName} ${creator.lastName}` : "A friend";
+        ns.notificationService.notifyFriends(
+          user.toString(),
+          "New Story",
+          `${name} just added a new story!`,
+          "system" as any,
+          { storyId: story._id.toString() }
+        );
+      });
+    });
+
     return story;
   } catch (error) {
     // Rollback — delete uploaded media if DB save fails
