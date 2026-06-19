@@ -1,21 +1,28 @@
 import { faqModel } from "./faq.models";
 import { IFaq } from "./faq.interface";
 import CustomError from "../../helpers/CustomError";
+import { role } from "../usersAuth/user.interface";
 
 export const faqService = {
   async createFaq(data: IFaq) {
     return faqModel.create(data);
   },
 
-  async getAllFaqs(query: any) {
+  async getAllFaqs(query: any, user?: any) {
     const filter: any = {};
-    if (query.language) filter.language = query.language;
     if (query.category && query.category !== "ALL") filter.category = query.category;
+    
+    // Non-admins can only see active FAQs
+    if (!user || user.role !== role.ADMIN) {
+      filter.isActive = true;
+    }
     
     if (query.search) {
       filter.$or = [
-        { question: { $regex: query.search, $options: "i" } },
-        { answer: { $regex: query.search, $options: "i" } },
+        { "contentsArray.question.english.question": { $regex: query.search, $options: "i" } },
+        { "contentsArray.question.english.answer": { $regex: query.search, $options: "i" } },
+        { "contentsArray.question.french.question": { $regex: query.search, $options: "i" } },
+        { "contentsArray.question.french.answer": { $regex: query.search, $options: "i" } },
       ];
     }
 
@@ -34,8 +41,15 @@ export const faqService = {
     return { data, total, page, limit };
   },
 
-  async getFaqById(id: string) {
-    const faq = await faqModel.findById(id);
+  async getFaqById(id: string, user?: any) {
+    const filter: any = { _id: id };
+    
+    // Non-admins can only see active FAQs
+    if (!user || user.role !== role.ADMIN) {
+      filter.isActive = true;
+    }
+    
+    const faq = await faqModel.findOne(filter);
     if (!faq) throw new CustomError(404, "FAQ not found");
     return faq;
   },

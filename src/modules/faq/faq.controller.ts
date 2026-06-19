@@ -9,12 +9,12 @@ export const createFaq = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const getAllFaqs = asyncHandler(async (req: Request, res: Response) => {
-  const result = await faqService.getAllFaqs(req.query);
+  const result = await faqService.getAllFaqs(req.query, req.user);
   ApiResponse.sendSuccess(res, 200, "FAQs fetched successfully", result);
 });
 
 export const getFaqById = asyncHandler(async (req: Request, res: Response) => {
-  const result = await faqService.getFaqById(req.params.id as string);
+  const result = await faqService.getFaqById(req.params.id as string, req.user);
   ApiResponse.sendSuccess(res, 200, "FAQ fetched successfully", result);
 });
 

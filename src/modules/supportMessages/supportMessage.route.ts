@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authGuard, allowRole } from "../../middleware/auth.middleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
+import { rateLimiter } from "../../middleware/rateLimiter.middleware";
 import { supportMessageController } from "./supportMessage.controller";
 import { supportMessageValidation } from "./supportMessage.validation";
 
@@ -10,6 +11,7 @@ const router = Router();
 router.post(
   "/",
   authGuard,
+  rateLimiter(15, 2),
   validateRequest(supportMessageValidation.createSupportMessageSchema),
   supportMessageController.createSupportMessage
 );

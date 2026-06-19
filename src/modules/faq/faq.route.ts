@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authGuard, allowRole } from "../../middleware/auth.middleware";
+import { authGuard, authGuardOptional, allowRole } from "../../middleware/auth.middleware";
 import { role } from "../usersAuth/user.interface";
 import {
   createFaq,
@@ -12,9 +12,9 @@ import {
 
 const router = Router();
 
-// Public route to get FAQs
-router.get("/", getAllFaqs);
-router.get("/:id", getFaqById);
+// Public route to get FAQs (optional auth to see all if admin)
+router.get("/", authGuardOptional, getAllFaqs);
+router.get("/:id", authGuardOptional, getFaqById);
 
 // Admin only routes
 router.use(authGuard, allowRole(role.ADMIN));
