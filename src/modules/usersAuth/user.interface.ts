@@ -48,6 +48,8 @@ export interface IUser extends Document {
   city?: string;
   postalCode?: string;
   country?: string;
+  region?: string;
+  department?: string;
   location?: {
     type: string;
     coordinates: number[];
@@ -103,6 +105,8 @@ export interface UpdateUserPayload {
   city?: string;
   postalCode?: string;
   country?: string;
+  region?: string;
+  department?: string;
   company?: string;
   website?: string;
   profession?: string;

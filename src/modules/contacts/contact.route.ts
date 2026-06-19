@@ -10,6 +10,7 @@ import {
   getByContactType,
   updateContact,
   getContactStats,
+  getLocations,
 } from "./contact.controller";
 import { contactValidation } from "./contact.validation";
 
@@ -19,6 +20,7 @@ router.get("/get-all-contacts", authGuardOptional, getAllContacts);
 router.get("/get-by-type/:contactType", authGuardOptional, getByContactType);
 router.get("/get-single-contact/:contactId", getContactById);
 router.get("/stats", authGuardOptional, getContactStats);
+router.get("/locations", getLocations);
 
 router.use(authGuard, allowRole("admin"));
 

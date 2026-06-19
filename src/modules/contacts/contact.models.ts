@@ -42,6 +42,14 @@ const contactSchema = new Schema<IContact>(
       type: String,
       trim: true,
     },
+    region: {
+      type: String,
+      trim: true,
+    },
+    department: {
+      type: String,
+      trim: true,
+    },
     photo: {
       public_id: String,
       secure_url: String,

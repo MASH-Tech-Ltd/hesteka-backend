@@ -48,6 +48,8 @@ export const userService = {
       search,
       from,
       to,
+      region,
+      department,
       sort,
       sortBy,
       page: pagebody,
@@ -92,6 +94,14 @@ export const userService = {
         { lastName: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
       ];
+    }
+
+    if (region && region !== "all") {
+      filter.region = { $regex: `\\b${region}\\b`, $options: "i" };
+    }
+
+    if (department && department !== "all") {
+      filter.department = { $regex: `\\b${department}\\b`, $options: "i" };
     }
 
     if (from || to) {

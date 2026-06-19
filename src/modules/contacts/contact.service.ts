@@ -56,6 +56,8 @@ export const contactService = {
       search,
       city,
       country,
+      region,
+      department,
       from,
       to,
       sort,
@@ -81,6 +83,8 @@ export const contactService = {
     }
     if (city) filter.city = { $regex: city, $options: "i" };
     if (country) filter.country = { $regex: country, $options: "i" };
+    if (region && region !== "all") filter.region = { $regex: region, $options: "i" };
+    if (department && department !== "all") filter.department = { $regex: department, $options: "i" };
     if (status && status !== "all") filter.status = status;
     if (search) {
       const searchRegex = new RegExp(search as string, "i");
@@ -157,11 +161,13 @@ export const contactService = {
         };
       }
       
-      // Apply city and country filters to the address field for partners
-      if (city || country) {
+      // Apply city, country, region, and department filters to the address field for partners
+      if (city || country || (region && region !== "all") || (department && department !== "all")) {
         const andConditions: any[] = [];
-        if (city) andConditions.push({ address: { $regex: city as string, $options: "i" } });
-        if (country) andConditions.push({ address: { $regex: country as string, $options: "i" } });
+        if (city) andConditions.push({ address: { $regex: `\\b${city}\\b`, $options: "i" } });
+        if (country) andConditions.push({ address: { $regex: `\\b${country}\\b`, $options: "i" } });
+        if (region && region !== "all") andConditions.push({ address: { $regex: `\\b${region}\\b`, $options: "i" } });
+        if (department && department !== "all") andConditions.push({ address: { $regex: `\\b${department}\\b`, $options: "i" } });
         
         if (userFilter.$and) {
           userFilter.$and.push(...andConditions);
@@ -226,11 +232,13 @@ export const contactService = {
       const userFilter: any = { role: role.PARTNERS };
       if (status && status !== "all") userFilter.status = status;
       
-      // Apply city and country filters to the address field for partners
-      if (city || country) {
+      // Apply city, country, region, and department filters to the address field for partners
+      if (city || country || (region && region !== "all") || (department && department !== "all")) {
         const andConditions: any[] = [];
-        if (city) andConditions.push({ address: { $regex: city as string, $options: "i" } });
-        if (country) andConditions.push({ address: { $regex: country as string, $options: "i" } });
+        if (city) andConditions.push({ address: { $regex: `\\b${city}\\b`, $options: "i" } });
+        if (country) andConditions.push({ address: { $regex: `\\b${country}\\b`, $options: "i" } });
+        if (region && region !== "all") andConditions.push({ address: { $regex: `\\b${region}\\b`, $options: "i" } });
+        if (department && department !== "all") andConditions.push({ address: { $regex: `\\b${department}\\b`, $options: "i" } });
         
         if (userFilter.$and) {
           userFilter.$and.push(...andConditions);
@@ -267,6 +275,8 @@ export const contactService = {
             website: 1,
             city: 1,
             country: 1,
+            region: 1,
+            department: 1,
             description: 1,
             createdAt: 1,
             updatedAt: 1,
@@ -293,6 +303,8 @@ export const contactService = {
                   website: 1,
                   city: 1,
                   country: 1,
+                  region: 1,
+                  department: 1,
                   description: 1,
                   facebook: 1,
                   instagram: 1,
@@ -345,6 +357,8 @@ export const contactService = {
       page: pagebody,
       limit: limitbody,
       search,
+      region,
+      department,
       latitude,
       longitude,
       radius,
@@ -371,6 +385,17 @@ export const contactService = {
             $centerSphere: [[Number(longitude), Number(latitude)], rad / 6371],
           },
         };
+      }
+      if (region || department) {
+        const andConditions: any[] = [];
+        if (region && region !== "all") andConditions.push({ address: { $regex: `\\b${region}\\b`, $options: "i" } });
+        if (department && department !== "all") andConditions.push({ address: { $regex: `\\b${department}\\b`, $options: "i" } });
+        
+        if (filter.$and) {
+          filter.$and.push(...andConditions);
+        } else {
+          filter.$and = andConditions;
+        }
       }
       if (search) {
         const searchRegex = new RegExp(search as string, "i");
@@ -408,6 +433,8 @@ export const contactService = {
         postalCode: user.postalCode,
         city: user.city,
         country: user.country,
+        region: user.region,
+        department: user.department,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       }));
@@ -424,6 +451,8 @@ export const contactService = {
     } else {
       const filter: any = { type: contactType };
       if (status && status !== "all") filter.status = status;
+      if (region && region !== "all") filter.region = { $regex: region, $options: "i" };
+      if (department && department !== "all") filter.department = { $regex: department, $options: "i" };
       if (latitude && longitude) {
         const rad = Number(radius) || 10;
         filter.location = {

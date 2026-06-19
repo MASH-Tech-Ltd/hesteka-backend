@@ -37,6 +37,8 @@ export const updateUserSchema = z
       .regex(/^\d{5}$/, "Postal code must be a valid 5-digit French postal code")
       .optional(),
     country: z.string().optional(),
+    region: z.string().optional(),
+    department: z.string().optional(),
     status: statusSchema.optional(),
     image: z.any().optional(),
     website: z.string().url("Invalid website URL").optional().or(z.literal("")),

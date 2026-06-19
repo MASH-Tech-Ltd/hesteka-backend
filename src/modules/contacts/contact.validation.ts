@@ -27,6 +27,8 @@ export const createContactSchema = z
     website: optionalUrl,
     city: optionalString,
     country: optionalString,
+    region: optionalString,
+    department: optionalString,
     latitude: z.preprocess((v) => (v === "" ? undefined : v ? Number(v) : undefined), z.number().min(-90).max(90).optional()),
     longitude: z.preprocess((v) => (v === "" ? undefined : v ? Number(v) : undefined), z.number().min(-180).max(180).optional()),
     status: z.enum(Object.values(ContactStatus) as [string, ...string[]]).optional().or(z.literal("")),

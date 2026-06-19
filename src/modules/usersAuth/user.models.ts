@@ -44,6 +44,16 @@ const userSchema = new Schema<IUser>(
       required: false,
       trim: true,
     },
+    region: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+    department: {
+      type: String,
+      required: false,
+      trim: true,
+    },
     company: {
       type: String,
       required: false,
