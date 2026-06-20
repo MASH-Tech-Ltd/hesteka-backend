@@ -63,7 +63,7 @@ export const notificationService = {
     return notificationModel.findOneAndUpdate(
       { _id: notificationId, user: userId },
       { isRead: true },
-      { new: true }
+      { returnDocument: 'after' }
     );
   },
   

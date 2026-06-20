@@ -12,6 +12,8 @@ import cors from "cors";
 import { notFound } from "./middleware/notFound";
 
 const app = express();
+// Required for express-rate-limit when running behind a reverse proxy
+app.set("trust proxy", 1);
 const server = http.createServer(app);
 
 const allowedOrigins = [

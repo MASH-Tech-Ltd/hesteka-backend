@@ -122,7 +122,7 @@ const updateReportStatus = async (
   const report = await chatReportModel.findByIdAndUpdate(
     reportId,
     { status: payload.status },
-    { new: true },
+    { returnDocument: 'after' },
   );
 
   if (!report) {

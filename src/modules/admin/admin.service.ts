@@ -367,7 +367,7 @@ export const adminService = {
       config = await adminConfigModel.create(payload);
     } else {
       config = await adminConfigModel.findOneAndUpdate({}, payload, {
-        new: true,
+        returnDocument: 'after',
       });
     }
     return config;
@@ -415,7 +415,7 @@ export const adminService = {
       const user = await userModel.findByIdAndUpdate(
         report.author,
         { $inc: { pointsBalance: pointsToAdd } },
-        { session, new: true },
+        { session, returnDocument: 'after' },
       );
 
       if (!user) {

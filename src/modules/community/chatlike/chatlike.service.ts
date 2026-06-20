@@ -37,7 +37,7 @@ const toggleLike = async (
     const updated = await chatModel.findByIdAndUpdate(
       chatId,
       { $inc: { likesCount: -1 } },
-      { new: true },
+      { returnDocument: 'after' },
     );
 
     result = {
@@ -49,7 +49,7 @@ const toggleLike = async (
     const updated = await chatModel.findByIdAndUpdate(
       chatId,
       { $inc: { likesCount: 1 } },
-      { new: true },
+      { returnDocument: 'after' },
     );
 
     result = {

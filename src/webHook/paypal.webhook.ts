@@ -112,7 +112,7 @@ export const paypalWebhookHandler = async (
               captureId,
             },
             { $set: { status: PaymentStatus.COMPLETED } },
-            { new: true, session },
+            { returnDocument: 'after', session },
           );
 
           // fallback — যদি captureId দিয়ে না পাওয়া যায় (Race condition), তবে orderId দিয়ে খুঁজি
@@ -131,7 +131,7 @@ export const paypalWebhookHandler = async (
                 {
                   $set: { status: PaymentStatus.COMPLETED, captureId: captureId },
                 },
-                { new: true, session },
+                { returnDocument: 'after', session },
               );
             }
           }
@@ -209,7 +209,7 @@ export const paypalWebhookHandler = async (
           const payment = await paymentModel.findOneAndUpdate(
             { provider: PaymentProvider.PAYPAL, captureId: capture.id },
             { $set: { status: PaymentStatus.FAILED } },
-            { new: true, session },
+            { returnDocument: 'after', session },
           );
 
           if (payment) {

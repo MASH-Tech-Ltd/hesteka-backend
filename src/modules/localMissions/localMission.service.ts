@@ -378,7 +378,7 @@ export const localMissionService = {
               pointsAwarded: points,
               completedAt: new Date(),
             },
-            { new: true, session },
+            { returnDocument: 'after', session },
           )
           .populate("user", "firstName lastName email profileImage pointsBalance");
 
@@ -390,7 +390,7 @@ export const localMissionService = {
           .findByIdAndUpdate(
             participation.user,
             { $inc: { pointsBalance: points } },
-            { new: true, session },
+            { returnDocument: 'after', session },
           )
           .select("pointsBalance");
 

@@ -105,7 +105,7 @@ export const pointService = {
       .findOneAndUpdate(
         { _id: userId, pointsBalance: { $gte: points } },
         { $inc: { pointsBalance: -points } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .select("pointsBalance")
       .lean();
@@ -141,7 +141,7 @@ export const pointService = {
 
   async updateConfig(payload: UpdatePointConfigPayload) {
     const config = await pointConfigModel.findOneAndUpdate({}, payload, {
-      new: true,
+      returnDocument: 'after',
       upsert: true,
     });
     return config;
@@ -230,7 +230,7 @@ export const pointService = {
       const user = await userModel.findByIdAndUpdate(
         userId,
         { $inc: { pointsBalance: pointsToAward } },
-        { new: true },
+        { returnDocument: 'after' },
       );
 
       if (!user) {

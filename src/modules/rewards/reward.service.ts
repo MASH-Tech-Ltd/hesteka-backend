@@ -197,7 +197,7 @@ export const rewardService = {
         const updatedUser = await userModel.findByIdAndUpdate(
           userId,
           { $inc: { pointsBalance: -reward.points } },
-          { new: true, session },
+          { returnDocument: 'after', session },
         );
 
         if (!updatedUser) throw new CustomError(404, "User not found");
@@ -422,7 +422,7 @@ export const rewardService = {
           const updatedUser = await userModel.findByIdAndUpdate(
             redemption.user,
             { $inc: { pointsBalance: redemption.pointsAtRedemption } },
-            { session, new: true }
+            { session, returnDocument: 'after' }
           );
 
           if (!updatedUser) throw new CustomError(404, "User not found for point refund");
