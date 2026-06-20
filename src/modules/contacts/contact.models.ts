@@ -1,5 +1,5 @@
 import mongoose, { Model, Schema } from "mongoose";
-import { ContactStatus, ContactType, IContact } from "./contact.interface";
+import { ContactStatus, ContactType, IContact, CreationMethod } from "./contact.interface";
 
 const contactSchema = new Schema<IContact>(
   {
@@ -68,6 +68,11 @@ const contactSchema = new Schema<IContact>(
       type: String,
       enum: Object.values(ContactStatus),
       default: ContactStatus.ACTIVE,
+    },
+    creationMethod: {
+      type: String,
+      enum: Object.values(CreationMethod),
+      default: CreationMethod.MANUAL,
     },
   },
   {

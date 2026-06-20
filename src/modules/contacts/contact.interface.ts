@@ -12,6 +12,11 @@ export enum ContactStatus {
   INACTIVE = "inactive",
 }
 
+export enum CreationMethod {
+  MANUAL = "manual",
+  BULK = "bulk",
+}
+
 export interface IContact extends Document {
   name: string;
   type: ContactType;
@@ -33,6 +38,7 @@ export interface IContact extends Document {
     coordinates: number[];
   };
   status: ContactStatus;
+  creationMethod: CreationMethod;
 }
 
 export interface CreateContactPayload {
@@ -50,6 +56,7 @@ export interface CreateContactPayload {
   latitude?: number;
   longitude?: number;
   status?: ContactStatus;
+  creationMethod?: CreationMethod;
 }
 
 export interface UpdateContactPayload extends Partial<CreateContactPayload> { }

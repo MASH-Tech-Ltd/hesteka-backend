@@ -34,6 +34,7 @@ const imageFileFilter = (
     "image/webp",
     "text/csv",
     "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "application/csv",
   ];
   if (!allowedTypes.includes(file.mimetype)) {

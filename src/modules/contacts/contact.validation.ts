@@ -32,6 +32,7 @@ export const createContactSchema = z
     latitude: z.preprocess((v) => (v === "" ? undefined : v ? Number(v) : undefined), z.number().min(-90).max(90).optional()),
     longitude: z.preprocess((v) => (v === "" ? undefined : v ? Number(v) : undefined), z.number().min(-180).max(180).optional()),
     status: z.enum(Object.values(ContactStatus) as [string, ...string[]]).optional().or(z.literal("")),
+    creationMethod: z.enum(["manual", "bulk"]).optional().or(z.literal("")),
     image: z.any().optional(),
   })
   .strict();

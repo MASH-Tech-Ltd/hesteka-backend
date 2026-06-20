@@ -6,6 +6,8 @@ import { ContactStatus, ContactType, CreateContactPayload, UpdateContactPayload 
 import { contactModel } from "./contact.models";
 import { userModel } from "../usersAuth/user.models";
 import { role } from "../usersAuth/user.interface";
+import * as xlsx from "xlsx";
+import * as fs from "fs";
 
 const deleteCloudinaryQuietly = async (publicId?: string): Promise<void> => {
   if (!publicId) return;
@@ -74,6 +76,7 @@ export const contactService = {
     try {
       return await contactModel.create({
         ...rest,
+        creationMethod: "manual", // Explicitly set to manual
         ...(photo ? { photo } : {}),
         ...(location ? { location } : {}),
       });
@@ -81,6 +84,154 @@ export const contactService = {
       await deleteCloudinaryQuietly(photo?.public_id);
       throw error;
     }
+  },
+
+  async bulkUploadContacts(req: Request) {
+    const file = req.file;
+    if (!file) throw new CustomError(400, "No file uploaded");
+
+    const workbook = xlsx.readFile(file.path);
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) throw new CustomError(400, "The uploaded Excel file is empty");
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) throw new CustomError(400, "The requested sheet could not be found");
+    const rows = xlsx.utils.sheet_to_json<any>(sheet);
+
+    // Default processing results
+    const result = {
+      total: rows.length,
+      success: 0,
+      failed: 0,
+      pending: 0, // In synchronous upload, pending might be 0, but included for API structure
+      errors: [] as string[],
+    };
+
+    const contactsToInsert: any[] = [];
+    
+    // Fetch existing identifiers for fast duplicate checking
+    const existingContacts = await contactModel.find({}, { name: 1, email: 1 }).lean();
+    const existingNames = new Set(existingContacts.map(c => c.name?.toLowerCase().trim()));
+    const existingEmails = new Set(existingContacts.map(c => c.email?.toLowerCase().trim()).filter(Boolean));
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      try {
+        // Map excel columns to model fields
+        // We do basic normalization of column names (lowercase, remove spaces)
+        const getVal = (keys: string[]) => {
+          for (const key of Object.keys(row)) {
+            const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+            for (const expected of keys) {
+              if (normalizedKey === expected) return row[key]?.toString().trim();
+            }
+          }
+          return undefined;
+        };
+
+        const name = getVal(["name", "company", "nom", "clinicname", "veterinaryclinic"]);
+        const email = getVal(["email", "mail", "courriel"]);
+        const phone = getVal(["phone", "phonenumber", "telephone", "tel", "contactnumber"]);
+        const address = getVal(["address", "adresse", "location"]);
+        let city = getVal(["city", "ville", "town"]) || "";
+        const country = getVal(["country", "pays"]);
+        const region = getVal(["region", "province", "state"]);
+        const website = getVal(["website", "site", "url"]);
+        const description = getVal(["description", "notes", "about"]);
+        let department = getVal(["department", "departement"]);
+        
+        let zipCode = getVal(["zipcode", "zip", "postalcode", "codepostal"]);
+
+        // If city starts with 5 digits (like "78860 Saint-Nom-la-Bretèche"), extract it
+        const cityMatch = city.match(/^(\d{5})\s+(.*)$/);
+        if (cityMatch) {
+            if (!zipCode) zipCode = cityMatch[1];
+            city = cityMatch[2]; // Leave only the city name
+        }
+        
+        // We will default to extracting the whole zip code into the address if it exists, and using the first 2 chars for department if department is missing.
+        if (zipCode && !department && zipCode.length >= 2) {
+            department = zipCode.substring(0, 2);
+        }
+
+        let typeStr = getVal(["type", "category", "contacttype", "role"]);
+        let type = ContactType.VETERINARIAN; // Default to veterinarian based on file name "veterinary clinics"
+        
+        if (typeStr) {
+          typeStr = typeStr.toLowerCase();
+          if (typeStr.includes("shelter")) type = ContactType.SHELTER;
+          else if (typeStr.includes("csrf")) type = ContactType.CSRF;
+          else if (typeStr.includes("partner")) type = ContactType.PARTNER;
+          else type = ContactType.VETERINARIAN;
+        }
+
+        if (!name) {
+          result.failed++;
+          result.errors.push(`Row ${i + 2}: Missing name`);
+          continue;
+        }
+
+        const normalizedName = name.toLowerCase().trim();
+        const normalizedEmail = email?.toLowerCase().trim();
+
+        // Check for duplicates
+        if (existingNames.has(normalizedName) || (normalizedEmail && existingEmails.has(normalizedEmail))) {
+          result.pending++; // Consider duplicates as "Skipped" / Pending
+          continue;
+        }
+
+        // Register to prevent duplicates within the same file
+        existingNames.add(normalizedName);
+        if (normalizedEmail) existingEmails.add(normalizedEmail);
+
+        let fullAddress = address || "";
+        if (zipCode && !fullAddress.includes(zipCode)) {
+           fullAddress = fullAddress ? `${fullAddress}, ${zipCode}` : zipCode;
+        }
+
+        contactsToInsert.push({
+          name,
+          type,
+          email,
+          phone,
+          address: fullAddress,
+          city,
+          country,
+          region,
+          department,
+          website,
+          description,
+          creationMethod: "bulk",
+          status: ContactStatus.ACTIVE,
+        });
+
+      } catch (error: any) {
+        result.failed++;
+        result.errors.push(`Row ${i + 2}: ${error.message}`);
+      }
+    }
+
+    if (contactsToInsert.length > 0) {
+      try {
+        await contactModel.insertMany(contactsToInsert, { ordered: false });
+        result.success = contactsToInsert.length;
+      } catch (error: any) {
+        // If there is a bulk write error, we can extract details
+        if (error.writeErrors) {
+           result.success = contactsToInsert.length - error.writeErrors.length;
+           result.failed += error.writeErrors.length;
+           error.writeErrors.forEach((e: any) => result.errors.push(`Bulk Insert Error: ${e.errmsg}`));
+        } else {
+           throw error;
+        }
+      }
+    }
+
+    // Cleanup the uploaded file
+    if (file.path && fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+
+    return result;
   },
 
   async getAllContacts(req: Request) {
@@ -101,6 +252,7 @@ export const contactService = {
       longitude,
       radius, // in km
       status: queryStatus,
+      creationMethod,
     } = req.query;
 
     const isAdmin = req.user?.role === role.ADMIN;
@@ -118,6 +270,14 @@ export const contactService = {
     }
     applyLocationFilters(filter, { city, country, region, department });
     if (status && status !== "all") filter.status = status;
+    if (creationMethod && creationMethod !== "all") {
+      if (creationMethod === "manual") {
+        filter.$and = filter.$and || [];
+        filter.$and.push({ $or: [{ creationMethod: "manual" }, { creationMethod: { $exists: false } }] });
+      } else {
+        filter.creationMethod = creationMethod;
+      }
+    }
     if (search) {
       const searchRegex = new RegExp(search as string, "i");
       filter.$or = [
@@ -186,6 +346,7 @@ export const contactService = {
       // ONLY partners (existing logic)
       const userFilter: any = { role: role.PARTNERS };
       if (status && status !== "all") userFilter.status = status;
+      if (creationMethod === "bulk") userFilter._id = null;
       if (latitude && longitude) {
         const rad = Number(radius) || 10;
         userFilter.location = {
@@ -234,6 +395,7 @@ export const contactService = {
         country: user.country,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+        creationMethod: "manual",
       }));
       totalCount = total;
     } else if (shouldFetchStandardContacts && !shouldFetchPartners) {
@@ -251,6 +413,7 @@ export const contactService = {
       
       const userFilter: any = { role: role.PARTNERS };
       if (status && status !== "all") userFilter.status = status;
+      if (creationMethod === "bulk") userFilter._id = null;
       
       // Apply city, country, region, and department filters to the address field for partners
       applyLocationFilters(userFilter, { city, country, region, department }, true);
@@ -295,6 +458,7 @@ export const contactService = {
         department: user.department,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+        creationMethod: "manual",
       }));
 
       const allMerged = [...contacts, ...mappedUsers];
@@ -346,6 +510,7 @@ export const contactService = {
       longitude,
       radius,
       status: queryStatus,
+      creationMethod,
     } = req.query;
 
     const isAdmin = req.user?.role === role.ADMIN;
@@ -360,6 +525,9 @@ export const contactService = {
       const filter: any = { role: role.PARTNERS };
       if (status && status !== "all") {
         filter.status = status;
+      }
+      if (creationMethod === "bulk") {
+        filter._id = null;
       }
       if (latitude && longitude) {
         const rad = Number(radius) || 10;
@@ -411,6 +579,7 @@ export const contactService = {
         department: user.department,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+        creationMethod: "manual",
       }));
 
       return {
@@ -425,6 +594,14 @@ export const contactService = {
     } else {
       const filter: any = { type: contactType };
       if (status && status !== "all") filter.status = status;
+      if (creationMethod && creationMethod !== "all") {
+        if (creationMethod === "manual") {
+          filter.$and = filter.$and || [];
+          filter.$and.push({ $or: [{ creationMethod: "manual" }, { creationMethod: { $exists: false } }] });
+        } else {
+          filter.creationMethod = creationMethod;
+        }
+      }
       applyLocationFilters(filter, { region, department });
 
       if (latitude && longitude) {

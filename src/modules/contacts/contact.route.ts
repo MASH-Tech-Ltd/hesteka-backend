@@ -31,6 +31,13 @@ router.post(
   createContact,
 );
 
+router.post(
+  "/bulk-upload",
+  upload.single("file"),
+  // Note: we can add validation for file presence if needed
+  require("./contact.controller").bulkUploadContacts
+);
+
 router.patch(
   "/update-contact/:contactId",
   upload.single("image"),

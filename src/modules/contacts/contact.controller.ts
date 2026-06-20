@@ -8,6 +8,11 @@ export const createContact = asyncHandler(async (req: Request, res: Response) =>
   ApiResponse.sendSuccess(res, 201, "Contact created successfully", contact);
 });
 
+export const bulkUploadContacts = asyncHandler(async (req: Request, res: Response) => {
+  const result = await contactService.bulkUploadContacts(req);
+  ApiResponse.sendSuccess(res, 201, "Bulk upload processed", result);
+});
+
 export const getAllContacts = asyncHandler(async (req: Request, res: Response) => {
   const { contacts, meta } = await contactService.getAllContacts(req);
   ApiResponse.sendSuccess(res, 200, "Contacts fetched successfully", contacts, meta);
