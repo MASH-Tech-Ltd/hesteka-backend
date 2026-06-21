@@ -357,7 +357,7 @@ export const rewardService = {
     const [redemptions, total] = await Promise.all([
       redemptionModel
         .find(filter)
-        .populate("user", "firstName lastName email phone address")
+        .populate("user", "firstName lastName email phone address provider")
         .populate("rewardItem")
         .sort({ [sortField]: sortOrder })
         .skip(skip)

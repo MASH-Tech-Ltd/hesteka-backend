@@ -75,7 +75,7 @@ export const supportMessageService = {
 
     const [messages, total] = await Promise.all([
       SupportMessageModel.find(filter)
-        .populate("user", "firstName lastName email")
+        .populate("user", "firstName lastName email profileImage")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

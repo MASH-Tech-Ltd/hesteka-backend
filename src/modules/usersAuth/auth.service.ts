@@ -404,10 +404,7 @@ export const authService = {
         lastName: payload.family_name || "User",
         email: payload.email,
         isVerified: true, // Google emails are already verified
-        address: "Not Set", 
-        company: "Not Set", 
         provider: authProvider.GOOGLE,
-        phone: `Not Set (${payload.sub})`, 
       });
     } else {
       // Update provider if not set (optional migration)
@@ -476,10 +473,7 @@ export const authService = {
         lastName: lastName || "User",
         email: email,
         isVerified: true,
-        address: "Not Set",
-        company: "Not Set",
         provider: authProvider.APPLE,
-        phone: `Not Set (${appleId})`,
       });
     } else {
       if (!user.provider) {

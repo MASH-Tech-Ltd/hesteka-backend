@@ -22,12 +22,13 @@ const userSchema = new Schema<IUser>(
     },
     phone: {
       type: String,
-      required: true,
+      required: false,
       unique: true,
+      sparse: true,
     },
     address: {
       type: String,
-      required: true,
+      required: false,
     },
     city: {
       type: String,

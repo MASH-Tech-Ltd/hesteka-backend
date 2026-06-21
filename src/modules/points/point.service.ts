@@ -296,5 +296,72 @@ export const pointService = {
       transaction,
     };
   },
+
+  async getAllPointHistory(req: Request) {
+    const { page: pagebody, limit: limitbody, search, type, source, sort, sortBy, from, to } = req.query;
+    const { page, limit, skip } = paginationHelper(pagebody as string, limitbody as string);
+    const filter: any = {};
+
+    if (type && type !== "all") {
+      filter.type = type;
+    }
+    
+    if (source && source !== "all") {
+      filter.source = source;
+    }
+
+    if (from || to) {
+      filter.createdAt = {};
+      if (from) {
+        const fromDate = new Date(from as string);
+        fromDate.setHours(0, 0, 0, 0);
+        filter.createdAt.$gte = fromDate;
+      }
+      if (to) {
+        const toDate = new Date(to as string);
+        toDate.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = toDate;
+      }
+    }
+
+    if (search) {
+      const searchRegex = new RegExp(search as string, "i");
+      const users = await userModel.find({
+        $or: [{ firstName: searchRegex }, { lastName: searchRegex }, { email: searchRegex }],
+      }).select("_id");
+      const userIds = users.map((u) => u._id);
+      filter.user = { $in: userIds };
+    }
+
+    const sortFields: Record<string, string> = {
+      date: "createdAt",
+      points: "points",
+      type: "type",
+    };
+    const sortByValue = typeof sortBy === "string" ? sortBy : "date";
+    const sortField = sortFields[sortByValue.toLowerCase()] || "createdAt";
+    const sortOrder = sort === "ascending" ? 1 : -1;
+
+    const [transactions, total] = await Promise.all([
+      pointTransactionModel
+        .find(filter)
+        .populate("user", "firstName lastName email profileImage logo")
+        .sort({ [sortField]: sortOrder })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      pointTransactionModel.countDocuments(filter),
+    ]);
+
+    return {
+      transactions,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  },
 };
 

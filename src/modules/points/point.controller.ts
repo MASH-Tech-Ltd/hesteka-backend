@@ -33,6 +33,11 @@ const assignCustomPoints = asyncHandler(async (req: Request, res: Response) => {
   return ApiResponse.sendSuccess(res, 200, "Custom points assigned successfully", result);
 });
 
+const getAllPointHistory = asyncHandler(async (req: Request, res: Response) => {
+  const result = await pointService.getAllPointHistory(req);
+  return ApiResponse.sendSuccess(res, 200, "Point history fetched successfully", result);
+});
+
 export const pointController = {
   getMyPoints,
   redeemPoints,
@@ -40,4 +45,5 @@ export const pointController = {
   updatePointConfig,
   getPointStats,
   assignCustomPoints,
+  getAllPointHistory,
 };
