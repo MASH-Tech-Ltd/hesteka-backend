@@ -12,6 +12,7 @@ export enum PointTransactionSource {
   PHYSICAL_DONATION = "physical_donation",
   ONLINE_DONATION = "online_donation",
   ANIMAL_REPORT = "animal_report",
+  ADMIN_CUSTOM = "admin_custom",
 }
 
 export interface IPointTransaction extends Document {
@@ -24,6 +25,12 @@ export interface IPointTransaction extends Document {
 }
 
 export interface RedeemPointsPayload {
+  points: number;
+  note?: string;
+}
+
+export interface AssignCustomPointsPayload {
+  userId: string;
   points: number;
   note?: string;
 }

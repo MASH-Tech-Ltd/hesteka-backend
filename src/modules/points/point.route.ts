@@ -19,5 +19,12 @@ router.post(
 router.get("/admin/config", authGuard, allowRole("admin"), pointController.getPointConfig);
 router.patch("/admin/config", authGuard, allowRole("admin"), pointController.updatePointConfig);
 router.get("/admin/stats", authGuard, allowRole("admin"), pointController.getPointStats);
+router.post(
+  "/admin/assign-custom-points",
+  authGuard,
+  allowRole("admin"),
+  validateRequest(pointValidation.assignCustomPointsSchema),
+  pointController.assignCustomPoints
+);
 
 export const pointRoute = router;

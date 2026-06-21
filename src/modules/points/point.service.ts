@@ -10,6 +10,9 @@ import {
 import { pointTransactionModel } from "./point.models";
 import { pointConfigModel } from "./pointConfig.models";
 import { UpdatePointConfigPayload } from "./pointConfig.interface";
+import { AssignCustomPointsPayload } from "./point.interface";
+import { notificationService } from "../notifications/notification.service";
+import { NotificationType } from "../notifications/notification.interface";
 
 export const pointService = {
   async getMyPoints(req: Request) {
@@ -257,4 +260,41 @@ export const pointService = {
       throw error;
     }
   },
+
+  async assignCustomPoints(req: Request) {
+    const { userId, points, note } = req.body as AssignCustomPointsPayload;
+
+    const user = await userModel.findById(userId);
+    if (!user) {
+      throw new CustomError(404, "User not found");
+    }
+
+    const updatedUser = await userModel.findByIdAndUpdate(
+      userId,
+      { $inc: { pointsBalance: points } },
+      { returnDocument: 'after' }
+    );
+
+    const transaction = await pointTransactionModel.create({
+      user: userId,
+      type: PointTransactionType.EARN,
+      source: PointTransactionSource.ADMIN_CUSTOM,
+      points,
+      note: note || `Points customisés attribués par l'administrateur`,
+    });
+
+    // Notify user
+    notificationService.notifySingleUser(
+      userId,
+      "Points reçus !",
+      `Vous avez reçu ${points} points de la part de l'administrateur.`,
+      NotificationType.POINTS_EARNED
+    ).catch((err) => console.error("Notification Error:", err));
+
+    return {
+      balance: updatedUser?.pointsBalance || 0,
+      transaction,
+    };
+  },
 };
+
