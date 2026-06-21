@@ -37,7 +37,7 @@ export const registerPartnerSchema = registerUserSchema
     city: z.string().min(1, "City is required"),
     postalCode: z
       .string()
-      .regex(/^\d{5}$/, "Postal code must be a valid 5-digit French postal code"),
+      .regex(/^[A-Za-z0-9\s\-]{3,10}$/, "Invalid postal code format"),
     country: z.string().min(1, "Country is required").default("France").optional(),
     latitude: optionalCoordinate("Latitude", -90, 90),
     longitude: optionalCoordinate("Longitude", -180, 180),
