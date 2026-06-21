@@ -158,11 +158,11 @@ export const friendService = {
         { requester: userId, recipient: targetUserId },
         { requester: targetUserId, recipient: userId },
       ],
-      status: FriendStatus.ACCEPTED,
+      status: { $in: [FriendStatus.ACCEPTED, FriendStatus.PENDING] },
     });
 
     if (!relation) {
-      throw new CustomError(404, "Friendship not found");
+      throw new CustomError(404, "Relationship not found");
     }
 
     await relation.deleteOne();
