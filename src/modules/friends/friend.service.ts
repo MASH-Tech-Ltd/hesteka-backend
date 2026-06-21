@@ -54,7 +54,7 @@ export const friendService = {
           recipientId,
           "New Friend Request",
           `${requesterName} sent you a friend request.`,
-          NotificationType.SYSTEM
+          NotificationType.FRIEND_REQUEST
         ).catch(err => console.error("Error sending friend request notification:", err));
 
         return existingRelation;
@@ -75,7 +75,7 @@ export const friendService = {
       recipientId,
       "New Friend Request",
       `${requesterName} sent you a friend request.`,
-      NotificationType.SYSTEM
+      NotificationType.FRIEND_REQUEST
     ).catch(err => console.error("Error sending friend request notification:", err));
 
     return newRequest;
@@ -107,7 +107,7 @@ export const friendService = {
       request.requester.toString(),
       "Friend Request Accepted",
       `${acceptorName} accepted your friend request.`,
-      NotificationType.SYSTEM
+      NotificationType.FRIEND_ACCEPT
     ).catch(err => console.error("Error sending friend accept notification:", err));
 
     return request;
