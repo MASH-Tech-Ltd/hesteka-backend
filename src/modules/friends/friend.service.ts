@@ -5,10 +5,13 @@ import { FriendStatus } from "./friend.interface";
 import { userModel } from "../usersAuth/user.models";
 import { Types } from "mongoose";
 import { getIo } from "../../socket/server";
+import { notificationService } from "../notifications/notification.service";
+import { NotificationType } from "../notifications/notification.interface";
 
 export const friendService = {
   async sendFriendRequest(req: Request) {
-    const requesterId = req.user?._id as string;
+    const user = req.user as any;
+    const requesterId = user?._id as string;
     const recipientId = req.params.userId as string;
 
     if (requesterId.toString() === recipientId) {
@@ -44,6 +47,16 @@ export const friendService = {
         await existingRelation.save();
         
         getIo().to(recipientId).emit("friend_request_received", existingRelation);
+        
+        // Send Push & In-app Notification
+        const requesterName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+        notificationService.notifySingleUser(
+          recipientId,
+          "New Friend Request",
+          `${requesterName} sent you a friend request.`,
+          NotificationType.FRIEND_REQUEST
+        ).catch(err => console.error("Error sending friend request notification:", err));
+
         return existingRelation;
       }
     }
@@ -55,11 +68,22 @@ export const friendService = {
     });
 
     getIo().to(recipientId).emit("friend_request_received", newRequest);
+
+    // Send Push & In-app Notification
+    const requesterName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+    notificationService.notifySingleUser(
+      recipientId,
+      "New Friend Request",
+      `${requesterName} sent you a friend request.`,
+      NotificationType.FRIEND_REQUEST
+    ).catch(err => console.error("Error sending friend request notification:", err));
+
     return newRequest;
   },
 
   async acceptFriendRequest(req: Request) {
-    const userId = req.user?._id as string;
+    const user = req.user as any;
+    const userId = user?._id as string;
     const requestId = req.params.requestId as string;
 
     const request = await FriendModel.findOne({
@@ -76,6 +100,16 @@ export const friendService = {
     await request.save();
     
     getIo().to(request.requester.toString()).emit("friend_request_accepted", request);
+
+    // Send Push & In-app Notification
+    const acceptorName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+    notificationService.notifySingleUser(
+      request.requester.toString(),
+      "Friend Request Accepted",
+      `${acceptorName} accepted your friend request.`,
+      NotificationType.FRIEND_ACCEPT
+    ).catch(err => console.error("Error sending friend accept notification:", err));
+
     return request;
   },
 
@@ -158,11 +192,11 @@ export const friendService = {
         { requester: userId, recipient: targetUserId },
         { requester: targetUserId, recipient: userId },
       ],
-      status: FriendStatus.ACCEPTED,
+      status: { $in: [FriendStatus.ACCEPTED, FriendStatus.PENDING] },
     });
 
     if (!relation) {
-      throw new CustomError(404, "Friendship not found");
+      throw new CustomError(404, "Relationship not found");
     }
 
     await relation.deleteOne();
@@ -176,7 +210,7 @@ export const friendService = {
     const friends = await FriendModel.find({
       $or: [{ requester: userId }, { recipient: userId }],
       status: FriendStatus.ACCEPTED,
-    }).populate("requester recipient", "firstName lastName email image");
+    }).populate("requester recipient", "firstName lastName email image profileImage");
 
     return friends.map((f: any) => {
       const friend = f.requester._id.toString() === userId.toString() ? f.recipient : f.requester;
@@ -189,7 +223,7 @@ export const friendService = {
     return await FriendModel.find({
       recipient: userId,
       status: FriendStatus.PENDING,
-    }).populate("requester", "firstName lastName email image");
+    }).populate("requester", "firstName lastName email image profileImage");
   },
 
   async searchUsers(req: Request) {
@@ -204,7 +238,7 @@ export const friendService = {
         { lastName: searchRegex },
         { email: searchRegex }
       ]
-    }).select("firstName lastName email image").limit(20);
+    }).select("firstName lastName email image profileImage").limit(20);
 
     const relations = await FriendModel.find({
       $or: [{ requester: userId }, { recipient: userId }]

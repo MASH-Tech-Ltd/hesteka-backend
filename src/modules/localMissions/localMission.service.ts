@@ -20,6 +20,7 @@ import { localMissionModel } from "./localMission.models";
 import { localMissionParticipationModel } from "./localMissionParticipation.models";
 import { notificationService } from "../notifications/notification.service";
 import { NotificationType } from "../notifications/notification.interface";
+import { mailer } from "../../helpers/nodeMailer";
 
 const partnerPopulate = "firstName lastName email profileImage company";
 
@@ -312,19 +313,110 @@ export const localMissionService = {
     });
     if (!mission) throw new CustomError(404, "Active local mission not found");
 
+    const isEnglish = (req.headers["accept-language"] || "fr")
+      .toLowerCase()
+      .startsWith("en");
+
     try {
       const participation = await localMissionParticipationModel.create({
         user: userId,
         mission: mission._id,
       });
 
+      const populatedMission = await mission.populate("partner", partnerPopulate);
+      const user = await userModel.findById(userId);
+
+      if (user && populatedMission) {
+        const partner = populatedMission.partner as any;
+
+        const partnerName = partner.company || (partner.firstName + " " + partner.lastName);
+
+        // Generate email template based on language
+        const emailTemplate = isEnglish
+          ? `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+              <h2 style="color: #BA4A22;">Registration Confirmation</h2>
+              <p>Hello <strong>${user.firstName}</strong>,</p>
+              <p>Thank you for your commitment! Your enrollment in the local mission <strong>${populatedMission.title}</strong> has been successfully registered.</p>
+              <p><strong>Mission Details:</strong></p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="8" border="0" style="background-color:#f9fafb; border-radius:6px; border:1px solid #eef2f7;">
+                <tr><td><strong>Organizer:</strong></td><td>${partnerName}</td></tr>
+                <tr><td><strong>Address:</strong></td><td>${populatedMission.address}</td></tr>
+                <tr><td><strong>Duration:</strong></td><td>${populatedMission.duration}</td></tr>
+                <tr><td><strong>Points to earn:</strong></td><td>${populatedMission.points || 0} pts</td></tr>
+              </table>
+              <p style="margin-top:20px;">The mission organizer has been notified of your registration. They will contact you if necessary to coordinate your participation.</p>
+              <p>Thank you for advancing great causes with HESTEKA!</p>
+              <p style="margin-top:25px; border-top:1px solid #eef2f7; padding-top:15px; font-size:12px; color:#9ca3af;">HESTEKA Team</p>
+            </div>
+          `
+          : `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+              <h2 style="color: #BA4A22;">Confirmation d'inscription</h2>
+              <p>Bonjour <strong>${user.firstName}</strong>,</p>
+              <p>Merci pour votre engagement ! Votre inscription à la mission locale <strong>${populatedMission.title}</strong> a bien été enregistrée.</p>
+              <p><strong>Détails de la mission :</strong></p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="8" border="0" style="background-color:#f9fafb; border-radius:6px; border:1px solid #eef2f7;">
+                <tr><td><strong>Organisateur :</strong></td><td>${partnerName}</td></tr>
+                <tr><td><strong>Adresse :</strong></td><td>${populatedMission.address}</td></tr>
+                <tr><td><strong>Durée :</strong></td><td>${populatedMission.duration}</td></tr>
+                <tr><td><strong>Points à gagner :</strong></td><td>${populatedMission.points || 0} pts</td></tr>
+              </table>
+              <p style="margin-top:20px;">L'organisateur de la mission a été informé de votre inscription. Il vous contactera si nécessaire pour coordonner votre participation.</p>
+              <p>Merci de faire avancer de belles causes avec HESTEKA !</p>
+              <p style="margin-top:25px; border-top:1px solid #eef2f7; padding-top:15px; font-size:12px; color:#9ca3af;">L'équipe HESTEKA</p>
+            </div>
+          `;
+
+        const subject = isEnglish
+          ? `Mission Registration Confirmation: ${populatedMission.title}`
+          : `Confirmation d'inscription à la mission : ${populatedMission.title}`;
+
+        mailer({
+          email: user.email,
+          subject,
+          template: emailTemplate,
+        }).catch((err) => console.error("[Mailer] Failed to send mission confirmation email to user:", err));
+
+        // User in-app notification
+        const userNotifTitle = isEnglish ? "Registration Registered" : "Inscription enregistrée";
+        const userNotifBody = isEnglish
+          ? `Your registration for the mission "${populatedMission.title}" has been successfully registered.`
+          : `Votre inscription à la mission "${populatedMission.title}" a été enregistrée avec succès.`;
+
+        notificationService.notifySingleUser(
+          user._id.toString(),
+          userNotifTitle,
+          userNotifBody,
+          NotificationType.SYSTEM
+        ).catch((err) => console.error("[Notification] Failed to notify user:", err));
+
+        // Partner in-app notification
+        const partnerNotifTitle = isEnglish ? "New Participant!" : "Nouveau participant !";
+        const partnerNotifBody = isEnglish
+          ? `The user "${user.firstName} ${user.lastName}" has registered for your mission "${populatedMission.title}".`
+          : `L'utilisateur "${user.firstName} ${user.lastName}" s'est inscrit à votre mission "${populatedMission.title}".`;
+
+        notificationService.notifySingleUser(
+          partner._id.toString(),
+          partnerNotifTitle,
+          partnerNotifBody,
+          NotificationType.SYSTEM
+        ).catch((err) => console.error("[Notification] Failed to notify partner:", err));
+      }
+
       return {
-        mission: await mission.populate("partner", partnerPopulate),
+        mission: populatedMission,
         participation,
       };
     } catch (error: any) {
       if (error?.code === 11000) {
-        throw new CustomError(409, "You already joined this local mission");
+        throw new CustomError(
+          409,
+          isEnglish
+            ? "You already joined this local mission"
+            : "Vous avez déjà rejoint cette mission locale"
+        );
       }
       throw error;
     }
