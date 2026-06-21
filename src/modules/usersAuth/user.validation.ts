@@ -34,7 +34,7 @@ export const updateUserSchema = z
     city: z.string().optional(),
     postalCode: z
       .string()
-      .regex(/^\d{5}$/, "Postal code must be a valid 5-digit French postal code")
+      .regex(/^[A-Za-z0-9\s\-]{3,10}$/, "Invalid postal code format")
       .optional(),
     country: z.string().optional(),
     region: z.string().optional(),
