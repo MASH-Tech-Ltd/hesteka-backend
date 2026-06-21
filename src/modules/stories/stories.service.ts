@@ -138,9 +138,11 @@ const getLocalStories = async (query: GetStoriesQuery) => {
     radiusKm!,
   );
 
+  const baseFilter = user ? { $or: [geoFilter, { user }] } : geoFilter;
+
   // Only fetch non-expired stories (TTL should handle this, but safety check)
   const filter = {
-    ...geoFilter,
+    ...baseFilter,
     expiresAt: { $gt: new Date() },
   };
 

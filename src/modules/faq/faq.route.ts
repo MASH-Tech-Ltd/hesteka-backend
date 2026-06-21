@@ -9,6 +9,7 @@ import {
   deleteFaq,
   reorderFaqs
 } from "./faq.controller";
+import { upload } from "../../middleware/multer.midleware";
 
 const router = Router();
 
@@ -18,9 +19,9 @@ router.get("/:id", authGuardOptional, getFaqById);
 
 // Admin only routes
 router.use(authGuard, allowRole(role.ADMIN));
-router.post("/", createFaq);
+router.post("/", upload.single("image"), createFaq);
 router.patch("/reorder", reorderFaqs);
-router.patch("/:id", updateFaq);
+router.patch("/:id", upload.single("image"), updateFaq);
 router.delete("/:id", deleteFaq);
 
 export const faqRoute = router;

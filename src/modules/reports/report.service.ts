@@ -320,6 +320,13 @@ export const reportService = {
       reportModel.countDocuments(filter),
     ]);
 
+    // Manually filter out child comments from the main comments array
+      reports.forEach((report: any) => {
+        if (report.comments && Array.isArray(report.comments)) {
+          report.comments = report.comments.filter((c: any) => !c.parent);
+        }
+      });
+
     return {
       reports,
       meta: {
@@ -480,6 +487,13 @@ export const reportService = {
       reportModel.countDocuments(filter),
     ]);
 
+    // Manually filter out child comments from the main comments array
+    reports.forEach((report: any) => {
+      if (report.comments && Array.isArray(report.comments)) {
+        report.comments = report.comments.filter((c: any) => !c.parent);
+      }
+    });
+
     return {
       reports,
       meta: {
@@ -503,12 +517,17 @@ export const reportService = {
           { path: "author", select: "firstName lastName profileImage" },
           { path: "replies", select: "-__v", populate: { path: "author", select: "firstName lastName profileImage" } },
           { path: "likes", select: "firstName lastName profileImage" }
-
         ]
       })
+      .lean();
 
     if (!report) {
       throw new CustomError(404, "Report not found");
+    }
+
+    // Manually filter out child comments
+    if (report.comments && Array.isArray(report.comments)) {
+      report.comments = report.comments.filter((c: any) => !c.parent);
     }
 
     return report;
@@ -612,6 +631,11 @@ export const reportService = {
 
     await Promise.all(oldPublicIdsToDelete.map(deleteCloudinaryQuietly));
 
+    try {
+      const io = getIo();
+      io.emit("report_updated", updatedReport);
+    } catch (err) {}
+
     return updatedReport;
   },
 
@@ -659,6 +683,12 @@ export const reportService = {
           }
         }),
       );
+
+      try {
+        const io = getIo();
+        io.emit("report_deleted", { reportId });
+      } catch (err) {}
+
       return true;
     } catch (error) {
       await session.abortTransaction();

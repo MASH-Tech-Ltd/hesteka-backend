@@ -5,6 +5,9 @@ import CustomError from "../../helpers/CustomError";
 import { uploadCloudinary, deleteCloudinary } from "../../helpers/cloudinary";
 import { IComment } from "./comment.interface";
 import { reportModel } from "../reports/report.models";
+import { notificationService } from "../notifications/notification.service";
+import { NotificationType } from "../notifications/notification.interface";
+import { userModel } from "../usersAuth/user.models";
 
 const getCommentReportId = (comment: IComment): string => comment.report.toString();
 
@@ -26,6 +29,7 @@ export const commentService = {
     const publicIdsToDelete: string[] = [];
     try {
       const authorId = req.user?._id;
+      if (!authorId) throw new CustomError(401, "Unauthorized");
       const { content, reportId, parentId } = req.body;
       const image = req.file;
 
@@ -78,6 +82,22 @@ export const commentService = {
 
       // Populate author before returning (after commit is fine)
       await newComment.populate("author", "firstName lastName profileImage");
+
+      // Notifications
+      if (report.author.toString() !== authorId.toString()) {
+        const commenter = await userModel.findById(authorId).select("firstName lastName").lean();
+        const commenterName = commenter ? `${commenter.firstName} ${commenter.lastName}`.trim() : "Quelqu'un";
+        const title = "Nouveau commentaire";
+        const bodyMsg = `${commenterName} a commenté votre signalement "${report.title || report.animalName || 'sans titre'}".`;
+        
+        notificationService.notifySingleUser(
+          report.author.toString(),
+          title,
+          bodyMsg,
+          NotificationType.NEW_COMMENT
+        ).catch(err => console.error("Comment notification error:", err));
+      }
+
       return newComment;
     } catch (error) {
       await session.abortTransaction();
@@ -93,6 +113,7 @@ export const commentService = {
     session.startTransaction();
     try {
       const authorId = req.user?._id;
+      if (!authorId) throw new CustomError(401, "Unauthorized");
       const { commentId: parentId } = req.params;
       const { content, reportId } = req.body;
       const image = req.file;
@@ -134,17 +155,29 @@ export const commentService = {
         throw new CustomError(500, "Failed to create reply");
       }
 
-      // Push ID to report
-      await reportModel.findByIdAndUpdate(
-        reportId,
-        { $push: { comments: newReply._id } },
-        { session }
-      );
+      // We DO NOT push reply ID to report.comments
+      // Replies are tracked dynamically via the "replies" virtual on the parent comment.
 
       await session.commitTransaction();
 
       // Populate author before returning
       await newReply.populate("author", "firstName lastName profileImage");
+
+      // Notifications
+      if (parentComment.author.toString() !== authorId.toString()) {
+        const replier = await userModel.findById(authorId).select("firstName lastName").lean();
+        const replierName = replier ? `${replier.firstName} ${replier.lastName}`.trim() : "Quelqu'un";
+        const title = "Nouvelle réponse";
+        const bodyMsg = `${replierName} a répondu à votre commentaire.`;
+        
+        notificationService.notifySingleUser(
+          parentComment.author.toString(),
+          title,
+          bodyMsg,
+          NotificationType.NEW_REPLY
+        ).catch(err => console.error("Reply notification error:", err));
+      }
+
       return newReply;
     } catch (error) {
       await session.abortTransaction();
@@ -221,12 +254,7 @@ export const commentService = {
         }
         await child.deleteOne({ session });
         
-        // Pull each child from report
-        await reportModel.findByIdAndUpdate(
-          child.report,
-          { $pull: { comments: child._id } },
-          { session }
-        );
+        // We do not pull child from report because child replies are not in report.comments
       }
 
       // 2. Delete this reply's image from Cloudinary (Happens outside DB transaction, but safe enough)
@@ -237,12 +265,7 @@ export const commentService = {
       // 3. Delete this reply document
       await reply.deleteOne({ session });
 
-      // 4. Pull from report
-      await reportModel.findByIdAndUpdate(
-        reply.report,
-        { $pull: { comments: replyId } },
-        { session }
-      );
+      // We do not pull this reply from report because replies are not in report.comments
 
       await session.commitTransaction();
       await Promise.all(publicIdsToDelete.map(deleteCloudinaryQuietly));
@@ -371,12 +394,7 @@ export const commentService = {
         // Delete the reply document
         await reply.deleteOne({ session });
         
-        // Pull each reply from report comments array
-        await reportModel.findByIdAndUpdate(
-          reply.report,
-          { $pull: { comments: reply._id } },
-          { session }
-        );
+        // Pull each reply from report comments array? No, replies are not in report.comments
       }
 
       // 2. Delete parent comment image

@@ -441,6 +441,19 @@ export const adminService = {
       await report.save({ session });
 
       await session.commitTransaction();
+
+      // Fire & Forget Notification
+      import("../notifications/notification.service").then(({ notificationService }) => {
+        import("../notifications/notification.interface").then(({ NotificationType }) => {
+          notificationService.notifySingleUser(
+            report.author.toString(),
+            "Points approuvés !",
+            `Félicitations ! Vous avez gagné ${pointsToAdd} points pour votre signalement "${report.title || report.animalName}".`,
+            NotificationType.POINTS_EARNED
+          ).catch((err) => console.error("Notification Error:", err));
+        });
+      });
+
       return {
         pointsAwarded: pointsToAdd,
         newBalance: user.pointsBalance,

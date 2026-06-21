@@ -207,9 +207,11 @@ const getLocalChat = async (query: GetLocalChatQuery) => {
     radiusKm!,
   );
 
+  const filter = user ? { $or: [geoFilter, { user }] } : geoFilter;
+
   const [messages, total] = await Promise.all([
     chatModel
-      .find(geoFilter)
+      .find(filter)
       .populate("user", "firstName lastName profileImage")
       .populate({
         path: "replyTo",
@@ -223,7 +225,7 @@ const getLocalChat = async (query: GetLocalChatQuery) => {
       .skip(pagination.skip)
       .limit(pagination.limit)
       .lean(),
-    chatModel.countDocuments(geoFilter),
+    chatModel.countDocuments(filter),
   ]);
 
   const chatIds = messages.map((msg) => msg._id);

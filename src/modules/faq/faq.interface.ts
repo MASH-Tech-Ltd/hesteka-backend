@@ -15,7 +15,14 @@ export interface IFaqContent {
 }
 
 export interface IFaq extends Document {
-  category: string;
+  category: {
+    english: string;
+    french: string;
+  };
+  image: {
+    publicId: string;
+    secureUrl: string;
+  };
   contentsArray: IFaqContent[];
   order: number;
   isActive: boolean;

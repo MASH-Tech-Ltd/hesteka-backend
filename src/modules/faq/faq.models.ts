@@ -17,7 +17,14 @@ const faqContentSchema = new Schema<IFaqContent>({
 
 const faqSchema = new Schema<IFaq>(
   {
-    category: { type: String, required: true, unique: true },
+    category: {
+      english: { type: String, required: true },
+      french: { type: String, required: true }
+    },
+    image: {
+      publicId: { type: String },
+      secureUrl: { type: String }
+    },
     contentsArray: {
       type: [faqContentSchema],
       required: true,

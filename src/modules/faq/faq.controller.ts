@@ -4,7 +4,7 @@ import ApiResponse from "../../utils/apiResponse";
 import { faqService } from "./faq.service";
 
 export const createFaq = asyncHandler(async (req: Request, res: Response) => {
-  const result = await faqService.createFaq(req.body);
+  const result = await faqService.createFaq(req);
   ApiResponse.sendSuccess(res, 201, "FAQ created successfully", result);
 });
 
@@ -19,7 +19,7 @@ export const getFaqById = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const updateFaq = asyncHandler(async (req: Request, res: Response) => {
-  const result = await faqService.updateFaq(req.params.id as string, req.body);
+  const result = await faqService.updateFaq(req);
   ApiResponse.sendSuccess(res, 200, "FAQ updated successfully", result);
 });
 

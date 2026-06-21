@@ -15,7 +15,10 @@ export const friendService = {
     const recipientId = req.params.userId as string;
 
     if (requesterId.toString() === recipientId) {
-      throw new CustomError(400, "You cannot send a friend request to yourself");
+      throw new CustomError(
+        400,
+        "You cannot send a friend request to yourself",
+      );
     }
 
     const recipient = await userModel.findById(recipientId);
@@ -27,7 +30,7 @@ export const friendService = {
       $or: [
         { requester: requesterId, recipient: recipientId },
         { requester: recipientId, recipient: requesterId },
-      ]
+      ],
     });
 
     if (existingRelation) {
@@ -38,24 +41,34 @@ export const friendService = {
         throw new CustomError(400, "You are already friends");
       }
       if (existingRelation.status === FriendStatus.BLOCKED) {
-        throw new CustomError(400, "Cannot send request, blocked relationship exists");
+        throw new CustomError(
+          400,
+          "Cannot send request, blocked relationship exists",
+        );
       }
       if (existingRelation.status === FriendStatus.REJECTED) {
         existingRelation.requester = new Types.ObjectId(requesterId);
         existingRelation.recipient = new Types.ObjectId(recipientId);
         existingRelation.status = FriendStatus.PENDING;
         await existingRelation.save();
-        
-        getIo().to(recipientId).emit("friend_request_received", existingRelation);
-        
+
+        getIo()
+          .to(recipientId)
+          .emit("friend_request_received", existingRelation);
+
         // Send Push & In-app Notification
-        const requesterName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
-        notificationService.notifySingleUser(
-          recipientId,
-          "New Friend Request",
-          `${requesterName} sent you a friend request.`,
-          NotificationType.FRIEND_REQUEST
-        ).catch(err => console.error("Error sending friend request notification:", err));
+        const requesterName =
+          `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+        notificationService
+          .notifySingleUser(
+            recipientId,
+            "New Friend Request",
+            `${requesterName} sent you a friend request.`,
+            NotificationType.FRIEND_REQUEST,
+          )
+          .catch((err) =>
+            console.error("Error sending friend request notification:", err),
+          );
 
         return existingRelation;
       }
@@ -70,13 +83,18 @@ export const friendService = {
     getIo().to(recipientId).emit("friend_request_received", newRequest);
 
     // Send Push & In-app Notification
-    const requesterName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
-    notificationService.notifySingleUser(
-      recipientId,
-      "New Friend Request",
-      `${requesterName} sent you a friend request.`,
-      NotificationType.FRIEND_REQUEST
-    ).catch(err => console.error("Error sending friend request notification:", err));
+    const requesterName =
+      `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+    notificationService
+      .notifySingleUser(
+        recipientId,
+        "New Friend Request",
+        `${requesterName} sent you a friend request.`,
+        NotificationType.FRIEND_REQUEST,
+      )
+      .catch((err) =>
+        console.error("Error sending friend request notification:", err),
+      );
 
     return newRequest;
   },
@@ -98,17 +116,24 @@ export const friendService = {
 
     request.status = FriendStatus.ACCEPTED;
     await request.save();
-    
-    getIo().to(request.requester.toString()).emit("friend_request_accepted", request);
+
+    getIo()
+      .to(request.requester.toString())
+      .emit("friend_request_accepted", request);
 
     // Send Push & In-app Notification
-    const acceptorName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
-    notificationService.notifySingleUser(
-      request.requester.toString(),
-      "Friend Request Accepted",
-      `${acceptorName} accepted your friend request.`,
-      NotificationType.FRIEND_ACCEPT
-    ).catch(err => console.error("Error sending friend accept notification:", err));
+    const acceptorName =
+      `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+    notificationService
+      .notifySingleUser(
+        request.requester.toString(),
+        "Friend Request Accepted",
+        `${acceptorName} accepted your friend request.`,
+        NotificationType.FRIEND_ACCEPT,
+      )
+      .catch((err) =>
+        console.error("Error sending friend accept notification:", err),
+      );
 
     return request;
   },
@@ -129,8 +154,10 @@ export const friendService = {
 
     request.status = FriendStatus.REJECTED;
     await request.save();
-    
-    getIo().to(request.requester.toString()).emit("friend_request_rejected", request);
+
+    getIo()
+      .to(request.requester.toString())
+      .emit("friend_request_rejected", request);
     return request;
   },
 
@@ -146,7 +173,7 @@ export const friendService = {
       $or: [
         { requester: userId, recipient: targetUserId },
         { requester: targetUserId, recipient: userId },
-      ]
+      ],
     });
 
     if (relation) {
@@ -200,7 +227,7 @@ export const friendService = {
     }
 
     await relation.deleteOne();
-    
+
     getIo().to(targetUserId).emit("friend_removed", { friendId: userId });
     return true;
   },
@@ -210,10 +237,16 @@ export const friendService = {
     const friends = await FriendModel.find({
       $or: [{ requester: userId }, { recipient: userId }],
       status: FriendStatus.ACCEPTED,
-    }).populate("requester recipient", "firstName lastName email image profileImage");
+    }).populate(
+      "requester recipient",
+      "firstName lastName email image profileImage",
+    );
 
     return friends.map((f: any) => {
-      const friend = f.requester._id.toString() === userId.toString() ? f.recipient : f.requester;
+      const friend =
+        f.requester._id.toString() === userId.toString()
+          ? f.recipient
+          : f.requester;
       return { relationId: f._id, friend };
     });
   },
@@ -228,34 +261,40 @@ export const friendService = {
 
   async searchUsers(req: Request) {
     const userId = req.user?._id as string;
-    const search = req.query.q as string || "";
-    
+    const search = (req.query.q as string) || "";
+
     const searchRegex = new RegExp(search, "i");
-    const users = await userModel.find({
-      _id: { $ne: userId },
-      $or: [
-        { firstName: searchRegex },
-        { lastName: searchRegex },
-        { email: searchRegex }
-      ]
-    }).select("firstName lastName email image profileImage").limit(20);
+    const users = await userModel
+      .find({
+        _id: { $ne: userId },
+        $or: [
+          { firstName: searchRegex },
+          { lastName: searchRegex },
+          { email: searchRegex },
+        ],
+      })
+      .select("firstName lastName email image profileImage")
+      .limit(20);
 
     const relations = await FriendModel.find({
-      $or: [{ requester: userId }, { recipient: userId }]
+      $or: [{ requester: userId }, { recipient: userId }],
     });
 
-    return users.map(user => {
-      const rel = relations.find(r => 
-        r.requester.toString() === user._id.toString() || 
-        r.recipient.toString() === user._id.toString()
+    return users.map((user) => {
+      const rel = relations.find(
+        (r) =>
+          r.requester.toString() === user._id.toString() ||
+          r.recipient.toString() === user._id.toString(),
       );
-      
+
       return {
         user,
         relationStatus: rel ? rel.status : "none",
         relationId: rel ? rel._id : null,
-        isRequester: rel ? rel.requester.toString() === userId.toString() : false
+        isRequester: rel
+          ? rel.requester.toString() === userId.toString()
+          : false,
       };
     });
-  }
+  },
 };
