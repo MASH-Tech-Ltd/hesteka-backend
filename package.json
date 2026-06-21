@@ -17,6 +17,7 @@
     "makemodule": "ts-node scripts/makeModule.ts",
     "soket": "ts-node src/socket/client.ts",
     "seed:words": "ts-node scripts/seedWords.ts",
+    "seed:faq": "ts-node scripts/seedFaq.ts",
     "socket:a": "ts-node src/socket/test-client-a.ts",
     "socket:b": "ts-node src/socket/test-client-b.ts"
   },
