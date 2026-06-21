@@ -31,10 +31,16 @@ export const deleteSupportMessage = asyncHandler(async (req: Request, res: Respo
   ApiResponse.sendSuccess(res, 200, "Support message deleted successfully");
 });
 
+export const getMySupportMessages = asyncHandler(async (req: Request, res: Response) => {
+  const { messages, meta } = await supportMessageService.getMySupportMessages(req);
+  ApiResponse.sendSuccess(res, 200, "Support messages fetched successfully", messages, meta);
+});
+
 export const supportMessageController = {
   createSupportMessage,
   getAllSupportMessages,
   getSupportMessageById,
   replyToSupportMessage,
   deleteSupportMessage,
+  getMySupportMessages,
 };

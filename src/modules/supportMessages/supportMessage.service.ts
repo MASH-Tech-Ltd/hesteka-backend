@@ -20,6 +20,38 @@ export const supportMessageService = {
     });
   },
 
+  async getMySupportMessages(req: Request) {
+    const userId = req.user?._id;
+    if (!userId) {
+      throw new CustomError(401, "Authentication required");
+    }
+
+    const { page: queryPage, limit: queryLimit } = req.query;
+    const { page, limit, skip } = paginationHelper(
+      queryPage as string,
+      queryLimit as string
+    );
+
+    const [messages, total] = await Promise.all([
+      SupportMessageModel.find({ user: userId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      SupportMessageModel.countDocuments({ user: userId }),
+    ]);
+
+    return {
+      messages,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  },
+
   async getAllSupportMessages(req: Request) {
     const { page: queryPage, limit: queryLimit, status, search } = req.query;
     const { page, limit, skip } = paginationHelper(

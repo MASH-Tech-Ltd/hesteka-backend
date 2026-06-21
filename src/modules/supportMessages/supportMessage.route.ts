@@ -16,6 +16,12 @@ router.post(
   supportMessageController.createSupportMessage
 );
 
+router.get(
+  "/mine",
+  authGuard,
+  supportMessageController.getMySupportMessages
+);
+
 // Admin routes
 router.get(
   "/",
