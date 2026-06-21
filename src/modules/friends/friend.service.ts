@@ -176,7 +176,7 @@ export const friendService = {
     const friends = await FriendModel.find({
       $or: [{ requester: userId }, { recipient: userId }],
       status: FriendStatus.ACCEPTED,
-    }).populate("requester recipient", "firstName lastName email image");
+    }).populate("requester recipient", "firstName lastName email image profileImage");
 
     return friends.map((f: any) => {
       const friend = f.requester._id.toString() === userId.toString() ? f.recipient : f.requester;
@@ -189,7 +189,7 @@ export const friendService = {
     return await FriendModel.find({
       recipient: userId,
       status: FriendStatus.PENDING,
-    }).populate("requester", "firstName lastName email image");
+    }).populate("requester", "firstName lastName email image profileImage");
   },
 
   async searchUsers(req: Request) {
@@ -204,7 +204,7 @@ export const friendService = {
         { lastName: searchRegex },
         { email: searchRegex }
       ]
-    }).select("firstName lastName email image").limit(20);
+    }).select("firstName lastName email image profileImage").limit(20);
 
     const relations = await FriendModel.find({
       $or: [{ requester: userId }, { recipient: userId }]
