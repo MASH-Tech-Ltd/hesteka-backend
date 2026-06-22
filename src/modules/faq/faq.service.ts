@@ -66,9 +66,19 @@ export const faqService = {
     const sortOrder = query.sortOrder === "desc" ? -1 : 1;
 
     const [data, total] = await Promise.all([
-      faqModel.find(filter).sort({ [sortBy]: sortOrder, order: 1 }).skip(skip).limit(limit),
+      faqModel.find(filter).sort({ [sortBy]: sortOrder, order: 1 }).skip(skip).limit(limit).lean(),
       faqModel.countDocuments(filter),
     ]);
+
+    // Apply Cloudinary transformations to resize the image to ~ 500x300
+    data.forEach((faq: any) => {
+      if (faq.image && faq.image.secureUrl) {
+        faq.image.secureUrl = faq.image.secureUrl.replace(
+          '/upload/',
+          '/upload/w_500,h_300,c_fill,q_auto,f_auto/'
+        );
+      }
+    });
 
     return { data, total, page, limit };
   },

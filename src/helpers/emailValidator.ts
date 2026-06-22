@@ -22,7 +22,13 @@ export const emailValidator = (email: string | undefined) => {
     "bellsouth.net",
   ];
 
+
+
+// for now allow all emails cause own have a custom email
   if (process.env.NODE_ENV === "development") {
+    return;
+  }
+  else{
     return;
   }
 
