@@ -148,10 +148,10 @@ export const reportService = {
     if (newReport.location && newReport.location.coordinates && newReport.location.coordinates.length >= 2) {
       const lng = newReport.location.coordinates[0] as number;
       const lat = newReport.location.coordinates[1] as number;
-      notificationService.notifyUsersNearby(nearbyTitle, nearbyDesc, NotificationType.NEW_REPORT, lat, lng, 15)
+      notificationService.notifyUsersNearby(nearbyTitle, nearbyDesc, NotificationType.NEW_REPORT, lat, lng, 15, { reportId: newReport._id.toString() })
         .catch((err) => console.error("Notification Error:", err));
     } else {
-      notificationService.notifyUsersNearby(nearbyTitle, nearbyDesc, NotificationType.NEW_REPORT)
+      notificationService.notifyUsersNearby(nearbyTitle, nearbyDesc, NotificationType.NEW_REPORT, undefined, undefined, 15, { reportId: newReport._id.toString() })
         .catch((err) => console.error("Notification Error:", err));
     }
 

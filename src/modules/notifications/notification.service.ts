@@ -129,19 +129,17 @@ export const notificationService = {
         if (!user) continue;
 
         const userIdStr = user._id.toString();
-        let isOnline = false;
 
         if (io) {
           // Check if user has active sockets
           const sockets = await io.in(userIdStr).fetchSockets();
           if (sockets.length > 0) {
-            isOnline = true;
             io.to(userIdStr).emit("notification:new", savedNotifications[idx]);
           }
         }
 
-        // If user is offline, collect FCM tokens
-        if (!isOnline && user.fcmTokens && Array.isArray(user.fcmTokens)) {
+        // Always collect FCM tokens for push notification
+        if (user.fcmTokens && Array.isArray(user.fcmTokens)) {
           allTokens.push(...user.fcmTokens);
         }
       }
@@ -171,7 +169,6 @@ export const notificationService = {
 
       const savedNotification = await notificationModel.create(notificationToSave);
 
-      let isOnline = false;
       let io: any;
       try {
         io = getIo();
@@ -181,13 +178,12 @@ export const notificationService = {
         const userIdStr = user._id.toString();
         const sockets = await io.in(userIdStr).fetchSockets();
         if (sockets.length > 0) {
-          isOnline = true;
           io.to(userIdStr).emit("notification:new", savedNotification);
         }
       }
 
-      // Send Push Notifications via FCM only if offline
-      if (!isOnline && user.fcmTokens && Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
+      // Send Push Notifications via FCM
+      if (user.fcmTokens && Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
         await sendPushNotification(user.fcmTokens, title, body, { type });
       }
 
@@ -222,17 +218,15 @@ export const notificationService = {
         if (!admin) continue;
         
         const userIdStr = admin._id.toString();
-        let isOnline = false;
 
         if (io) {
           const sockets = await io.in(userIdStr).fetchSockets();
           if (sockets.length > 0) {
-            isOnline = true;
             io.to(userIdStr).emit("notification:new", savedNotifications[idx]);
           }
         }
 
-        if (!isOnline && admin.fcmTokens && Array.isArray(admin.fcmTokens)) {
+        if (admin.fcmTokens && Array.isArray(admin.fcmTokens)) {
           allTokens.push(...admin.fcmTokens);
         }
       }
@@ -295,17 +289,15 @@ export const notificationService = {
       if (!u) continue;
       
       const userIdStr = u._id.toString();
-      let isOnline = false;
 
       if (io) {
         const sockets = await io.in(userIdStr).fetchSockets();
         if (sockets.length > 0) {
-          isOnline = true;
           io.to(userIdStr).emit("notification:new", savedNotifications[idx]);
         }
       }
 
-      if (!isOnline && u.fcmTokens && Array.isArray(u.fcmTokens)) {
+      if (u.fcmTokens && Array.isArray(u.fcmTokens)) {
         allTokens.push(...u.fcmTokens);
       }
     }
@@ -353,17 +345,15 @@ export const notificationService = {
         if (!friend) continue;
 
         const friendIdStr = friend._id.toString();
-        let isOnline = false;
 
         if (io) {
           const sockets = await io.in(friendIdStr).fetchSockets();
           if (sockets.length > 0) {
-            isOnline = true;
             io.to(friendIdStr).emit("notification:new", savedNotifications[idx]);
           }
         }
 
-        if (!isOnline && friend.fcmTokens && Array.isArray(friend.fcmTokens)) {
+        if (friend.fcmTokens && Array.isArray(friend.fcmTokens)) {
           allTokens.push(...friend.fcmTokens);
         }
       }
