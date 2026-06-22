@@ -309,6 +309,7 @@ export const reportService = {
         .populate("author", "firstName lastName email profileImage")
         .populate({
           path: "comments",
+          match: { parent: null },
           select: "-__v -report",
           populate: [
             { path: "author", select: "firstName lastName profileImage" },
@@ -320,10 +321,10 @@ export const reportService = {
       reportModel.countDocuments(filter),
     ]);
 
-    // Manually filter out child comments from the main comments array
+    // Manually filter out child comments from the main comments array (fallback)
       reports.forEach((report: any) => {
         if (report.comments && Array.isArray(report.comments)) {
-          report.comments = report.comments.filter((c: any) => !c.parent);
+          report.comments = report.comments.filter((c: any) => c && (c.parent === null || c.parent === undefined));
         }
       });
 
@@ -476,6 +477,7 @@ export const reportService = {
         .populate("author", "firstName lastName email profileImage")
         .populate({
           path: "comments",
+          match: { parent: null },
           select: "-__v -report",
           populate: [
             { path: "author", select: "firstName lastName profileImage" },
@@ -487,10 +489,10 @@ export const reportService = {
       reportModel.countDocuments(filter),
     ]);
 
-    // Manually filter out child comments from the main comments array
+    // Manually filter out child comments from the main comments array (fallback)
     reports.forEach((report: any) => {
       if (report.comments && Array.isArray(report.comments)) {
-        report.comments = report.comments.filter((c: any) => !c.parent);
+        report.comments = report.comments.filter((c: any) => c && (c.parent === null || c.parent === undefined));
       }
     });
 
@@ -512,6 +514,7 @@ export const reportService = {
       .populate("author", "firstName lastName email profileImage")
       .populate({
         path: "comments",
+        match: { parent: null },
         select: "-__v -report",
         populate: [
           { path: "author", select: "firstName lastName profileImage" },
@@ -525,9 +528,9 @@ export const reportService = {
       throw new CustomError(404, "Report not found");
     }
 
-    // Manually filter out child comments
+    // Manually filter out child comments (fallback)
     if (report.comments && Array.isArray(report.comments)) {
-      report.comments = report.comments.filter((c: any) => !c.parent);
+      report.comments = report.comments.filter((c: any) => c && (c.parent === null || c.parent === undefined));
     }
 
     return report;
