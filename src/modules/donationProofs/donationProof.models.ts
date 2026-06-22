@@ -32,6 +32,11 @@ const donationProofSchema = new Schema<IDonationProof>(
       required: true,
       min: 0,
     },
+    quantity: {
+      type: Number,
+      required: false,
+      min: 0,
+    },
     category: {
       type: String,
       enum: Object.values(DonationCategory),

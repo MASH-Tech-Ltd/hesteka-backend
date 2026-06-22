@@ -26,6 +26,7 @@ export interface IDonationProof extends Document {
   donorEmail?: string;
   collectionPoint: Types.ObjectId | string;
   amount: number;
+  quantity?: number;
   category: DonationCategory;
   photo: {
     public_id: string;
@@ -40,7 +41,8 @@ export interface IDonationProof extends Document {
 }
 
 export interface SubmitDonationProofPayload {
-  amount: number;
+  amount?: number;
+  quantity?: number;
   collectionPointId: string;
   category: DonationCategory;
 }
@@ -48,4 +50,5 @@ export interface SubmitDonationProofPayload {
 export interface ValidateDonationProofPayload {
   pointsAwarded: number;
   adminNote?: string;
+  amount?: number;
 }

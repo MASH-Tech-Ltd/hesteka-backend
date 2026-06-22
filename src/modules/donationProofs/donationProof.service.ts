@@ -37,12 +37,18 @@ export const donationProofService = {
 
     const photoResult = await uploadCloudinary(file.path);
 
+    const valAmount = data.amount ? Number(data.amount) : undefined;
+    const valQuantity = data.quantity ? Number(data.quantity) : undefined;
+    const finalQuantity = valQuantity ?? valAmount ?? 0;
+    const finalAmount = valAmount ?? valQuantity ?? 0;
+
     const donationProof = await donationProofModel.create({
       ...(userId && { user: userId }),
       ...(data.donorName && { donorName: data.donorName }),
       ...(data.donorEmail && { donorEmail: data.donorEmail }),
       collectionPoint: data.collectionPointId,
-      amount: data.amount,
+      amount: finalAmount,
+      quantity: finalQuantity,
       category: data.category,
       photo: {
         public_id: photoResult.public_id,
@@ -62,7 +68,7 @@ export const donationProofService = {
     }
 
     await donationService.syncPhysicalDonation({
-      amount: data.amount,
+      amount: finalAmount,
       donorEmail: finalDonorEmail || "unknown",
       donorName: finalDonorName || "Manual Donor",
       status: "pending",
@@ -71,7 +77,7 @@ export const donationProofService = {
 
     notificationService.notifyAdmins(
       "Nouvelle preuve de soutien",
-      `Une nouvelle preuve de soutien de ${data.amount} unités a été soumise et nécessite une approbation.`,
+      `Une nouvelle preuve de soutien de ${finalAmount} unités a été soumise et nécessite une approbation.`,
       NotificationType.NEW_DONATION
     ).catch(err => console.error("Admin Notification Error:", err));
 
@@ -80,11 +86,11 @@ export const donationProofService = {
       io.emit("donation_proof_new", { 
         proofId: donationProof._id, 
         donorName: finalDonorName,
-        amount: data.amount 
+        amount: finalAmount 
       });
       io.emit("donation_new", {
         method: "collection_point",
-        amount: data.amount,
+        amount: finalAmount,
         donor: finalDonorEmail
       });
     } catch (error) {
@@ -128,12 +134,13 @@ export const donationProofService = {
       throw new CustomError(400, `Proof is already ${proof.status}`);
     }
 
-    const { pointsAwarded, adminNote } = payload;
+    const { pointsAwarded, adminNote, amount } = payload;
 
     // 1. Update proof status
     proof.status = DonationProofStatus.APPROVED;
     proof.pointsAwarded = pointsAwarded;
     if (adminNote) proof.adminNote = adminNote;
+    if (amount !== undefined) proof.amount = amount;
     await proof.save();
 
     // 2. Award points to user (if registered user)

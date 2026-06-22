@@ -177,6 +177,7 @@ const syncPhysicalDonation = async (payload: {
   });
   if (existing) {
     existing.status = payload.status;
+    existing.amount = payload.amount;
     await existing.save();
     return existing;
   }
