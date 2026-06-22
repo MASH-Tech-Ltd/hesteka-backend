@@ -22,7 +22,10 @@ HESTEKA is built with a modular architecture, supporting a wide array of communi
     -   **Registration Flexibility**: `company` field is optional for general users but strictly required for partner accounts.
 -   **📣 Community Reporting & Engagement**:
     -   Geospatial-aware reports for community issues (e.g., animal reports).
-    -   Interactive commenting system with nested replies and media uploads.
+    -   Interactive commenting system with nested replies, real-time Socket.io events, and media uploads.
+-   **📚 Knowledge Base & Support**:
+    -   Multilingual FAQ management with active/inactive visibility controls.
+    -   Rate-limited support messaging to ensure platform stability.
 -   **🎯 Local Missions & Partnerships**:
     -   Dynamic mission creation for community tasks.
     -   Partner-led mission management and verification.
@@ -170,14 +173,14 @@ src/
 
 ## 🔌 API OverView
 
-The backend exposes over **83 endpoints** through the `/api/v1` namespace.
+The backend exposes over **90+ endpoints** through the `/api/v1` namespace.
 
 -   **Auth**: `/auth` & `/user` (Login, Register, Social Auth, Profile)
 -   **Reports**: `/reports` & `/comments` (Report management & conversation)
 -   **Missions**: `/local-missions` & `/partner-ads` (Tasks & Partnerships)
 -   **Commerce**: `/payments`, `/donations`, `/rewards` (Financial transactions)
 -   **Social**: `/community/chat`, `/community/stories`, `/solidarity` (Socializing)
--   **System**: `/notifications`, `/admin`, `/contacts` (Internal operations)
+-   **System**: `/notifications`, `/admin`, `/contacts`, `/faq` (Internal operations & Content Management)
 
 ---
 
