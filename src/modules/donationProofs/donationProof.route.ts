@@ -14,7 +14,8 @@ import {
   rejectProof,
   getValidationStats,
   getAcceptedValues,
-  validateAll
+  validateAll,
+  getAllProofs
 } from "./donationProof.controller";
 
 const router = Router();
@@ -50,6 +51,13 @@ router.get(
   authGuard,
   allowRole("admin"),
   getPendingProofs
+);
+
+router.get(
+  "/all",
+  authGuard,
+  allowRole("admin"),
+  getAllProofs
 );
 
 router.patch(

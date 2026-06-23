@@ -127,6 +127,42 @@ export const donationProofService = {
     };
   },
 
+  async getAllProofs(req: Request) {
+    const { page: pagebody, limit: limitbody, status, search } = req.query;
+    const { page, limit, skip } = paginationHelper(pagebody as string, limitbody as string);
+
+    const filter: any = {};
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+    if (search) {
+      const searchRegex = new RegExp(search as string, "i");
+      filter.$or = [{ donorName: searchRegex }, { donorEmail: searchRegex }];
+    }
+
+    const [proofs, total] = await Promise.all([
+      donationProofModel
+        .find(filter)
+        .populate("user", "firstName lastName email")
+        .populate("collectionPoint", "title address")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      donationProofModel.countDocuments(filter),
+    ]);
+
+    return {
+      proofs,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  },
+
   async validateProof(proofId: string, payload: ValidateDonationProofPayload) {
     const proof = await donationProofModel.findById(proofId).populate("user");
     if (!proof) throw new CustomError(404, "Donation proof not found");
@@ -312,11 +348,52 @@ export const donationProofService = {
     };
   },
 
-  async getValidationStats() {
+  async getValidationStats(period: string = 'monthly') {
     const now = new Date();
     const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+    let trendStart: Date;
+    let groupId: any;
+
+    if (period === "weekly") {
+      trendStart = new Date(now);
+      trendStart.setDate(now.getDate() - 6);
+      trendStart.setHours(0, 0, 0, 0);
+      groupId = {
+        year: { $year: "$createdAt" },
+        month: { $month: "$createdAt" },
+        day: { $dayOfMonth: "$createdAt" },
+        category: { $ifNull: ["$category", DonationCategory.OTHER] }
+      };
+    } else if (period === "yearly") {
+      trendStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+      groupId = {
+        year: { $year: "$createdAt" },
+        month: { $month: "$createdAt" },
+        category: { $ifNull: ["$category", DonationCategory.OTHER] }
+      };
+    } else if (period === "lifetime") {
+      trendStart = new Date(now.getFullYear() - 4, 0, 1);
+      groupId = {
+        year: { $year: "$createdAt" },
+        category: { $ifNull: ["$category", DonationCategory.OTHER] }
+      };
+    } else { // monthly (last 6 months)
+      trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      groupId = {
+        year: { $year: "$createdAt" },
+        month: { $month: "$createdAt" },
+        category: { $ifNull: ["$category", DonationCategory.OTHER] }
+      };
+    }
 
     const [stats] = await donationProofModel.aggregate([
       {
@@ -355,6 +432,31 @@ export const donationProofService = {
             { $group: { _id: "$refusalReason", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 5 }
+          ],
+          weeklyStats: [
+            { $match: { createdAt: { $gte: startOfWeek }, status: DonationProofStatus.APPROVED } },
+            { $group: { _id: null, totalCount: { $sum: 1 }, totalQuantity: { $sum: { $ifNull: ["$quantity", "$amount", 0] } } } }
+          ],
+          monthlyStats: [
+            { $match: { createdAt: { $gte: startOfCurrentMonth }, status: DonationProofStatus.APPROVED } },
+            { $group: { _id: null, totalCount: { $sum: 1 }, totalQuantity: { $sum: { $ifNull: ["$quantity", "$amount", 0] } } } }
+          ],
+          yearlyStats: [
+            { $match: { createdAt: { $gte: startOfYear }, status: DonationProofStatus.APPROVED } },
+            { $group: { _id: null, totalCount: { $sum: 1 }, totalQuantity: { $sum: { $ifNull: ["$quantity", "$amount", 0] } } } }
+          ],
+          lifetimeStats: [
+            { $match: { status: DonationProofStatus.APPROVED } },
+            { $group: { _id: null, totalCount: { $sum: 1 }, totalQuantity: { $sum: { $ifNull: ["$quantity", "$amount", 0] } } } }
+          ],
+          categoryTrendRaw: [
+            { $match: { createdAt: { $gte: trendStart }, status: DonationProofStatus.APPROVED } },
+            { 
+              $group: { 
+                _id: groupId, 
+                totalQuantity: { $sum: { $ifNull: ["$quantity", "$amount", 0] } } 
+              } 
+            }
           ]
         }
       }
@@ -385,6 +487,72 @@ export const donationProofService = {
       };
     });
 
+    const trendData: any[] = [];
+    const monthPrefixes = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    
+    if (period === "weekly") {
+      const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        trendData.push({
+          monthLabel: days[d.getDay()],
+          year: d.getFullYear(),
+          month: d.getMonth() + 1,
+          day: d.getDate(),
+          food: 0, litter: 0, toys: 0, medicine: 0, other: 0
+        });
+      }
+    } else if (period === "yearly") {
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        trendData.push({
+          monthLabel: monthPrefixes[d.getMonth()],
+          year: d.getFullYear(),
+          month: d.getMonth() + 1,
+          food: 0, litter: 0, toys: 0, medicine: 0, other: 0
+        });
+      }
+    } else if (period === "lifetime") {
+      for (let i = 4; i >= 0; i--) {
+        const y = now.getFullYear() - i;
+        trendData.push({
+          monthLabel: y.toString(),
+          year: y,
+          food: 0, litter: 0, toys: 0, medicine: 0, other: 0
+        });
+      }
+    } else { // monthly
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        trendData.push({
+          monthLabel: monthPrefixes[d.getMonth()],
+          year: d.getFullYear(),
+          month: d.getMonth() + 1,
+          food: 0, litter: 0, toys: 0, medicine: 0, other: 0
+        });
+      }
+    }
+
+    stats.categoryTrendRaw?.forEach((item: any) => {
+      let monthObj;
+      if (period === "weekly") {
+        monthObj = trendData.find(m => m.year === item._id.year && m.month === item._id.month && m.day === item._id.day);
+      } else if (period === "lifetime") {
+        monthObj = trendData.find(m => m.year === item._id.year);
+      } else {
+        monthObj = trendData.find(m => m.year === item._id.year && m.month === item._id.month);
+      }
+      
+      if (monthObj) {
+        if (monthObj[item._id.category] !== undefined) {
+          monthObj[item._id.category] += item.totalQuantity;
+        } else {
+          monthObj.other += item.totalQuantity;
+        }
+      }
+    });
+
     return {
       pendingCount,
       validatedThisMonth: current.validated,
@@ -396,7 +564,14 @@ export const donationProofService = {
       refusalReasons: stats.refusalReasons.map((item: any) => ({
         label: item._id,
         count: item.count
-      }))
+      })),
+      periodStats: {
+        weekly: stats.weeklyStats[0] || { totalCount: 0, totalQuantity: 0 },
+        monthly: stats.monthlyStats[0] || { totalCount: 0, totalQuantity: 0 },
+        yearly: stats.yearlyStats[0] || { totalCount: 0, totalQuantity: 0 },
+        lifetime: stats.lifetimeStats[0] || { totalCount: 0, totalQuantity: 0 }
+      },
+      categoryTrend: trendData
     };
   }
 };

@@ -81,6 +81,7 @@ export const adminService = {
       recentReports,
       recentUsers,
       recentDonations,
+      recentDonationProofs,
       inProgressMissions,
       totalDonors,
       config,
@@ -219,7 +220,8 @@ export const adminService = {
         .limit(10)
         .populate("author", "firstName lastName"),
       userModel.find().sort({ createdAt: -1 }).limit(10),
-      donationModel.find().sort({ createdAt: -1 }).limit(10),
+      donationModel.find({ method: { $ne: "collection_point" } }).sort({ createdAt: -1 }).limit(10),
+      donationProofModel.find().sort({ createdAt: -1 }).limit(10).populate("collectionPoint", "title").populate("user", "firstName lastName"),
 
       // Missions detail stats for global
       localMissionParticipationModel.countDocuments({
@@ -258,14 +260,28 @@ export const adminService = {
         time: u.createdAt,
       }),
     );
-    recentDonations.forEach((d: any) =>
+    recentDonations.forEach((d: any) => {
       activity.push({
         type: "donation",
         text: `${d.amount}\u20AC donation received \u2013 ${d.method || "Stripe"}`,
         time: d.createdAt,
         user: d.donorName,
-      }),
-    );
+      });
+    });
+    
+    recentDonationProofs.forEach((p: any) => {
+      const qty = p.quantity || p.amount || 0;
+      const cat = p.category || "item";
+      const cpName = p.collectionPoint?.title || "HESTEKA";
+      const userName = p.donorName || (p.user ? `${p.user.firstName} ${p.user.lastName}` : "Manual Donor");
+      
+      activity.push({
+        type: "donation", // Keeping blue dot per original design
+        text: `${qty}x ${cat} support proof received \u2013 ${cpName}`,
+        time: p.createdAt,
+        user: userName,
+      });
+    });
     activity.sort(
       (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime(),
     );

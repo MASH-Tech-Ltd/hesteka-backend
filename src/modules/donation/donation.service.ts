@@ -221,6 +221,8 @@ const getAllDonations = async (req: any) => {
 
   if (method) {
     filter.method = method;
+  } else {
+    filter.method = { $ne: "collection_point" };
   }
 
   if (from || to) {

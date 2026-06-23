@@ -32,6 +32,12 @@ export const getPendingProofs = asyncHandler(async (req: Request, res: Response)
   ApiResponse.sendSuccess(res, 200, "Pending donation proofs fetched successfully", proofs, meta);
 });
 
+//: get all proofs (Admin)
+export const getAllProofs = asyncHandler(async (req: Request, res: Response) => {
+  const { proofs, meta } = await donationProofService.getAllProofs(req);
+  ApiResponse.sendSuccess(res, 200, "All donation proofs fetched successfully", proofs, meta);
+});
+
 //: validate/approve proof (Admin)
 export const validateProof = asyncHandler(async (req: Request, res: Response) => {
   const { donationProofId } = req.params;
@@ -55,6 +61,7 @@ export const validateAll = asyncHandler(async (req: Request, res: Response) => {
 
 //: get validation stats (Admin)
 export const getValidationStats = asyncHandler(async (req: Request, res: Response) => {
-  const result = await donationProofService.getValidationStats();
+  const period = (req.query.period as string) || "monthly";
+  const result = await donationProofService.getValidationStats(period);
   ApiResponse.sendSuccess(res, 200, "Validation stats fetched successfully", result);
 });
