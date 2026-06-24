@@ -63,6 +63,8 @@ export const registerPartnerSchema = registerUserSchema
       (val) => (val === "" || val === undefined || val === null ? undefined : val),
       z.string().optional(),
     ),
+    region: z.string().optional(),
+    department: z.string().optional(),
   })
   .refine((data) => (data.latitude === undefined) === (data.longitude === undefined), {
     message: "Latitude and longitude must be provided together",
