@@ -405,13 +405,24 @@ export const authService = {
         email: payload.email,
         isVerified: true, // Google emails are already verified
         provider: authProvider.GOOGLE,
+        // Save Google profile picture if available
+        ...(payload.picture
+          ? { profileImage: { public_id: "", secure_url: payload.picture } }
+          : {}),
       });
     } else {
-      // Update provider if not set (optional migration)
+      // Update provider if not set
+      let needsSave = false;
       if (!user.provider) {
         user.provider = authProvider.GOOGLE;
-        await user.save();
+        needsSave = true;
       }
+      // Update profile picture from Google if user has none
+      if (!user.profileImage?.secure_url && payload.picture) {
+        user.profileImage = { public_id: "", secure_url: payload.picture };
+        needsSave = true;
+      }
+      if (needsSave) await user.save();
     }
     if (user.status !== status.ACTIVE) {
       const message =
