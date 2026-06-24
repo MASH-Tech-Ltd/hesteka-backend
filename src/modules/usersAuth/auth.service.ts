@@ -11,18 +11,12 @@ import { emailValidator } from "../../helpers/emailValidator";
 import { generateOTP } from "../../utils/otpGenerator";
 import { mailer } from "../../helpers/nodeMailer";
 import { verificationOtpEmailTemplate, forgotPasswordOtpEmailTemplate } from "../../tempaletes/auth.templates";
-import { OAuth2Client } from "google-auth-library";
-import appleSignin from "apple-signin-auth";
+import admin from "firebase-admin";
 
-const googleClient = new OAuth2Client(
-  config.provider.googleClientId,
-  // config.provider.googleClientSecret,
-  // process.env.GOOGLE_REDIRECT_URI
-);
+// Firebase Admin SDK is already initialized in src/utils/firebase.ts (for FCM)
+// We reuse it here to verify Google & Apple ID tokens issued by Firebase Auth
 
-// Note: For a true "callback" flow (redirect-based), you need a redirect URI and client secret.
-// I am implementing the idToken verification flow which is standard for modern apps,
-// but adding a placeholder for getting user info from a code if redirected.
+
 
 type RegisterPartnerPayload = Partial<IUser> & {
   latitude?: number;
@@ -373,57 +367,51 @@ export const authService = {
     return { accessToken, refreshToken: newRefreshToken, rememberMe: user.rememberMe };
   },
 
-  //google login callback logic
+  //google login — Firebase Auth token verification
   async googleLogin(idToken: string) {
-    let ticket;
+    let decoded: admin.auth.DecodedIdToken;
     try {
-      ticket = await googleClient.verifyIdToken({
-        idToken,
-        audience: [
-          config.provider.googleClientId as string,
-          config.provider.googleIosClientId as string,
-          config.provider.googleAndroidClientId as string,
-        ],
-      });
+      decoded = await admin.auth().verifyIdToken(idToken);
     } catch (error: any) {
-      console.error("[Auth] Google token verification failed:", error.message);
+      console.error("[Auth] Firebase Google token verification failed:", error.message);
       throw new CustomError(401, "Invalid Google token");
     }
 
-    const payload = ticket.getPayload();
-    if (!payload || !payload.email) {
-      throw new CustomError(400, "Invalid Google token");
+    if (!decoded.email) {
+      throw new CustomError(400, "Email not found in Google token");
     }
 
-    let user = await userModel.findOne({ email: payload.email });
+    // Extract name parts from Firebase decoded token
+    const nameParts = (decoded.name as string | undefined)?.split(" ") ?? [];
+    const firstName = nameParts[0] || "Google";
+    const lastName = nameParts.slice(1).join(" ") || "User";
+    const picture = decoded.picture as string | undefined;
+
+    let user = await userModel.findOne({ email: decoded.email });
 
     if (!user) {
-      // Create new user if not exists
+      // Create new user
       user = await userModel.create({
-        firstName: payload.given_name || "Google",
-        lastName: payload.family_name || "User",
-        email: payload.email,
-        isVerified: true, // Google emails are already verified
+        firstName,
+        lastName,
+        email: decoded.email,
+        isVerified: true,
         provider: authProvider.GOOGLE,
-        // Save Google profile picture if available
-        ...(payload.picture
-          ? { profileImage: { public_id: "", secure_url: payload.picture } }
-          : {}),
+        ...(picture ? { profileImage: { public_id: "", secure_url: picture } } : {}),
       });
     } else {
-      // Update provider if not set
       let needsSave = false;
       if (!user.provider) {
         user.provider = authProvider.GOOGLE;
         needsSave = true;
       }
-      // Update profile picture from Google if user has none
-      if (!user.profileImage?.secure_url && payload.picture) {
-        user.profileImage = { public_id: "", secure_url: payload.picture };
+      if (!user.profileImage?.secure_url && picture) {
+        user.profileImage = { public_id: "", secure_url: picture };
         needsSave = true;
       }
       if (needsSave) await user.save();
     }
+
     if (user.status !== status.ACTIVE) {
       const message =
         user.status === status.PENDING
@@ -445,33 +433,18 @@ export const authService = {
     return { user, accessToken, refreshToken };
   },
 
-  //apple login logic
+  //apple login — Firebase Auth token verification
   async appleLogin(idToken: string, firstName?: string, lastName?: string) {
-    let appleId: string;
-    let email: string | undefined;
+    let decoded: admin.auth.DecodedIdToken;
 
     try {
-      // Apple uses different audiences depending on the platform:
-      //   - iOS native Sign In:    the app's Bundle ID  (e.g., com.emmafve.hesteka)
-      //   - Android / Web Sign In: the Service ID        (if different from Bundle ID)
-      const validAudiences: string[] = [
-        config.provider.appleClientId as string,
-      ];
-      if (config.provider.appleServiceId) {
-        validAudiences.push(config.provider.appleServiceId as string);
-      }
-
-      const decoded = await appleSignin.verifyIdToken(idToken, {
-        audience: validAudiences.length > 1 ? validAudiences : validAudiences[0],
-      });
-      appleId = decoded.sub;
-      email = decoded.email;
+      decoded = await admin.auth().verifyIdToken(idToken);
     } catch (error: any) {
-      console.error("[Auth] Apple token verification failed:", error.message);
-      console.error("[Auth] Expected audience(s):", config.provider.appleClientId, config.provider.appleServiceId || "(none)");
+      console.error("[Auth] Firebase Apple token verification failed:", error.message);
       throw new CustomError(401, "Invalid Apple token");
     }
 
+    const email = decoded.email;
     if (!email) {
       throw new CustomError(400, "Email not found in Apple token");
     }
@@ -482,7 +455,7 @@ export const authService = {
       user = await userModel.create({
         firstName: firstName || "Apple",
         lastName: lastName || "User",
-        email: email,
+        email,
         isVerified: true,
         provider: authProvider.APPLE,
       });
@@ -492,6 +465,7 @@ export const authService = {
         await user.save();
       }
     }
+
     if (user.status !== status.ACTIVE) {
       const message =
         user.status === status.PENDING
