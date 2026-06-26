@@ -23,10 +23,7 @@ export const registerUserSchema = z
       .string()
       .min(6, "Password must be at least 6 characters")
       .max(16, "Password must be at most 16 characters")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.\-«»])[A-Za-z\d@$!%*?&.\-«»]+$/,
-        "Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character",
-      ),
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, "Password must contain at least 1 uppercase, 1 lowercase, and 1 number"),
     role: z.enum(["user", "admin", "partners"]).default("user").optional(),
   })
   .strict();
@@ -100,12 +97,9 @@ export const loginSchema = z
     email: z.string().email("Invalid email address"),
     password: z
       .string()
-      .min(6, "Password must be at least 6 characters")
+      .min(8, "Password must be at least 6 characters")
       .max(16, "Password must be at most 16 characters")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.\-«»])[A-Za-z\d@$!%*?&.\-«»]+$/,
-        "Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character",
-      ),
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, "Password must contain at least 1 uppercase, 1 lowercase, and 1 number"),
     rememberMe: z.boolean().default(false).optional(),
   })
   .strict();
@@ -130,20 +124,14 @@ export const resetPasswordSchema = z
   .object({
     password: z
       .string()
-      .min(6, "Password must be at least 6 characters")
+      .min(8, "Password must be at least 6 characters")
       .max(16, "Password must be at most 16 characters")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.\-«»])[A-Za-z\d@$!%*?&.\-«»]+$/,
-        "Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character",
-      ),
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, "Password must contain at least 1 uppercase, 1 lowercase, and 1 number"),
     confirmPassword: z
       .string()
-      .min(6, "Password must be at least 6 characters")
+      .min(8, "Password must be at least 6 characters")
       .max(16, "Password must be at most 16 characters")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.\-«»])[A-Za-z\d@$!%*?&.\-«»]+$/,
-        "Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character",
-      ),
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, "Password must contain at least 1 uppercase, 1 lowercase, and 1 number"),
   })
   .strict()
   .refine((data) => data.password === data.confirmPassword, {

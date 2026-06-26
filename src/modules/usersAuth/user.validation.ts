@@ -65,18 +65,12 @@ export const updatePasswordSchema = z
       .string()
       .min(6, "Password must be at least 6 characters")
       .max(16, "Password must be at most 16 characters")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.\-«»])[A-Za-z\d@$!%*?&.\-«»]+$/,
-        "Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character",
-      ),
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, "Password must contain at least 1 uppercase, 1 lowercase, and 1 number"),
     confirmPassword: z
       .string()
       .min(6, "Password must be at least 6 characters")
       .max(16, "Password must be at most 16 characters")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.\-«»])[A-Za-z\d@$!%*?&.\-«»]+$/,
-        "Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character",
-      ),
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, "Password must contain at least 1 uppercase, 1 lowercase, and 1 number"),
   })
   .strict()
   .refine((data) => data.currentPassword !== data.newPassword, {
