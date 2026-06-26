@@ -15,7 +15,7 @@ export interface IMyanimal extends Document {
   user: Types.ObjectId;
   title: string;
   description: string;
-  species: AnimalSpecies;
+  species: string;
   breed: string;
   gender: AnimalGender;
   age: AnimalAge;
@@ -33,7 +33,7 @@ export interface IMyanimal extends Document {
 export interface CreateMyanimalPayload {
   title: string;
   description: string;
-  species: AnimalSpecies;
+  species: string;
   breed: string;
   gender: AnimalGender;
   age: AnimalAge;
@@ -46,7 +46,7 @@ export interface CreateMyanimalPayload {
 export interface UpdateMyanimalPayload {
   title?: string;
   description?: string;
-  species?: AnimalSpecies;
+  species?: string;
   breed?: string;
   gender?: AnimalGender;
   age?: AnimalAge;

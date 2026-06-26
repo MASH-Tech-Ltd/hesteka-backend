@@ -16,7 +16,6 @@ const myanimalSchema = new Schema<IMyanimal>(
     description: { type: String, required: true },
     species: {
       type: String,
-      enum: Object.values(AnimalSpecies),
       required: true,
     },
     breed: { type: String, required: true, trim: true },
