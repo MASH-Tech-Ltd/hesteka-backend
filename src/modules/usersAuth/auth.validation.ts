@@ -2,7 +2,8 @@ import { z } from "zod";
 
 const optionalCoordinate = (label: string, min: number, max: number) =>
   z.preprocess(
-    (value) => (value === "" || value === undefined || value === null ? undefined : value),
+    (value) =>
+      value === "" || value === undefined || value === null ? undefined : value,
     z.coerce
       .number({ message: `${label} must be a number` })
       .min(min, `${label} must be at least ${min}`)
@@ -23,7 +24,7 @@ export const registerUserSchema = z
       .min(6, "Password must be at least 6 characters")
       .max(16, "Password must be at most 16 characters")
       .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.\-«»])[A-Za-z\d@$!%*?&.\-«»]+$/,
         "Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character",
       ),
     role: z.enum(["user", "admin", "partners"]).default("user").optional(),
@@ -38,38 +39,50 @@ export const registerPartnerSchema = registerUserSchema
     postalCode: z
       .string()
       .regex(/^[A-Za-z0-9\s\-]{3,10}$/, "Invalid postal code format"),
-    country: z.string().min(1, "Country is required").default("France").optional(),
+    country: z
+      .string()
+      .min(1, "Country is required")
+      .default("France")
+      .optional(),
     latitude: optionalCoordinate("Latitude", -90, 90),
     longitude: optionalCoordinate("Longitude", -180, 180),
     locationAddress: z.string().optional(),
     website: z.preprocess(
-      (val) => (val === "" || val === undefined || val === null ? undefined : val),
+      (val) =>
+        val === "" || val === undefined || val === null ? undefined : val,
       z.string().url("Invalid website URL").optional(),
     ),
     description: z.string().optional(),
     facebook: z.preprocess(
-      (val) => (val === "" || val === undefined || val === null ? undefined : val),
+      (val) =>
+        val === "" || val === undefined || val === null ? undefined : val,
       z.string().optional(),
     ),
     instagram: z.preprocess(
-      (val) => (val === "" || val === undefined || val === null ? undefined : val),
+      (val) =>
+        val === "" || val === undefined || val === null ? undefined : val,
       z.string().optional(),
     ),
     twitter: z.preprocess(
-      (val) => (val === "" || val === undefined || val === null ? undefined : val),
+      (val) =>
+        val === "" || val === undefined || val === null ? undefined : val,
       z.string().optional(),
     ),
     linkedin: z.preprocess(
-      (val) => (val === "" || val === undefined || val === null ? undefined : val),
+      (val) =>
+        val === "" || val === undefined || val === null ? undefined : val,
       z.string().optional(),
     ),
     region: z.string().optional(),
     department: z.string().optional(),
   })
-  .refine((data) => (data.latitude === undefined) === (data.longitude === undefined), {
-    message: "Latitude and longitude must be provided together",
-    path: ["longitude"],
-  })
+  .refine(
+    (data) => (data.latitude === undefined) === (data.longitude === undefined),
+    {
+      message: "Latitude and longitude must be provided together",
+      path: ["longitude"],
+    },
+  )
   .strict();
 
 export const verifyAccountSchema = z
