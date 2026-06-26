@@ -49,7 +49,7 @@ const imageFileFilter = (
 
 export const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
   fileFilter: imageFileFilter,
 });
 
@@ -61,10 +61,10 @@ export const uploadSingle =
       if (err) {
         if (err instanceof MulterError && err.code === "LIMIT_FILE_SIZE") {
           return next(
-            new CustomError(400, "File too large. Maximum size is 5MB", [
+            new CustomError(400, "File too large. Maximum size is 15MB", [
               {
                 field: fieldName,
-                message: "File too large. Maximum size is 5MB",
+                message: "File too large. Maximum size is 15MB",
               },
             ]),
           );
