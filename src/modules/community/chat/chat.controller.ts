@@ -94,10 +94,18 @@ const deleteChat = asyncHandler(async (req: Request, res: Response) => {
   return ApiResponse.sendSuccess(res, 200, "Message deleted successfully");
 });
 
+const adminDeleteChat = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  await chatService.adminDeleteChat(id as string);
+
+  return ApiResponse.sendSuccess(res, 200, "Message deleted successfully by admin");
+});
+
 export const chatController = {
   createChat,
   getLocalChat,
   getGlobalChat,
   getChatById,
   deleteChat,
+  adminDeleteChat,
 };

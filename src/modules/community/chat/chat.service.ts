@@ -230,10 +230,13 @@ const getLocalChat = async (query: GetLocalChatQuery) => {
 
   const chatIds = messages.map((msg) => msg._id);
   const userLikes = user
-    ? await chatLikeModel.find({
-        user: user,
-        chat: { $in: chatIds },
-      }).select("chat").lean()
+    ? await chatLikeModel
+        .find({
+          user: user,
+          chat: { $in: chatIds },
+        })
+        .select("chat")
+        .lean()
     : [];
 
   const likedChatIds = new Set(
@@ -275,13 +278,13 @@ const getGlobalChat = async (query: GetGlobalChatQuery) => {
   const [messages, total] = await Promise.all([
     chatModel
       .find()
-      .populate("user", "firstName lastName profileImage")
+      .populate("user", "firstName lastName email profileImage")
       .populate({
         path: "replyTo",
         select: "content user",
         populate: {
           path: "user",
-          select: "firstName lastName profileImage",
+          select: "firstName lastName email profileImage",
         },
       })
       .sort({ createdAt: -1 })
@@ -358,11 +361,37 @@ const deleteChat = async (
   });
 };
 
+const adminDeleteChat = async (chatId: string): Promise<void> => {
+  if (!Types.ObjectId.isValid(chatId)) {
+    throw new CustomError(400, "Invalid chat ID");
+  }
+
+  const chat = await chatModel.findById(chatId);
+
+  if (!chat) {
+    throw new CustomError(404, "Chat message not found");
+  }
+
+  for (const media of chat.media) {
+    const resourceType = getCloudinaryResourceType(media.type);
+    await deleteCloudinary(media.publicId, resourceType).catch(() => null);
+  }
+
+  const [lng, lat] = chat.location.coordinates;
+
+  await chatModel.findByIdAndDelete(chatId);
+
+  broadcastToGeohashes(lat, lng, ChatSocketEvents.CHAT_MESSAGE_DELETED, {
+    chatId,
+  });
+};
+
 export const chatService = {
   createChat,
   getLocalChat,
   getGlobalChat,
   getChatById,
   deleteChat,
+  adminDeleteChat,
   broadcastToGeohashes,
 };

@@ -1,6 +1,6 @@
 import express from "express";
 import { chatController } from "./chat.controller";
-import { authGuard } from "../../../middleware/auth.middleware";
+import { authGuard, allowRole } from "../../../middleware/auth.middleware";
 import { uploadMediaArray } from "../../../middleware/multer.midleware";
 import { COMMUNITY_CONFIG } from "../shared/community.config";
 
@@ -20,3 +20,5 @@ chatRoute.get("/global", authGuard, chatController.getGlobalChat);
 chatRoute.get("/:id", authGuard, chatController.getChatById);
 
 chatRoute.delete("/:id", authGuard, chatController.deleteChat);
+
+chatRoute.delete("/admin/:id", authGuard, allowRole("admin"), chatController.adminDeleteChat);
