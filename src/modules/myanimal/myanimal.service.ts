@@ -8,6 +8,7 @@ import { paginationHelper } from "../../utils/pagination";
 export const myanimalService = {
   async createMyanimal(req: Request) {
     const data = req.body as CreateMyanimalPayload;
+    console.log("Create MyAnimal Request Body Data:", data);
     const image = req.file;
 
     const payload: any = {
@@ -23,6 +24,7 @@ export const myanimalService = {
       const item = await myanimalModel.create(payload);
       return await item.populate("user", "firstName lastName email profileImage");
     } catch (error) {
+      console.error("Custom Error in Create MyAnimal:", error);
       if (payload.photo?.public_id) {
         await deleteCloudinary(payload.photo.public_id).catch(console.error);
       }

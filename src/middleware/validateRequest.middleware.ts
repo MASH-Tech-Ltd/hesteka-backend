@@ -5,6 +5,7 @@ import CustomError from "../helpers/CustomError";
 export const validateRequest = (schema: ZodSchema): RequestHandler => {
   return async (req: Request, _res: Response, next: NextFunction) => {
     try {
+      console.log("req.body in validation middleware", req.body);
       const hasBody = req.body && Object.keys(req.body).length > 0;
 
       const hasFile =
@@ -31,6 +32,7 @@ export const validateRequest = (schema: ZodSchema): RequestHandler => {
       next();
     } catch (err: any) {
       if (err instanceof ZodError) {
+        console.error("Validation Error Request Body:", req.body);
         const errors = err.issues.map((issue) => ({
           field: issue.path[0] ?? "unknown",
           message: issue.message,
