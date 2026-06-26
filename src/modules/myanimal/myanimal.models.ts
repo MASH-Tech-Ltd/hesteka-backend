@@ -66,11 +66,6 @@ const myanimalSchema = new Schema<IMyanimal>(
 myanimalSchema.pre("save", async function () {
   if (!this.isModified("title")) return;
 
-  const existing = await (this.constructor as any).findOne({ title: this.title });
-  if (existing) {
-    throw new CustomError(400, "Animal with this title already exists");
-  }
-
   this.slug = slugify(this.title, {
     lower: true,
     strict: true,
@@ -83,11 +78,6 @@ myanimalSchema.pre("findOneAndUpdate", async function () {
   const update = this.getUpdate() as any;
 
   if (update?.title) {
-    const existing = await (this.model as any).findOne({ title: update.title });
-    if (existing && existing._id.toString() !== this.getQuery()._id.toString()) {
-      throw new CustomError(400, "Animal with this title already exists");
-    }
-
     update.slug = slugify(update.title, {
       lower: true,
       strict: true,
