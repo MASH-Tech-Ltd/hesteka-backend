@@ -860,6 +860,8 @@ export const userService = {
     const { email } = req?.user as { email: string };
     const { fcmToken } = req.body as { fcmToken: string };
 
+    console.log(`[User Service] updateFcmToken called for ${email} with token: ${fcmToken}`);
+
     const user = await userModel.findOneAndUpdate(
       { email: email },
       { $addToSet: { fcmTokens: fcmToken } },
