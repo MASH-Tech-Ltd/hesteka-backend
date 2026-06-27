@@ -107,7 +107,7 @@ export const notificationService = {
         filter.role = { $in: ["user", "partner", "admin"] };
       }
 
-      const usersNearby = await userModel.find(filter).select("_id fcmTokens");
+      const usersNearby = await userModel.find(filter).select("_id fcmTokens firstName lastName email location role");
 
       console.log(`[Notification Service] Found ${usersNearby.length} target users.`);
 
@@ -130,8 +130,8 @@ export const notificationService = {
 
       // Extract FCM tokens and prepare Socket logic
       const allTokens: string[] = [];
-      let socketCount = 0;
-      let fcmCount = 0;
+      let successLog: string[] = [];
+      let failLog: string[] = [];
       let io: any; // using any to bypass strict type here easily, or import Server
       try {
         io = getIo();
@@ -144,20 +144,52 @@ export const notificationService = {
         if (!user) continue;
 
         const userIdStr = user._id.toString();
+        
+        let distanceStr = "";
+        if (lat !== undefined && lng !== undefined) {
+          if (user.location?.coordinates && Array.isArray(user.location.coordinates) && user.location.coordinates.length >= 2) {
+            const userLng = user.location.coordinates[0] as number;
+            const userLat = user.location.coordinates[1] as number;
+            const R = 6371; // Radius of the earth in km
+            const dLat = (userLat - lat) * Math.PI / 180;
+            const dLon = (userLng - lng) * Math.PI / 180;
+            const a = 
+              Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat * Math.PI / 180) * Math.cos(userLat * Math.PI / 180) * 
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+            const distKm = (R * c).toFixed(2);
+            distanceStr = ` [${distKm}km away]`;
+          } else if (user.role === 'admin') {
+            distanceStr = ` [Admin: Global]`;
+          } else {
+            distanceStr = ` [Location Unknown]`;
+          }
+        }
+
+        const userInfo = `${user.firstName || 'User'} ${user.lastName || ''} (${user.email || 'No email'})${distanceStr}`;
+        let gotSocket = false;
+        let gotFcm = false;
 
         if (io) {
           // Check if user has active sockets
           const sockets = await io.in(userIdStr).fetchSockets();
           if (sockets.length > 0) {
             io.to(userIdStr).emit("notification:new", savedNotifications[idx]);
-            socketCount++;
+            gotSocket = true;
           }
         }
 
         // Always collect FCM tokens for push notification
         if (user.fcmTokens && Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
           allTokens.push(...user.fcmTokens);
-          fcmCount++;
+          gotFcm = true;
+        }
+
+        if (gotSocket || gotFcm) {
+          successLog.push(`${userInfo} -> [Socket: ${gotSocket ? 'Yes' : 'No'}, FCM: ${gotFcm ? 'Yes' : 'No'}]`);
+        } else {
+          failLog.push(`${userInfo}`);
         }
       }
 
@@ -166,7 +198,9 @@ export const notificationService = {
         await sendPushNotification(allTokens, title, body, { type, ...data });
       }
 
-      console.log(`[Notification Service] notifyUsersNearby: Sent to ${socketCount} active sockets and ${fcmCount} devices via FCM.`);
+      console.log(`[Notification Service] notifyUsersNearby targeted ${usersNearby.length} users.`);
+      if (successLog.length > 0) console.log(`   ✅ Sent to:\n      ${successLog.join('\n      ')}`);
+      if (failLog.length > 0) console.log(`   ❌ Did NOT receive (No socket/FCM):\n      ${failLog.join('\n      ')}`);
 
     } catch (error) {
       console.error(" Failed in notifyUsersNearby:", error);
@@ -175,7 +209,7 @@ export const notificationService = {
 
   async notifySingleUser(userId: string, title: string, body: string, type: NotificationType, data?: Record<string, any>) {
     try {
-      const user = await userModel.findById(userId).select("_id fcmTokens");
+      const user = await userModel.findById(userId).select("_id fcmTokens firstName lastName email");
       if (!user) return;
 
       const notificationToSave = {
@@ -211,7 +245,12 @@ export const notificationService = {
         fcmSent = true;
       }
 
-      console.log(`[Notification Service] notifySingleUser: Socket=${socketSent}, FCM=${fcmSent} for User=${userId}`);
+      const userInfo = `${user.firstName || 'User'} ${user.lastName || ''} (${user.email || 'No email'})`;
+      if (socketSent || fcmSent) {
+        console.log(`[Notification Service] notifySingleUser ✅ Sent to: ${userInfo} -> [Socket: ${socketSent ? 'Yes' : 'No'}, FCM: ${fcmSent ? 'Yes' : 'No'}]`);
+      } else {
+        console.log(`[Notification Service] notifySingleUser ❌ Failed for: ${userInfo} (No active socket or FCM token)`);
+      }
 
     } catch (error) {
       console.error(" Failed in notifySingleUser:", error);
@@ -220,7 +259,7 @@ export const notificationService = {
 
   async notifyAdmins(title: string, body: string, type: NotificationType) {
     try {
-      const admins = await userModel.find({ role: "admin", status: "active" }).select("_id fcmTokens");
+      const admins = await userModel.find({ role: "admin", status: "active" }).select("_id fcmTokens firstName lastName email");
       if (!admins.length) return;
 
       const notificationsToSave = admins.map(admin => ({
@@ -234,8 +273,8 @@ export const notificationService = {
       const savedNotifications = await notificationModel.insertMany(notificationsToSave);
 
       const allTokens: string[] = [];
-      let socketCount = 0;
-      let fcmCount = 0;
+      let successLog: string[] = [];
+      let failLog: string[] = [];
       let io: any;
       try {
         io = getIo();
@@ -246,18 +285,27 @@ export const notificationService = {
         if (!admin) continue;
         
         const userIdStr = admin._id.toString();
+        const userInfo = `${admin.firstName || 'Admin'} ${admin.lastName || ''} (${admin.email || 'No email'})`;
+        let gotSocket = false;
+        let gotFcm = false;
 
         if (io) {
           const sockets = await io.in(userIdStr).fetchSockets();
           if (sockets.length > 0) {
             io.to(userIdStr).emit("notification:new", savedNotifications[idx]);
-            socketCount++;
+            gotSocket = true;
           }
         }
 
         if (admin.fcmTokens && Array.isArray(admin.fcmTokens) && admin.fcmTokens.length > 0) {
           allTokens.push(...admin.fcmTokens);
-          fcmCount++;
+          gotFcm = true;
+        }
+
+        if (gotSocket || gotFcm) {
+          successLog.push(`${userInfo} -> [Socket: ${gotSocket ? 'Yes' : 'No'}, FCM: ${gotFcm ? 'Yes' : 'No'}]`);
+        } else {
+          failLog.push(`${userInfo}`);
         }
       }
 
@@ -265,7 +313,9 @@ export const notificationService = {
         await sendPushNotification(allTokens, title, body, { type });
       }
 
-      console.log(`[Notification Service] notifyAdmins: Sent to ${socketCount} active sockets and ${fcmCount} devices via FCM.`);
+      console.log(`[Notification Service] notifyAdmins targeted ${admins.length} admins.`);
+      if (successLog.length > 0) console.log(`   ✅ Sent to:\n      ${successLog.join('\n      ')}`);
+      if (failLog.length > 0) console.log(`   ❌ Did NOT receive (No socket/FCM):\n      ${failLog.join('\n      ')}`);
 
     } catch (error) {
       console.error(" Failed in notifyAdmins:", error);
@@ -294,7 +344,7 @@ export const notificationService = {
       }
     }
 
-    const targetUsers = await userModel.find(query).select("_id fcmTokens");
+    const targetUsers = await userModel.find(query).select("_id fcmTokens firstName lastName email");
 
     if (!targetUsers || targetUsers.length === 0) return;
 
@@ -311,8 +361,8 @@ export const notificationService = {
     const savedNotifications = await notificationModel.insertMany(notificationsToSave);
 
     const allTokens: string[] = [];
-    let socketCount = 0;
-    let fcmCount = 0;
+    let successLog: string[] = [];
+    let failLog: string[] = [];
     let io: any;
     try {
       io = getIo();
@@ -323,18 +373,27 @@ export const notificationService = {
       if (!u) continue;
       
       const userIdStr = u._id.toString();
+      const userInfo = `${u.firstName || 'User'} ${u.lastName || ''} (${u.email || 'No email'})`;
+      let gotSocket = false;
+      let gotFcm = false;
 
       if (io) {
         const sockets = await io.in(userIdStr).fetchSockets();
         if (sockets.length > 0) {
           io.to(userIdStr).emit("notification:new", savedNotifications[idx]);
-          socketCount++;
+          gotSocket = true;
         }
       }
 
       if (u.fcmTokens && Array.isArray(u.fcmTokens) && u.fcmTokens.length > 0) {
         allTokens.push(...u.fcmTokens);
-        fcmCount++;
+        gotFcm = true;
+      }
+
+      if (gotSocket || gotFcm) {
+        successLog.push(`${userInfo} -> [Socket: ${gotSocket ? 'Yes' : 'No'}, FCM: ${gotFcm ? 'Yes' : 'No'}]`);
+      } else {
+        failLog.push(`${userInfo}`);
       }
     }
 
@@ -342,7 +401,9 @@ export const notificationService = {
       await sendPushNotification(allTokens, title, message, { type });
     }
 
-    console.log(`[Notification Service] sendManualAdminAlert: Sent to ${socketCount} active sockets and ${fcmCount} devices via FCM.`);
+    console.log(`[Notification Service] sendManualAdminAlert targeted ${targetUsers.length} users.`);
+    if (successLog.length > 0) console.log(`   ✅ Sent to:\n      ${successLog.join('\n      ')}`);
+    if (failLog.length > 0) console.log(`   ❌ Did NOT receive (No socket/FCM):\n      ${failLog.join('\n      ')}`);
   },
 
   async notifyFriends(userId: string, title: string, body: string, type: NotificationType, data?: Record<string, any>) {
@@ -353,7 +414,7 @@ export const notificationService = {
       const relations = await FriendModel.find({
         $or: [{ requester: userId }, { recipient: userId }],
         status: FriendStatus.ACCEPTED
-      }).populate("requester recipient", "_id fcmTokens");
+      }).populate("requester recipient", "_id fcmTokens firstName lastName email");
 
       if (!relations.length) return;
 
@@ -373,8 +434,8 @@ export const notificationService = {
       const savedNotifications = await notificationModel.insertMany(notificationsToSave);
 
       const allTokens: string[] = [];
-      let socketCount = 0;
-      let fcmCount = 0;
+      let successLog: string[] = [];
+      let failLog: string[] = [];
       let io: any;
       try {
         io = getIo();
@@ -385,18 +446,27 @@ export const notificationService = {
         if (!friend) continue;
 
         const friendIdStr = friend._id.toString();
+        const userInfo = `${friend.firstName || 'Friend'} ${friend.lastName || ''} (${friend.email || 'No email'})`;
+        let gotSocket = false;
+        let gotFcm = false;
 
         if (io) {
           const sockets = await io.in(friendIdStr).fetchSockets();
           if (sockets.length > 0) {
             io.to(friendIdStr).emit("notification:new", savedNotifications[idx]);
-            socketCount++;
+            gotSocket = true;
           }
         }
 
         if (friend.fcmTokens && Array.isArray(friend.fcmTokens) && friend.fcmTokens.length > 0) {
           allTokens.push(...friend.fcmTokens);
-          fcmCount++;
+          gotFcm = true;
+        }
+
+        if (gotSocket || gotFcm) {
+          successLog.push(`${userInfo} -> [Socket: ${gotSocket ? 'Yes' : 'No'}, FCM: ${gotFcm ? 'Yes' : 'No'}]`);
+        } else {
+          failLog.push(`${userInfo}`);
         }
       }
 
@@ -404,7 +474,9 @@ export const notificationService = {
         await sendPushNotification(allTokens, title, body, { type, ...data });
       }
 
-      console.log(`[Notification Service] notifyFriends: Sent to ${socketCount} active sockets and ${fcmCount} devices via FCM.`);
+      console.log(`[Notification Service] notifyFriends targeted ${friendsToNotify.length} friends.`);
+      if (successLog.length > 0) console.log(`   ✅ Sent to:\n      ${successLog.join('\n      ')}`);
+      if (failLog.length > 0) console.log(`   ❌ Did NOT receive (No socket/FCM):\n      ${failLog.join('\n      ')}`);
     } catch (error) {
       console.error(" Failed in notifyFriends:", error);
     }
