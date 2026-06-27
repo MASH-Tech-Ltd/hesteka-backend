@@ -9,7 +9,7 @@ import {
   removeImage,
   getMyReports,
 } from "./report.controller";
-import { authGuard } from "../../middleware/auth.middleware";
+import { authGuard, authGuardOptional } from "../../middleware/auth.middleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
 import {
   createReportSchema,
@@ -21,8 +21,8 @@ const router = Router();
 
 // Public routes (or authentication required based on your app's needs)
 // If you want everyone to see reports:
-router.get("/get-all-reports", getAllReports);
-router.get("/get-single-report/:reportId", getReportById);
+router.get("/get-all-reports", authGuardOptional, getAllReports);
+router.get("/get-single-report/:reportId", authGuardOptional, getReportById);
 
 // Protected routes (requires login)
 router.use(authGuard);
