@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { chatModel } from "./chat.models";
+import { userModel } from "../../usersAuth/user.models";
 import { chatLikeModel } from "../chatlike/chatlike.models";
 import {
   CreateChatPayload,
@@ -206,6 +207,13 @@ const getLocalChat = async (query: GetLocalChatQuery) => {
     resolvedLocation.lng,
     radiusKm!,
   );
+
+  if (user && lat !== undefined && lng !== undefined) {
+    userModel.findByIdAndUpdate(user, {
+      "location.type": "Point",
+      "location.coordinates": [resolvedLocation.lng, resolvedLocation.lat]
+    }).catch(err => console.error("[Chat Service] Failed to update user location silently:", err));
+  }
 
   const filter = user ? { $or: [geoFilter, { user }] } : geoFilter;
 

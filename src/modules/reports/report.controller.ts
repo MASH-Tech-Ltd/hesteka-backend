@@ -24,8 +24,7 @@ export const getMyReports = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const getReportById = asyncHandler(async (req: Request, res: Response) => {
-  const { reportId } = req.params as { reportId: string };
-  const report = await reportService.getReportById(reportId);
+  const report = await reportService.getReportById(req);
   ApiResponse.sendSuccess(res, 200, "Report fetched successfully", report);
 });
 

@@ -368,7 +368,7 @@ export const authService = {
   },
 
   //google login — Firebase Auth token verification
-  async googleLogin(idToken: string) {
+  async googleLogin(idToken: string, extraData?: any) {
     let decoded: admin.auth.DecodedIdToken;
     try {
       decoded = await admin.auth().verifyIdToken(idToken);
@@ -387,6 +387,12 @@ export const authService = {
     const lastName = nameParts.slice(1).join(" ") || "User";
     const picture = decoded.picture as string | undefined;
 
+    const location = (extraData?.latitude !== undefined && extraData?.longitude !== undefined) ? {
+        type: "Point",
+        coordinates: [extraData.longitude, extraData.latitude],
+        ...(extraData.locationAddress ? { address: extraData.locationAddress } : {})
+    } : undefined;
+
     let user = await userModel.findOne({ email: decoded.email });
 
     if (!user) {
@@ -398,6 +404,11 @@ export const authService = {
         isVerified: true,
         provider: authProvider.GOOGLE,
         ...(picture ? { profileImage: { public_id: "", secure_url: picture } } : {}),
+        ...(location ? { location } : {}),
+        ...(extraData?.city ? { city: extraData.city } : {}),
+        ...(extraData?.postalCode ? { postalCode: extraData.postalCode } : {}),
+        ...(extraData?.country ? { country: extraData.country } : {}),
+        ...(extraData?.phone ? { phone: extraData.phone } : {}),
       });
     } else {
       let needsSave = false;
@@ -409,6 +420,16 @@ export const authService = {
         user.profileImage = { public_id: "", secure_url: picture };
         needsSave = true;
       }
+
+      if (location && (!user.location || !user.location.coordinates || user.location.coordinates.length < 2)) {
+         user.location = location as any;
+         needsSave = true;
+      }
+      if (!user.city && extraData?.city) { user.city = extraData.city; needsSave = true; }
+      if (!user.postalCode && extraData?.postalCode) { user.postalCode = extraData.postalCode; needsSave = true; }
+      if (!user.country && extraData?.country) { user.country = extraData.country; needsSave = true; }
+      if (!user.phone && extraData?.phone) { user.phone = extraData.phone; needsSave = true; }
+
       if (needsSave) await user.save();
     }
 
@@ -434,7 +455,7 @@ export const authService = {
   },
 
   //apple login — Firebase Auth token verification
-  async appleLogin(idToken: string, firstName?: string, lastName?: string) {
+  async appleLogin(idToken: string, firstName?: string, lastName?: string, extraData?: any) {
     let decoded: admin.auth.DecodedIdToken;
 
     try {
@@ -449,6 +470,12 @@ export const authService = {
       throw new CustomError(400, "Email not found in Apple token");
     }
 
+    const location = (extraData?.latitude !== undefined && extraData?.longitude !== undefined) ? {
+        type: "Point",
+        coordinates: [extraData.longitude, extraData.latitude],
+        ...(extraData.locationAddress ? { address: extraData.locationAddress } : {})
+    } : undefined;
+
     let user = await userModel.findOne({ email });
 
     if (!user) {
@@ -458,12 +485,29 @@ export const authService = {
         email,
         isVerified: true,
         provider: authProvider.APPLE,
+        ...(location ? { location } : {}),
+        ...(extraData?.city ? { city: extraData.city } : {}),
+        ...(extraData?.postalCode ? { postalCode: extraData.postalCode } : {}),
+        ...(extraData?.country ? { country: extraData.country } : {}),
+        ...(extraData?.phone ? { phone: extraData.phone } : {}),
       });
     } else {
+      let needsSave = false;
       if (!user.provider) {
         user.provider = authProvider.APPLE;
-        await user.save();
+        needsSave = true;
       }
+
+      if (location && (!user.location || !user.location.coordinates || user.location.coordinates.length < 2)) {
+         user.location = location as any;
+         needsSave = true;
+      }
+      if (!user.city && extraData?.city) { user.city = extraData.city; needsSave = true; }
+      if (!user.postalCode && extraData?.postalCode) { user.postalCode = extraData.postalCode; needsSave = true; }
+      if (!user.country && extraData?.country) { user.country = extraData.country; needsSave = true; }
+      if (!user.phone && extraData?.phone) { user.phone = extraData.phone; needsSave = true; }
+
+      if (needsSave) await user.save();
     }
 
     if (user.status !== status.ACTIVE) {

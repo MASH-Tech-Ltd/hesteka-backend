@@ -222,6 +222,14 @@ export const reportService = {
           $centerSphere: [[lngNum, latNum], radiusKm / 6378.1],
         },
       };
+
+      // Silently update the user's actual location in the database to keep it fresh
+      if (req.user?._id) {
+        userModel.findByIdAndUpdate(req.user._id, {
+          "location.type": "Point",
+          "location.coordinates": [lngNum, latNum]
+        }).catch(err => console.error("[Report Service] Failed to update user location silently:", err));
+      }
     }
 
     // Search (title/breed/description)
@@ -395,6 +403,14 @@ export const reportService = {
           $centerSphere: [[lngNum, latNum], radiusKm / 6378.1],
         },
       };
+
+      // Silently update the user's actual location in the database to keep it fresh
+      if (req.user?._id) {
+        userModel.findByIdAndUpdate(req.user._id, {
+          "location.type": "Point",
+          "location.coordinates": [lngNum, latNum]
+        }).catch(err => console.error("[Report Service] Failed to update user location silently:", err));
+      }
     }
 
     // Search (title/breed/description)
@@ -518,7 +534,10 @@ export const reportService = {
   },
 
   // Get a single report by ID
-  async getReportById(reportId: string) {
+  async getReportById(req: Request) {
+    const { reportId } = req.params as { reportId: string };
+    const { lat, lng } = req.query;
+
     const report = await reportModel
       .findById(reportId)
       .populate("author", "firstName lastName email profileImage")
@@ -541,6 +560,18 @@ export const reportService = {
     // Manually filter out child comments (fallback)
     if (report.comments && Array.isArray(report.comments)) {
       report.comments = report.comments.filter((c: any) => c && (c.parent === null || c.parent === undefined));
+    }
+
+    // Silently update the user's actual location in the database to keep it fresh
+    if (req.user?._id && lat !== undefined && lng !== undefined) {
+      const latNum = parseFloat(lat as string);
+      const lngNum = parseFloat(lng as string);
+      if (!isNaN(latNum) && !isNaN(lngNum)) {
+        userModel.findByIdAndUpdate(req.user._id, {
+          "location.type": "Point",
+          "location.coordinates": [lngNum, latNum]
+        }).catch(err => console.error("[Report Service] Failed to update user location silently:", err));
+      }
     }
 
     return report;
