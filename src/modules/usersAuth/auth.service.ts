@@ -409,6 +409,7 @@ export const authService = {
         ...(extraData?.postalCode ? { postalCode: extraData.postalCode } : {}),
         ...(extraData?.country ? { country: extraData.country } : {}),
         ...(extraData?.phone ? { phone: extraData.phone } : {}),
+        ...(extraData?.fcmToken ? { fcmTokens: [extraData.fcmToken] } : {}),
       });
     } else {
       let needsSave = false;
@@ -429,6 +430,12 @@ export const authService = {
       if (!user.postalCode && extraData?.postalCode) { user.postalCode = extraData.postalCode; needsSave = true; }
       if (!user.country && extraData?.country) { user.country = extraData.country; needsSave = true; }
       if (!user.phone && extraData?.phone) { user.phone = extraData.phone; needsSave = true; }
+
+      if (extraData?.fcmToken && (!user.fcmTokens || !user.fcmTokens.includes(extraData.fcmToken))) {
+         if (!user.fcmTokens) user.fcmTokens = [];
+         user.fcmTokens.push(extraData.fcmToken);
+         needsSave = true;
+      }
 
       if (needsSave) await user.save();
     }
@@ -490,6 +497,7 @@ export const authService = {
         ...(extraData?.postalCode ? { postalCode: extraData.postalCode } : {}),
         ...(extraData?.country ? { country: extraData.country } : {}),
         ...(extraData?.phone ? { phone: extraData.phone } : {}),
+        ...(extraData?.fcmToken ? { fcmTokens: [extraData.fcmToken] } : {}),
       });
     } else {
       let needsSave = false;
@@ -506,6 +514,12 @@ export const authService = {
       if (!user.postalCode && extraData?.postalCode) { user.postalCode = extraData.postalCode; needsSave = true; }
       if (!user.country && extraData?.country) { user.country = extraData.country; needsSave = true; }
       if (!user.phone && extraData?.phone) { user.phone = extraData.phone; needsSave = true; }
+
+      if (extraData?.fcmToken && (!user.fcmTokens || !user.fcmTokens.includes(extraData.fcmToken))) {
+         if (!user.fcmTokens) user.fcmTokens = [];
+         user.fcmTokens.push(extraData.fcmToken);
+         needsSave = true;
+      }
 
       if (needsSave) await user.save();
     }
