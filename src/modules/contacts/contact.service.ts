@@ -159,7 +159,7 @@ export const contactService = {
         if (typeStr) {
           typeStr = typeStr.toLowerCase();
           if (typeStr.includes("shelter")) type = ContactType.SHELTER;
-          else if (typeStr.includes("csrf")) type = ContactType.CSRF;
+          else if (typeStr.includes("csfs") || typeStr.includes("csrf")) type = ContactType.CSFS;
           else if (typeStr.includes("partner")) type = ContactType.PARTNER;
           else type = ContactType.VETERINARIAN;
         }
@@ -700,7 +700,7 @@ export const contactService = {
             active: { $sum: { $cond: [{ $eq: ["$status", ContactStatus.ACTIVE] }, 1, 0] } },
             shelter: { $sum: { $cond: [{ $eq: ["$type", ContactType.SHELTER] }, 1, 0] } },
             vet: { $sum: { $cond: [{ $eq: ["$type", ContactType.VETERINARIAN] }, 1, 0] } },
-            csrf: { $sum: { $cond: [{ $eq: ["$type", ContactType.CSRF] }, 1, 0] } },
+            csfs: { $sum: { $cond: [{ $eq: ["$type", ContactType.CSFS] }, 1, 0] } },
           },
         },
       ]),
@@ -716,7 +716,7 @@ export const contactService = {
       ]),
     ]);
 
-    const s = standardStats[0] || { total: 0, active: 0, shelter: 0, vet: 0, csrf: 0 };
+    const s = standardStats[0] || { total: 0, active: 0, shelter: 0, vet: 0, csfs: 0 };
     const p = partnerStats[0] || { total: 0, active: 0 };
 
     return {
@@ -724,7 +724,7 @@ export const contactService = {
       active: s.active + p.active,
       shelter: s.shelter,
       vet: s.vet,
-      csrf: s.csrf,
+      csfs: s.csfs,
       partner: p.total,
     };
   },

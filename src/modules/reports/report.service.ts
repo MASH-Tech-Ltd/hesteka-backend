@@ -131,6 +131,16 @@ export const reportService = {
       // Mark report as point-awarded
       newReport.isPointApproved = true;
       await newReport.save();
+
+      // Notify the user that their report was successful and they earned points
+      notificationService.notifySingleUser(
+        authorId.toString(),
+        "Signalement publié !",
+        `Votre signalement "${newReport.title}" a été créé avec succès. Vous avez gagné ${pointsToAward} points !`,
+        NotificationType.POINTS_EARNED,
+        { reportId: newReport._id.toString() }
+      ).catch((err) => console.error("Author Notification Error:", err));
+
     } catch (pointError) {
       console.error("Failed to award points for report:", pointError);
     }

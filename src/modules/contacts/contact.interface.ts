@@ -3,7 +3,7 @@ import { Document } from "mongoose";
 export enum ContactType {
   SHELTER = "shelter",
   VETERINARIAN = "veterinarian",
-  CSRF = "CSRF",
+  CSFS = "CSFS",
   PARTNER = "partner",
 }
 

@@ -10,6 +10,7 @@ const settingsSchema = new Schema(
       twitter: { type: String, default: "" },
     },
     maintenanceMode: { type: Boolean, default: false },
+    alertRadius: { type: Number, default: 5 },
   },
   { timestamps: true }
 );
