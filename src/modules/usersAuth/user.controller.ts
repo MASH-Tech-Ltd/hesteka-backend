@@ -130,6 +130,7 @@ export const deleteAccount = asyncHandler(
 //: update fcm token
 export const updateFcmToken = asyncHandler(
   async (req: Request, res: Response) => {
+    console.log("[User Controller] Update FCM Token - Received Payload:", req.body);
     await userService.updateFcmToken(req);
     ApiResponse.sendSuccess(res, 200, "FCM Token registered successfully");
   },

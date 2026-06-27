@@ -156,10 +156,12 @@ export const generateAccessToken = asyncHandler(async (req, res) => {
 
 //: Google Login callback/token handler
 export const googleLogin = asyncHandler(async (req, res) => {
-  const { idToken, latitude, longitude, locationAddress, city, postalCode, country, phone, fcmToken } = req.body;
+  const { idToken, latitude, longitude, locationAddress, city, postalCode, country, fcmToken } = req.body;
   if (!idToken) throw new CustomError(400, "Google idToken is required");
+  
+  console.log("[Auth Controller] Google Login - Received FCM Token:", fcmToken);
 
-  const { user, accessToken, refreshToken } = await authService.googleLogin(idToken, { latitude, longitude, locationAddress, city, postalCode, country, phone, fcmToken });
+  const { user, accessToken, refreshToken } = await authService.googleLogin(idToken, { latitude, longitude, locationAddress, city, postalCode, country, fcmToken });
 
   res.cookie("refreshToken", refreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
   res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(user.rememberMe)));
@@ -177,10 +179,12 @@ export const googleLogin = asyncHandler(async (req, res) => {
 
 //: Apple Login handler
 export const appleLogin = asyncHandler(async (req, res) => {
-  const { idToken, firstName, lastName, latitude, longitude, locationAddress, city, postalCode, country, phone, fcmToken } = req.body;
+  const { idToken, firstName, lastName, latitude, longitude, locationAddress, city, postalCode, country, fcmToken } = req.body;
   if (!idToken) throw new CustomError(400, "Apple idToken is required");
 
-  const { user, accessToken, refreshToken } = await authService.appleLogin(idToken, firstName, lastName, { latitude, longitude, locationAddress, city, postalCode, country, phone, fcmToken });
+  console.log("[Auth Controller] Apple Login - Received FCM Token:", fcmToken);
+
+  const { user, accessToken, refreshToken } = await authService.appleLogin(idToken, firstName, lastName, { latitude, longitude, locationAddress, city, postalCode, country, fcmToken });
 
   res.cookie("refreshToken", refreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
   res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(user.rememberMe)));
