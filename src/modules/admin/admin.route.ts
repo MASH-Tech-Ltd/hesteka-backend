@@ -15,7 +15,8 @@ import {
   getDonationStats,
   getPhysicalItemStats,
   getCollectionPointStats,
-  getAnalytics
+  getAnalytics,
+  getOnlineUsers
 } from "./admin.controller";
 
 const router = Router();
@@ -49,5 +50,7 @@ router.get("/stats/missions", authGuard, allowRole("admin"), getMissionStats);
 router.get("/stats/donations", authGuard, allowRole("admin"), getDonationStats);
 router.get("/stats/items", authGuard, allowRole("admin"), getPhysicalItemStats);
 router.get("/stats/collection-points", authGuard, allowRole("admin"), getCollectionPointStats);
+
+router.get("/online-users", authGuard, allowRole("admin"), getOnlineUsers);
 
 export const adminRoute = router;

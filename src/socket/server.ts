@@ -7,6 +7,8 @@ import { AuthenticatedSocket } from "./socket.type";
 import { registerChatHandlers } from "./chat.handler";
 
 let io: Server | null = null;
+const onlineUsers = new Set<string>();
+
 
 interface TokenPayload extends JwtPayload {
   userId: string;
@@ -81,6 +83,10 @@ export const initSocket = (httpServer: http.Server): Server => {
   io.on("connection", (socket: AuthenticatedSocket) => {
     console.log(`🔌 Socket connected: ${socket.id} (user: ${socket.userId}, email: ${socket.userEmail})`);
 
+    // Track active connection instances (tabs/windows)
+    onlineUsers.add(socket.id);
+    io?.emit("onlineUsersCount", { count: onlineUsers.size });
+
     // Personal room for direct user notifications
     if (socket.userId) {
       socket.join(socket.userId);
@@ -107,8 +113,11 @@ export const initSocket = (httpServer: http.Server): Server => {
     // Register community chat handlers
     registerChatHandlers(socket);
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       console.log(`🔌 Socket disconnected: ${socket.id}`);
+      
+      onlineUsers.delete(socket.id);
+      io?.emit("onlineUsersCount", { count: onlineUsers.size });
     });
   });
 
@@ -118,4 +127,8 @@ export const initSocket = (httpServer: http.Server): Server => {
 export const getIo = (): Server => {
   if (!io) throw new CustomError(500, "Socket not initialized");
   return io;
+};
+
+export const getOnlineUsersCount = (): number => {
+  return onlineUsers.size;
 };

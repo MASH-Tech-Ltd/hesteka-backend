@@ -26,6 +26,7 @@ import {
 } from "../localMissions/localMission.interface";
 import { partnerAdModel } from "../partnerAds/partnerAd.models";
 import { rewardItemModel, redemptionModel } from "../rewards/reward.models";
+import { getOnlineUsersCount } from "../../socket/server";
 
 export const adminService = {
   async getStats() {
@@ -290,6 +291,7 @@ export const adminService = {
       users: {
         total: totalUsers,
         active: activeUsers,
+        online: getOnlineUsersCount(),
         newThisWeek: newUsersThisWeek,
       },
       reports: {

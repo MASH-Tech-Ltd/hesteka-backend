@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import ApiResponse from "../../utils/apiResponse";
 import { adminService } from "./admin.service";
+import { getOnlineUsersCount } from "../../socket/server";
 
 //: get global stats (Admin)
 export const getStats = asyncHandler(async (req: Request, res: Response) => {
@@ -80,4 +81,10 @@ export const getCollectionPointStats = asyncHandler(async (req: Request, res: Re
 export const getAnalytics = asyncHandler(async (req: Request, res: Response) => {
   const data = await adminService.getAnalytics();
   ApiResponse.sendSuccess(res, 200, "Analytics data fetched successfully", data);
+});
+
+//: get online users count (Admin)
+export const getOnlineUsers = asyncHandler(async (req: Request, res: Response) => {
+  const count = getOnlineUsersCount();
+  ApiResponse.sendSuccess(res, 200, "Online users count fetched successfully", { online: count });
 });
