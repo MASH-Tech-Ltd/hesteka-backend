@@ -188,7 +188,7 @@ const createChat = async (
     }
   }
 
-  return chat;
+  return populatedChat as unknown as IChat;
 };
 
 const getLocalChat = async (query: GetLocalChatQuery) => {
