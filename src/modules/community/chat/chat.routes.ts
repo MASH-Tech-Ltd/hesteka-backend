@@ -21,4 +21,11 @@ chatRoute.get("/:id", authGuard, chatController.getChatById);
 
 chatRoute.delete("/:id", authGuard, chatController.deleteChat);
 
+chatRoute.patch(
+  "/:id",
+  authGuard,
+  uploadMediaArray("media", COMMUNITY_CONFIG.CHAT_MEDIA_MAX_COUNT),
+  chatController.updateChat,
+);
+
 chatRoute.delete("/admin/:id", authGuard, allowRole("admin"), chatController.adminDeleteChat);

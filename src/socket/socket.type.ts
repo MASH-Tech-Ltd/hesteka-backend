@@ -29,6 +29,7 @@ export enum ChatSocketEvents {
 
   // Server → Client (Global Chat)
   CHAT_NEW_MESSAGE = "chat:newMessage",
+  CHAT_MESSAGE_UPDATED = "chat:messageUpdated",
   CHAT_LIKE_UPDATE = "chat:likeUpdate",
   CHAT_MESSAGE_DELETED = "chat:messageDeleted",
   CHAT_USER_TYPING = "chat:userTyping",

@@ -394,6 +394,77 @@ const adminDeleteChat = async (chatId: string): Promise<void> => {
   });
 };
 
+const updateChat = async (
+  chatId: string,
+  userId: Types.ObjectId,
+  payload: { content?: string; removeMediaIds?: string[] },
+  files?: Express.Multer.File[],
+): Promise<IChat> => {
+  if (!Types.ObjectId.isValid(chatId)) {
+    throw new CustomError(400, "Invalid chat ID");
+  }
+
+  const chat = await chatModel.findById(chatId);
+
+  if (!chat) {
+    throw new CustomError(404, "Chat message not found");
+  }
+
+  if (chat.user.toString() !== userId.toString()) {
+    throw new CustomError(403, "You can only edit your own messages");
+  }
+
+  if (payload.content !== undefined) {
+    chat.content = payload.content;
+  }
+
+  // Remove specified media
+  if (payload.removeMediaIds && payload.removeMediaIds.length > 0) {
+    const keepMedia: IChatMedia[] = [];
+    for (const media of chat.media) {
+      if (payload.removeMediaIds.includes(media.publicId)) {
+        const resourceType = getCloudinaryResourceType(media.type);
+        await deleteCloudinary(media.publicId, resourceType).catch(() => null);
+      } else {
+        keepMedia.push(media);
+      }
+    }
+    chat.media = keepMedia;
+  }
+
+  // Upload new media if provided
+  if (files && files.length > 0) {
+    const newUploaded = await uploadChatMedia(files);
+    chat.media.push(...newUploaded);
+  }
+
+  await chat.save();
+
+  // Populate full data for response/broadcast
+  const populatedChat = await chatModel
+    .findById(chat._id)
+    .populate("user", "firstName lastName profileImage")
+    .populate({
+      path: "replyTo",
+      select: "content user",
+      populate: {
+        path: "user",
+        select: "firstName lastName profileImage",
+      },
+    })
+    .lean();
+
+  const [lng, lat] = chat.location.coordinates;
+  broadcastToGeohashes(
+    lat,
+    lng,
+    ChatSocketEvents.CHAT_MESSAGE_UPDATED,
+    populatedChat,
+  );
+
+  return populatedChat as any;
+};
+
 export const chatService = {
   createChat,
   getLocalChat,
@@ -402,4 +473,5 @@ export const chatService = {
   deleteChat,
   adminDeleteChat,
   broadcastToGeohashes,
+  updateChat,
 };

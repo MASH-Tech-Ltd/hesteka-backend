@@ -101,6 +101,39 @@ const adminDeleteChat = asyncHandler(async (req: Request, res: Response) => {
   return ApiResponse.sendSuccess(res, 200, "Message deleted successfully by admin");
 });
 
+const updateChat = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user?._id;
+  if (!userId) {
+    throw new CustomError(401, "Unauthorized");
+  }
+
+  const { id } = req.params;
+  const { content, removeMediaIds } = req.body;
+
+  let splitRemoveMediaIds: string[] | undefined;
+  if (removeMediaIds) {
+    splitRemoveMediaIds = typeof removeMediaIds === "string"
+      ? removeMediaIds.split(",").map(item => item.trim()).filter(Boolean)
+      : removeMediaIds;
+  }
+
+  const files = Array.isArray(req.files)
+    ? (req.files as Express.Multer.File[])
+    : [];
+
+  const updatedChat = await chatService.updateChat(
+    id as string,
+    userId as Types.ObjectId,
+    {
+      content,
+      removeMediaIds: splitRemoveMediaIds,
+    },
+    files,
+  );
+
+  return ApiResponse.sendSuccess(res, 200, "Post updated successfully", updatedChat);
+});
+
 export const chatController = {
   createChat,
   getLocalChat,
@@ -108,4 +141,5 @@ export const chatController = {
   getChatById,
   deleteChat,
   adminDeleteChat,
+  updateChat,
 };

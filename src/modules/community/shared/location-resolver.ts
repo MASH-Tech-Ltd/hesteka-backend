@@ -63,8 +63,11 @@ export const resolveCommunityCoordinates = async ({
     };
   }
 
-  throw new CustomError(
-    400,
-    `Location is required to ${action}. Please enable location access or update your profile location.`,
-  );
+  // Fallback to default coordinates (e.g. Paris 48.8566, 2.3522) if location is not set/available.
+  // This prevents breaking the user experience when profile has no location and GPS is not resolved yet.
+  return {
+    lat: 48.8566,
+    lng: 2.3522,
+    address: address ?? "Paris, France",
+  };
 };
