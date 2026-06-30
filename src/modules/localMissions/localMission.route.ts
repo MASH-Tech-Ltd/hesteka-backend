@@ -12,6 +12,7 @@ import {
   getMyLocalMissions,
   joinLocalMission,
   updateLocalMission,
+  rejectLocalMissionParticipant,
 } from "./localMission.controller";
 import { localMissionValidation } from "./localMission.validation";
 
@@ -26,6 +27,7 @@ router.use(authGuard, allowRole("partners", "admin"));
 router.get("/get-my-local-missions", getMyLocalMissions);
 router.get("/get-local-mission-participants/:missionId", getLocalMissionParticipants);
 router.patch("/approve-local-mission/:participationId", approveLocalMissionParticipant);
+router.patch("/reject-local-mission/:participationId", rejectLocalMissionParticipant);
 
 router.post(
   "/create-local-mission",

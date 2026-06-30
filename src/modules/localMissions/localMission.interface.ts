@@ -13,6 +13,7 @@ export enum LocalMissionStatus {
 export enum LocalMissionParticipationStatus {
   PENDING = "pending",
   COMPLETED = "completed",
+  REJECTED = "rejected",
 }
 
 export interface ILocalMission extends Document {

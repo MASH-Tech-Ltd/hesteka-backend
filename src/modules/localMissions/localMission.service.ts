@@ -290,7 +290,7 @@ export const localMissionService = {
 
     return await localMissionParticipationModel
       .find({ mission: mission._id })
-      .populate("user", "firstName lastName email profileImage pointsBalance")
+      .populate("user", "firstName lastName email profileImage pointsBalance phone address postalCode country")
       .sort({ createdAt: -1 });
   },
 
@@ -515,6 +515,45 @@ export const localMissionService = {
     } finally {
       await session.endSession();
     }
+  },
+
+  async rejectLocalMissionParticipant(req: Request) {
+    const partner = await getPartnerAccount(req.user?._id);
+    const participationId = req.params.participationId as string;
+
+    const participation = await localMissionParticipationModel.findById(participationId);
+    if (!participation) throw new CustomError(404, "Local mission participation not found");
+    if (participation.status !== LocalMissionParticipationStatus.PENDING) {
+      throw new CustomError(409, `This local mission participation is already ${participation.status}`);
+    }
+
+    const mission = await localMissionModel.findById(participation.mission);
+    if (!mission) throw new CustomError(404, "Local mission not found");
+    if (partner.role !== role.ADMIN && mission.partner.toString() !== partner._id.toString()) {
+      throw new CustomError(403, "You can only reject your own local mission participants");
+    }
+
+    const updatedParticipation = await localMissionParticipationModel
+      .findByIdAndUpdate(
+        participation._id,
+        {
+          status: LocalMissionParticipationStatus.REJECTED,
+        },
+        { new: true }
+      )
+      .populate("user", "firstName lastName email profileImage pointsBalance");
+
+    // Optional: Notify user about rejection
+    if (updatedParticipation) {
+      notificationService.notifySingleUser(
+        participation.user.toString(),
+        "Participation refusée",
+        `Votre participation à la mission "${mission.title}" a été refusée.`,
+        NotificationType.SYSTEM
+      ).catch((err) => console.error("Notification Error:", err));
+    }
+
+    return updatedParticipation;
   },
 
   async updateLocalMission(req: Request) {

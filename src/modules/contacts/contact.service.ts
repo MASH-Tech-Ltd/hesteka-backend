@@ -299,18 +299,23 @@ export const contactService = {
       if (to && !isValidDate(to)) {
         throw new CustomError(400, "Invalid 'to' date. Format must be YYYY-MM-DD or ISO");
       }
-      if (from && to && new Date(from as string) > new Date(to as string)) {
-        throw new CustomError(400, "'from' date cannot be greater than 'to' date");
+      let actualFrom = from as string | undefined;
+      let actualTo = to as string | undefined;
+
+      if (actualFrom && actualTo && new Date(actualFrom) > new Date(actualTo)) {
+        const temp = actualFrom;
+        actualFrom = actualTo;
+        actualTo = temp;
       }
 
       filter.createdAt = {};
-      if (from) {
-        const fromDate = new Date(from as string);
+      if (actualFrom) {
+        const fromDate = new Date(actualFrom);
         fromDate.setHours(0, 0, 0, 0);
         filter.createdAt.$gte = fromDate;
       }
-      if (to) {
-        const toDate = new Date(to as string);
+      if (actualTo) {
+        const toDate = new Date(actualTo);
         toDate.setHours(23, 59, 59, 999);
         filter.createdAt.$lte = toDate;
       }

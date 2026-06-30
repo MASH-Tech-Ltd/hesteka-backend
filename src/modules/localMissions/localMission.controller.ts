@@ -38,6 +38,11 @@ export const approveLocalMissionParticipant = asyncHandler(async (req: Request, 
   ApiResponse.sendSuccess(res, 200, "Local mission approved successfully", result);
 });
 
+export const rejectLocalMissionParticipant = asyncHandler(async (req: Request, res: Response) => {
+  const result = await localMissionService.rejectLocalMissionParticipant(req);
+  ApiResponse.sendSuccess(res, 200, "Local mission rejected successfully", result);
+});
+
 export const updateLocalMission = asyncHandler(async (req: Request, res: Response) => {
   const mission = await localMissionService.updateLocalMission(req);
   ApiResponse.sendSuccess(res, 200, "Local mission updated successfully", mission);
