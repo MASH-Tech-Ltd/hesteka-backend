@@ -62,8 +62,8 @@ export const friendService = {
         notificationService
           .notifySingleUser(
             recipientId,
-            "New Friend Request",
-            `${requesterName} sent you a friend request.`,
+            "Nouvelle demande d'ami",
+            `${requesterName} vous a envoyé une demande d'ami.`,
             NotificationType.FRIEND_REQUEST,
           )
           .catch((err) =>
@@ -88,8 +88,8 @@ export const friendService = {
     notificationService
       .notifySingleUser(
         recipientId,
-        "New Friend Request",
-        `${requesterName} sent you a friend request.`,
+        "Nouvelle demande d'ami",
+        `${requesterName} vous a envoyé une demande d'ami.`,
         NotificationType.FRIEND_REQUEST,
       )
       .catch((err) =>
@@ -127,8 +127,8 @@ export const friendService = {
     notificationService
       .notifySingleUser(
         request.requester.toString(),
-        "Friend Request Accepted",
-        `${acceptorName} accepted your friend request.`,
+        "Demande d'ami acceptée",
+        `${acceptorName} a accepté votre demande d'ami.`,
         NotificationType.FRIEND_ACCEPT,
       )
       .catch((err) =>
