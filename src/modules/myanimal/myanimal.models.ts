@@ -48,6 +48,12 @@ const myanimalSchema = new Schema<IMyanimal>(
       required: true,
       default: YesNoUnknown.UNKNOWN,
     },
+    isSterilized: {
+      type: String,
+      enum: Object.values(YesNoUnknown),
+      required: false,
+      default: YesNoUnknown.UNKNOWN,
+    },
     photo: {
       public_id: { type: String },
       secure_url: { type: String },

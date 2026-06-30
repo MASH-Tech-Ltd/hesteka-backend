@@ -22,6 +22,7 @@ export interface IMyanimal extends Document {
   hasMicrochip: YesNoUnknown;
   hasTattoo: YesNoUnknown;
   hasCollarOrHarness: YesNoUnknown;
+  isSterilized?: YesNoUnknown;
   photo?: {
     public_id: string;
     secure_url: string;
@@ -40,6 +41,7 @@ export interface CreateMyanimalPayload {
   hasMicrochip: YesNoUnknown;
   hasTattoo: YesNoUnknown;
   hasCollarOrHarness: YesNoUnknown;
+  isSterilized?: YesNoUnknown;
   status?: MyanimalStatus;
 }
 
@@ -53,5 +55,6 @@ export interface UpdateMyanimalPayload {
   hasMicrochip?: YesNoUnknown;
   hasTattoo?: YesNoUnknown;
   hasCollarOrHarness?: YesNoUnknown;
+  isSterilized?: YesNoUnknown;
   status?: MyanimalStatus;
 }

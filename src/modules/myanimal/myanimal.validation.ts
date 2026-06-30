@@ -17,6 +17,7 @@ export const createMyanimalSchema = z.object({
   hasMicrochip: z.enum(Object.values(YesNoUnknown) as [string, ...string[]]),
   hasTattoo: z.enum(Object.values(YesNoUnknown) as [string, ...string[]]),
   hasCollarOrHarness: z.enum(Object.values(YesNoUnknown) as [string, ...string[]]),
+  isSterilized: z.enum(Object.values(YesNoUnknown) as [string, ...string[]]).optional(),
   status: z.enum([MyanimalStatus.ACTIVE, MyanimalStatus.INACTIVE]).optional(),
 });
 
@@ -30,6 +31,7 @@ export const updateMyanimalSchema = z.object({
   hasMicrochip: z.enum(Object.values(YesNoUnknown) as [string, ...string[]]).optional(),
   hasTattoo: z.enum(Object.values(YesNoUnknown) as [string, ...string[]]).optional(),
   hasCollarOrHarness: z.enum(Object.values(YesNoUnknown) as [string, ...string[]]).optional(),
+  isSterilized: z.enum(Object.values(YesNoUnknown) as [string, ...string[]]).optional(),
   status: z.enum([MyanimalStatus.ACTIVE, MyanimalStatus.INACTIVE]).optional(),
 });
 
