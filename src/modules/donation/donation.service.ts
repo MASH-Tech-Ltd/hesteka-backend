@@ -711,4 +711,10 @@ export const donationService = {
       doc.end();
     });
   },
+  getCollectionPointDonationsCount: async () => {
+    return await donationModel.countDocuments({
+      method: "collection_point",
+      status: "completed",
+    });
+  },
 };

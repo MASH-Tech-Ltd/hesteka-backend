@@ -154,6 +154,16 @@ const getMyDonations = asyncHandler(async (req: Request, res: Response) => {
   );
 });
 
+const getCollectionPointDonationsCount = asyncHandler(async (req: Request, res: Response) => {
+  const count = await donationService.getCollectionPointDonationsCount();
+  return ApiResponse.sendSuccess(
+    res,
+    200,
+    "Collection point donations count fetched successfully",
+    { count },
+  );
+});
+
 export const donationController = {
   initiateStripeDonation,
   initiatePayPalDonation,
@@ -164,4 +174,5 @@ export const donationController = {
   getDonationByReceiptId,
   getMyDonations,
   sendReceiptEmail,
+  getCollectionPointDonationsCount,
 };
