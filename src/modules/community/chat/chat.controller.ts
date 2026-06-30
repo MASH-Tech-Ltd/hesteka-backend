@@ -121,13 +121,18 @@ const updateChat = asyncHandler(async (req: Request, res: Response) => {
     ? (req.files as Express.Multer.File[])
     : [];
 
+  const payload: { content?: string; removeMediaIds?: string[] } = {};
+  if (content !== undefined) {
+    payload.content = content;
+  }
+  if (splitRemoveMediaIds !== undefined) {
+    payload.removeMediaIds = splitRemoveMediaIds;
+  }
+
   const updatedChat = await chatService.updateChat(
     id as string,
     userId as Types.ObjectId,
-    {
-      content,
-      removeMediaIds: splitRemoveMediaIds,
-    },
+    payload,
     files,
   );
 
