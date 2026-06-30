@@ -91,6 +91,11 @@ const reportSchema = new Schema<IReport>(
       enum: Object.values(YesNoUnknown),
       required: true,
     },
+    isSterilized: {
+      type: String,
+      enum: Object.values(YesNoUnknown),
+      required: false,
+    },
     contactPhone: {
       type: String,
     },

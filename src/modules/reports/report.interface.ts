@@ -58,6 +58,7 @@ export interface IReport extends Document {
   hasMicrochip: YesNoUnknown;
   hasTattoo: YesNoUnknown;
   hasCollarOrHarness: YesNoUnknown;
+  isSterilized?: YesNoUnknown;
   contactPhone?: string;
   isPhoneVisible: boolean;
   contactEmail?: string;

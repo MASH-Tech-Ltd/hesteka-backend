@@ -31,6 +31,7 @@ export const createReportSchema = z
     hasMicrochip: z.enum(Object.values(YesNoUnknown) as [string, ...string[]]),
     hasTattoo: z.enum(Object.values(YesNoUnknown) as [string, ...string[]]),
     hasCollarOrHarness: z.enum(Object.values(YesNoUnknown) as [string, ...string[]]),
+    isSterilized: z.enum(Object.values(YesNoUnknown) as [string, ...string[]]).optional(),
     contactPhone: z.string().optional(),
     isPhoneVisible: z.preprocess(
       (val) => (val === "true" || val === true ? true : val === "false" || val === false ? false : val),
