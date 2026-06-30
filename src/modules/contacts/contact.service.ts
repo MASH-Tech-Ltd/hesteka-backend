@@ -253,6 +253,7 @@ export const contactService = {
       radius, // in km
       status: queryStatus,
       creationMethod,
+      partnerType,
     } = req.query;
 
     const isAdmin = req.user?.role === role.ADMIN;
@@ -346,6 +347,7 @@ export const contactService = {
       // ONLY partners (existing logic)
       const userFilter: any = { role: role.PARTNERS };
       if (status && status !== "all") userFilter.status = status;
+      if (partnerType && partnerType !== "all") userFilter.partnerType = partnerType;
       if (creationMethod === "bulk") userFilter._id = null;
       if (latitude && longitude) {
         const rad = Number(radius) || 10;
@@ -413,6 +415,7 @@ export const contactService = {
       
       const userFilter: any = { role: role.PARTNERS };
       if (status && status !== "all") userFilter.status = status;
+      if (partnerType && partnerType !== "all") userFilter.partnerType = partnerType;
       if (creationMethod === "bulk") userFilter._id = null;
       
       // Apply city, country, region, and department filters to the address field for partners
