@@ -37,6 +37,7 @@ export interface IUser extends Document {
   provider: authProvider;
   password?: string;
   role: string;
+  partnerType?: string;
   profession: string;
   profileImage: {
     public_id: string;

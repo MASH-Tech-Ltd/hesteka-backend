@@ -87,6 +87,11 @@ const userSchema = new Schema<IUser>(
       enum: Object.values(role),
       default: role.USER,
     },
+    partnerType: {
+      type: String,
+      enum: ["association", "brand", "collection_point"],
+      required: false,
+    },
     provider: {
       type: String,
       enum: Object.values(authProvider),

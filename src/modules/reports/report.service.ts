@@ -194,6 +194,7 @@ export const reportService = {
       lat,
       lng,
       radius, // in km, defaults to 5 km when lat/lng are provided
+      partnerType,
     } = req.query;
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -201,6 +202,13 @@ export const reportService = {
 
     // Build filter object
     const filter: any = {};
+
+    // Filter by partner type
+    if (partnerType && partnerType !== "all") {
+      const targetPartners = await userModel.find({ partnerType }).select("_id").lean();
+      const partnerIds = targetPartners.map(p => p._id);
+      filter.author = { $in: partnerIds };
+    }
 
     // Radius / geospatial filter
     const hasGeo = lat !== undefined && lng !== undefined;
