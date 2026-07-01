@@ -60,6 +60,45 @@ export const notificationService = {
     };
   },
 
+  async getTargetedAdminNotifications(pageQuery?: any, limitQuery?: any, search?: string) {
+    const { page, limit, skip } = paginationHelper(pageQuery, limitQuery);
+
+    const filter: any = { title: "Message de l'Administrateur", type: NotificationType.SYSTEM };
+    
+    if (search) {
+      const users = await userModel.find({
+        $or: [
+          { firstName: { $regex: search, $options: "i" } },
+          { lastName: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ]
+      }).select("_id");
+      const userIds = users.map(u => u._id);
+      filter.user = { $in: userIds };
+    }
+
+    const [notifications, total] = await Promise.all([
+      notificationModel
+        .find(filter)
+        .populate("user", "firstName lastName email role")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      notificationModel.countDocuments(filter),
+    ]);
+
+    return {
+      notifications,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  },
+
   async markAsRead(userId: string, notificationId: string) {
     return notificationModel.findOneAndUpdate(
       { _id: notificationId, user: userId },

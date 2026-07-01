@@ -20,6 +20,14 @@ export const getAdminNotifications = asyncHandler(async (req: Request, res: Resp
   ApiResponse.sendSuccess(res, 200, "Admin notifications fetched successfully", result.notifications, result.meta);
 });
 
+export const getTargetedNotifications = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit, search } = req.query;
+
+  const result = await notificationService.getTargetedAdminNotifications(page, limit, search as string);
+
+  ApiResponse.sendSuccess(res, 200, "Targeted notifications fetched successfully", result.notifications, result.meta);
+});
+
 export const markNotificationAsRead = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req.user as any)._id;
   const { notificationId } = req.params as { notificationId: string };
