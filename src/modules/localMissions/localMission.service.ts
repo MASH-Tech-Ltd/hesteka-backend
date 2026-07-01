@@ -290,7 +290,7 @@ export const localMissionService = {
 
     return await localMissionParticipationModel
       .find({ mission: mission._id })
-      .populate("user", "firstName lastName email profileImage pointsBalance")
+      .populate("user", "firstName lastName email profileImage pointsBalance phone address postalCode country")
       .sort({ createdAt: -1 });
   },
 
@@ -564,7 +564,7 @@ export const localMissionService = {
     const participation = await localMissionParticipationModel.findById(participationId);
     if (!participation) throw new CustomError(404, "Local mission participation not found");
     if (participation.status !== LocalMissionParticipationStatus.PENDING) {
-      throw new CustomError(409, "Can only reject pending mission participants");
+      throw new CustomError(409, `This local mission participation is already ${participation.status}`);
     }
 
     const mission = await localMissionModel.findById(participation.mission);
@@ -573,27 +573,36 @@ export const localMissionService = {
       throw new CustomError(403, "You can only reject your own local mission participants");
     }
 
-    participation.status = LocalMissionParticipationStatus.REJECTED;
-    await participation.save();
+    const updatedParticipation = await localMissionParticipationModel
+      .findByIdAndUpdate(
+        participation._id,
+        {
+          status: LocalMissionParticipationStatus.REJECTED,
+        },
+        { new: true }
+      )
+      .populate("user", "firstName lastName email profileImage pointsBalance");
 
-    const isEnglish = (req.headers["accept-language"] || "fr")
-      .toLowerCase()
-      .startsWith("en");
+    if (updatedParticipation) {
+      const isEnglish = (req.headers["accept-language"] || "fr")
+        .toLowerCase()
+        .startsWith("en");
 
-    // Send localized notification to user
-    const userNotifTitle = isEnglish ? "Mission not approved" : "Mission non validée";
-    const userNotifBody = isEnglish
-      ? `Your participation in the mission "${mission.title}" was not approved.`
-      : `Votre participation à la mission "${mission.title}" n'a pas été validée.`;
+      // Send localized notification to user
+      const userNotifTitle = isEnglish ? "Mission not approved" : "Mission non validée";
+      const userNotifBody = isEnglish
+        ? `Your participation in the mission "${mission.title}" was not approved.`
+        : `Votre participation à la mission "${mission.title}" n'a pas été validée.`;
 
-    notificationService.notifySingleUser(
-      participation.user.toString(),
-      userNotifTitle,
-      userNotifBody,
-      NotificationType.SYSTEM
-    ).catch((err) => console.error("Notification Error:", err));
+      notificationService.notifySingleUser(
+        participation.user.toString(),
+        userNotifTitle,
+        userNotifBody,
+        NotificationType.SYSTEM
+      ).catch((err) => console.error("Notification Error:", err));
+    }
 
-    return participation;
+    return updatedParticipation;
   },
 
   async updateLocalMission(req: Request) {

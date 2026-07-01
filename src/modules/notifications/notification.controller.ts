@@ -20,11 +20,20 @@ export const getAdminNotifications = asyncHandler(async (req: Request, res: Resp
   ApiResponse.sendSuccess(res, 200, "Admin notifications fetched successfully", result.notifications, result.meta);
 });
 
+export const getTargetedNotifications = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit, search } = req.query;
+
+  const result = await notificationService.getTargetedAdminNotifications(page, limit, search as string);
+
+  ApiResponse.sendSuccess(res, 200, "Targeted notifications fetched successfully", result.notifications, result.meta);
+});
+
 export const markNotificationAsRead = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req.user as any)._id;
+  const role = (req.user as any).role;
   const { notificationId } = req.params as { notificationId: string };
 
-  const updated = await notificationService.markAsRead(userId, notificationId);
+  const updated = await notificationService.markAsRead(userId, notificationId, role);
 
   if (!updated) {
     ApiResponse.sendError(res, 404, "Notification not found or already read");
@@ -54,6 +63,8 @@ export const deleteNotification = asyncHandler(async (req: Request, res: Respons
   ApiResponse.sendSuccess(res, 200, "Notification deleted successfully");
 });
 
+import { NotificationType } from "./notification.interface";
+
 export const sendAdminAlert = asyncHandler(async (req: Request, res: Response) => {
   const { geoTarget, userType, message } = req.body;
 
@@ -62,10 +73,25 @@ export const sendAdminAlert = asyncHandler(async (req: Request, res: Response) =
     return;
   }
 
-  // Determine if we need location-based filtering (PACA region approximation)
-  // Or just broadcast to everyone. For simplicity, we can pass geoTarget/userType to the service.
-  // We'll add this to the service.
   await notificationService.sendManualAdminAlert(geoTarget, userType, message);
 
   ApiResponse.sendSuccess(res, 200, "Alert sent successfully");
+});
+
+export const sendTargetedAlert = asyncHandler(async (req: Request, res: Response) => {
+  const { userId, message } = req.body;
+
+  if (!userId || !message) {
+    ApiResponse.sendError(res, 400, "User ID and message are required");
+    return;
+  }
+
+  await notificationService.notifySingleUser(
+    userId,
+    "Message de l'Administrateur",
+    message,
+    NotificationType.SYSTEM
+  );
+
+  ApiResponse.sendSuccess(res, 200, "Targeted alert sent successfully");
 });

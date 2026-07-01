@@ -5,13 +5,13 @@ import { ContactStatus, ContactType } from "./contact.interface";
 const optionalUrl = z.union([
   z.string().url("Invalid website URL"),
   z.literal(""),
-  z.undefined()
+  z.undefined(),
 ]);
 
 const optionalEmail = z.union([
   z.string().email("Invalid email"),
   z.literal(""),
-  z.undefined()
+  z.undefined(),
 ]);
 
 const optionalString = z.string().optional().or(z.literal(""));
@@ -29,9 +29,18 @@ export const createContactSchema = z
     country: optionalString,
     region: optionalString,
     department: optionalString,
-    latitude: z.preprocess((v) => (v === "" ? undefined : v ? Number(v) : undefined), z.number().min(-90).max(90).optional()),
-    longitude: z.preprocess((v) => (v === "" ? undefined : v ? Number(v) : undefined), z.number().min(-180).max(180).optional()),
-    status: z.enum(Object.values(ContactStatus) as [string, ...string[]]).optional().or(z.literal("")),
+    latitude: z.preprocess(
+      (v) => (v === "" ? undefined : v ? Number(v) : undefined),
+      z.number().min(-90).max(90).optional(),
+    ),
+    longitude: z.preprocess(
+      (v) => (v === "" ? undefined : v ? Number(v) : undefined),
+      z.number().min(-180).max(180).optional(),
+    ),
+    status: z
+      .enum(Object.values(ContactStatus) as [string, ...string[]])
+      .optional()
+      .or(z.literal("")),
     creationMethod: z.enum(["manual", "bulk"]).optional().or(z.literal("")),
     image: z.any().optional(),
   })

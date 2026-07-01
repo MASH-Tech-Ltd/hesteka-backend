@@ -45,7 +45,7 @@ export const approveLocalMissionParticipant = asyncHandler(async (req: Request, 
 
 export const rejectLocalMissionParticipant = asyncHandler(async (req: Request, res: Response) => {
   const result = await localMissionService.rejectLocalMissionParticipant(req);
-  ApiResponse.sendSuccess(res, 200, "Local mission participant rejected successfully", result);
+  ApiResponse.sendSuccess(res, 200, "Local mission rejected successfully", result);
 });
 
 export const updateLocalMission = asyncHandler(async (req: Request, res: Response) => {
