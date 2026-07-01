@@ -30,9 +30,10 @@ export const getTargetedNotifications = asyncHandler(async (req: Request, res: R
 
 export const markNotificationAsRead = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req.user as any)._id;
+  const role = (req.user as any).role;
   const { notificationId } = req.params as { notificationId: string };
 
-  const updated = await notificationService.markAsRead(userId, notificationId);
+  const updated = await notificationService.markAsRead(userId, notificationId, role);
 
   if (!updated) {
     ApiResponse.sendError(res, 404, "Notification not found or already read");

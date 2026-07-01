@@ -99,9 +99,13 @@ export const notificationService = {
     };
   },
 
-  async markAsRead(userId: string, notificationId: string) {
+  async markAsRead(userId: string, notificationId: string, role?: string) {
+    const query: any = { _id: notificationId };
+    if (role !== "ADMIN" && role !== "admin") {
+      query.user = userId;
+    }
     return notificationModel.findOneAndUpdate(
-      { _id: notificationId, user: userId },
+      query,
       { isRead: true },
       { returnDocument: 'after' }
     );
