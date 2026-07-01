@@ -24,7 +24,7 @@ export const getLocalMissionParticipants = asyncHandler(async (req: Request, res
 });
 
 export const getLocalMissionById = asyncHandler(async (req: Request, res: Response) => {
-  const mission = await localMissionService.getLocalMissionById(req.params.missionId as string);
+  const mission = await localMissionService.getLocalMissionById(req);
   ApiResponse.sendSuccess(res, 200, "Local mission fetched successfully", mission);
 });
 
@@ -33,9 +33,19 @@ export const joinLocalMission = asyncHandler(async (req: Request, res: Response)
   ApiResponse.sendSuccess(res, 200, "Local mission interest submitted successfully", result);
 });
 
+export const leaveLocalMission = asyncHandler(async (req: Request, res: Response) => {
+  const result = await localMissionService.leaveLocalMission(req);
+  ApiResponse.sendSuccess(res, 200, "Local mission participation cancelled successfully", result);
+});
+
 export const approveLocalMissionParticipant = asyncHandler(async (req: Request, res: Response) => {
   const result = await localMissionService.approveLocalMissionParticipant(req);
   ApiResponse.sendSuccess(res, 200, "Local mission approved successfully", result);
+});
+
+export const rejectLocalMissionParticipant = asyncHandler(async (req: Request, res: Response) => {
+  const result = await localMissionService.rejectLocalMissionParticipant(req);
+  ApiResponse.sendSuccess(res, 200, "Local mission participant rejected successfully", result);
 });
 
 export const updateLocalMission = asyncHandler(async (req: Request, res: Response) => {

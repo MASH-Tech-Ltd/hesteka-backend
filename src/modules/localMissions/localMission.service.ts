@@ -294,12 +294,35 @@ export const localMissionService = {
       .sort({ createdAt: -1 });
   },
 
-  async getLocalMissionById(missionId: string) {
+  async getLocalMissionById(req: Request) {
+    const missionId = req.params.missionId as string;
+    const userId = req.user?._id;
+
     const mission = await localMissionModel
       .findById(missionId)
-      .populate("partner", partnerPopulate);
+      .populate("partner", partnerPopulate)
+      .lean();
     if (!mission) throw new CustomError(404, "Local mission not found");
-    return mission;
+
+    let isJoined = false;
+    let participationStatus: string | null = null;
+
+    if (userId) {
+      const participation = await localMissionParticipationModel.findOne({
+        user: userId,
+        mission: missionId,
+      });
+      if (participation) {
+        isJoined = participation.status !== LocalMissionParticipationStatus.REJECTED;
+        participationStatus = participation.status;
+      }
+    }
+
+    return {
+      ...mission,
+      isJoined,
+      participationStatus,
+    };
   },
 
   async joinLocalMission(req: Request) {
@@ -515,6 +538,62 @@ export const localMissionService = {
     } finally {
       await session.endSession();
     }
+  },
+
+  async leaveLocalMission(req: Request) {
+    const userId = req.user?._id;
+    const missionId = req.params.missionId as string;
+    if (!userId) throw new CustomError(401, "Unauthorized access");
+
+    const participation = await localMissionParticipationModel.findOneAndDelete({
+      user: userId,
+      mission: missionId,
+      status: LocalMissionParticipationStatus.PENDING,
+    });
+    if (!participation) {
+      throw new CustomError(404, "Active local mission participation not found for this user");
+    }
+
+    return participation;
+  },
+
+  async rejectLocalMissionParticipant(req: Request) {
+    const partner = await getPartnerAccount(req.user?._id);
+    const participationId = req.params.participationId as string;
+
+    const participation = await localMissionParticipationModel.findById(participationId);
+    if (!participation) throw new CustomError(404, "Local mission participation not found");
+    if (participation.status !== LocalMissionParticipationStatus.PENDING) {
+      throw new CustomError(409, "Can only reject pending mission participants");
+    }
+
+    const mission = await localMissionModel.findById(participation.mission);
+    if (!mission) throw new CustomError(404, "Local mission not found");
+    if (partner.role !== role.ADMIN && mission.partner.toString() !== partner._id.toString()) {
+      throw new CustomError(403, "You can only reject your own local mission participants");
+    }
+
+    participation.status = LocalMissionParticipationStatus.REJECTED;
+    await participation.save();
+
+    const isEnglish = (req.headers["accept-language"] || "fr")
+      .toLowerCase()
+      .startsWith("en");
+
+    // Send localized notification to user
+    const userNotifTitle = isEnglish ? "Mission not approved" : "Mission non validée";
+    const userNotifBody = isEnglish
+      ? `Your participation in the mission "${mission.title}" was not approved.`
+      : `Votre participation à la mission "${mission.title}" n'a pas été validée.`;
+
+    notificationService.notifySingleUser(
+      participation.user.toString(),
+      userNotifTitle,
+      userNotifBody,
+      NotificationType.SYSTEM
+    ).catch((err) => console.error("Notification Error:", err));
+
+    return participation;
   },
 
   async updateLocalMission(req: Request) {
