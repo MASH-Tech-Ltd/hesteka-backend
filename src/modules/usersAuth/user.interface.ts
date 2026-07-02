@@ -109,6 +109,7 @@ export interface UpdateUserPayload {
   region?: string;
   department?: string;
   company?: string;
+  partnerType?: string;
   website?: string;
   profession?: string;
   selfIntroduction?: string;
