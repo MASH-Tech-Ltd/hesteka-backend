@@ -49,7 +49,10 @@ export const uploadCloudinary = async (
     const cloudinaryResponse = await cloudinary.uploader.upload(filePath, {
       resource_type: "image",
       folder: getCloudinaryFolder("image"),
-      quality: "auto",
+      quality: "auto:good",
+      fetch_format: "auto",
+      width: 1280,
+      crop: "limit",
     });
 
     fs.unlinkSync(filePath);
@@ -81,10 +84,19 @@ export const uploadMediaCloudinary = async (
       throw new CustomError(400, "File path missing");
     }
 
-    const cloudinaryResponse = await cloudinary.uploader.upload(filePath, {
+    const uploadOptions: any = {
       resource_type: resourceType,
       folder: getCloudinaryFolder(resourceType),
-    });
+    };
+
+    if (resourceType === "image" || resourceType === "auto") {
+      uploadOptions.quality = "auto:good";
+      uploadOptions.fetch_format = "auto";
+      uploadOptions.width = 1280;
+      uploadOptions.crop = "limit";
+    }
+
+    const cloudinaryResponse = await cloudinary.uploader.upload(filePath, uploadOptions);
 
     fs.unlinkSync(filePath);
 
