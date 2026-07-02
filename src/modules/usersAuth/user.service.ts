@@ -863,12 +863,16 @@ export const userService = {
   async updateFcmToken(req: any) {
     const { email } = req?.user as { email: string };
     const { fcmToken } = req.body as { fcmToken: string };
+    const language = (req.headers["accept-language"] || "fr").startsWith("en") ? "en" : "fr";
 
-    console.log(`[User Service] updateFcmToken called for ${email} with token: ${fcmToken}`);
+    console.log(`[User Service] updateFcmToken called for ${email} with token: ${fcmToken}, language: ${language}`);
 
     const user = await userModel.findOneAndUpdate(
       { email: email },
-      { $addToSet: { fcmTokens: fcmToken } },
+      { 
+        $addToSet: { fcmTokens: fcmToken },
+        $set: { language: language }
+      },
       {
         returnDocument: "after",
         runValidators: true,

@@ -136,6 +136,11 @@ const userSchema = new Schema<IUser>(
       type: [String],
       default: [],
     },
+    language: {
+      type: String,
+      enum: ["en", "fr"],
+      default: "fr",
+    },
     location: {
       type: {
         type: String,

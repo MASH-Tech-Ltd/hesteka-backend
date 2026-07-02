@@ -7,6 +7,130 @@ import { getIo } from "../../socket/server";
 import { paginationHelper } from "../../utils/pagination";
 import { settingsModel } from "../settings/settings.models";
 
+function translatePushNotification(title: string, body: string, language: string): { title: string; body: string } {
+  if (language !== 'fr') {
+    return { title, body }; // Default to English/original
+  }
+
+  let frTitle = title;
+  let frBody = body;
+
+  // Title translations
+  if (title === 'New Story') {
+    frTitle = 'Nouvelle story';
+  } else if (title === 'New Report!') {
+    frTitle = 'Nouveau signalement !';
+  } else if (title === 'New Report Nearby!') {
+    frTitle = 'Nouveau signalement à proximité !';
+  } else if (title === 'New Report Created') {
+    frTitle = 'Nouveau signalement créé';
+  } else if (title === 'New Local Mission') {
+    frTitle = 'Nouvelle mission locale';
+  } else if (title === 'New Local Mission Available!') {
+    frTitle = 'Nouvelle mission locale disponible !';
+  } else if (title === 'Points Gained!') {
+    frTitle = 'Points gagnés !';
+  } else if (title === 'Mission Cancelled') {
+    frTitle = 'Mission annulée';
+  } else if (title === 'Support Approved!') {
+    frTitle = 'Soutien approuvé !';
+  } else if (title === 'Support Proof Rejected') {
+    frTitle = 'Preuve de soutien refusée';
+  } else if (title === 'Registration Registered') {
+    frTitle = 'Inscription enregistrée';
+  } else if (title === 'New Participant!') {
+    frTitle = 'Nouveau participant !';
+  } else if (title === 'Admin Alert') {
+    frTitle = 'Alerte Admin';
+  } else if (title === 'Mission not approved') {
+    frTitle = 'Mission non validée';
+  } else if (title === 'System Notification') {
+    frTitle = 'Notification Système';
+  } else if (title === 'Account Updated') {
+    frTitle = 'Compte mis à jour';
+  } else if (title === 'New Comment') {
+    frTitle = 'Nouveau commentaire';
+  } else if (title === 'New Reply') {
+    frTitle = 'Nouvelle réponse';
+  } else if (title === 'Reward Status Updated') {
+    frTitle = 'Statut de récompense mis à jour';
+  } else if (title === 'New Payment Received') {
+    frTitle = 'Nouveau paiement reçu';
+  } else if (title === 'New Support Proof') {
+    frTitle = 'Nouvelle preuve de soutien';
+  } else if (title === 'New Partner Registered') {
+    frTitle = 'Nouveau partenaire inscrit';
+  } else if (title === 'Friend Request Received') {
+    frTitle = "Demande d'ami reçue";
+  } else if (title === 'Friend Request Accepted') {
+    frTitle = "Demande d'ami acceptée";
+  }
+
+  // Body translations
+  if (body.includes('just added a new story!')) {
+    frBody = body.replace('just added a new story!', "vient d'ajouter une nouvelle story !");
+  } else if (body.includes('created a new report')) {
+    frBody = body.replace('Your friend created a new report', 'Votre ami a créé un nouveau signalement');
+  } else if (body.includes('was just created near you')) {
+    if (body.includes('mission')) {
+      frBody = body.replace('A new mission', 'Une nouvelle mission')
+                   .replace('was just created near you. Participate and earn points!', "vient d'être créée près de chez vous. Participez et gagnez des points !");
+    } else {
+      frBody = body.replace('A new report', 'Un nouveau signalement')
+                   .replace('was just created near you.', "vient d'être créé près de chez vous.");
+    }
+  } else if (body.includes('requires your attention')) {
+    frBody = body.replace('A new report', 'Un nouveau signalement')
+                 .replace('requires your attention.', 'nécessite votre attention.');
+  } else if (body.includes('created a new mission')) {
+    frBody = body.replace('Partner', 'Le partenaire')
+                 .replace('created a new mission', 'a créé une nouvelle mission');
+  } else if (body.includes('You earned') && body.includes('points for participating')) {
+    frBody = body.replace('Congratulations! You earned', 'Félicitations ! Vous avez gagné')
+                 .replace('points for participating in the mission', 'points pour votre participation à la mission');
+  } else if (body.includes('has been cancelled by the partner')) {
+    frBody = body.replace('The local mission', 'La mission locale')
+                 .replace('has been cancelled by the partner.', "a été annulée par le partenaire.");
+  } else if (body.includes('Your support proof') && body.includes('approved')) {
+    frBody = body.replace('Your support proof of', 'Votre preuve de soutien de')
+                 .replace('has been approved.', 'a été approuvée.')
+                 .replace('You earned', 'Vous avez gagné')
+                 .replace('points.', 'points.');
+  } else if (body.includes('Your support proof has been rejected. Reason:')) {
+    frBody = body.replace('Your support proof has been rejected. Reason:', 'Votre preuve de soutien a été refusée. Raison :');
+  } else if (body.includes('Your registration for the mission') && body.includes('successfully registered')) {
+    frBody = body.replace('Your registration for the mission', "Votre inscription à la mission")
+                 .replace('has been successfully registered.', "a été enregistrée avec succès.");
+  } else if (body.includes('has registered for your mission')) {
+    frBody = body.replace('The user', "L'utilisateur")
+                 .replace('has registered for your mission', "s'est inscrit à votre mission");
+  } else if (body.includes('Your participation in the mission') && body.includes('was not approved')) {
+    frBody = body.replace('Your participation in the mission', "Votre participation à la mission")
+                 .replace('was not approved.', "n'a pas été validée.");
+  } else if (body.includes('Your account has been successfully updated.')) {
+    frBody = 'Votre compte a été mis à jour avec succès.';
+  } else if (body.includes('commented on your report')) {
+    frBody = body.replace('commented on your report', 'a commenté votre signalement');
+  } else if (body.includes('replied to your comment.')) {
+    frBody = body.replace('replied to your comment.', 'a répondu à votre commentaire.');
+  } else if (body.includes('status of your reward exchange has been updated.')) {
+    frBody = "Le statut de votre échange de récompense a été mis à jour.";
+  } else if (body.includes('A new payment has been registered.')) {
+    frBody = 'Un nouveau paiement a été enregistré. Merci pour votre soutien !';
+  } else if (body.includes('A new support proof') && body.includes('requires approval.')) {
+    frBody = body.replace('A new support proof of', 'Une nouvelle preuve de soutien de')
+                 .replace('units has been submitted and requires approval.', 'unités a été soumise et nécessite une approbation.');
+  } else if (body.includes('A new partner has joined the Hesteka community.')) {
+    frBody = 'Un nouveau partenaire a rejoint la communauté Hesteka.';
+  } else if (body.includes('sent you a friend request.')) {
+    frBody = body.replace('sent you a friend request.', "vous a envoyé une demande d'ami.");
+  } else if (body.includes('accepted your friend request.')) {
+    frBody = body.replace('accepted your friend request.', "a accepté votre demande d'ami.");
+  }
+
+  return { title: frTitle, body: frBody };
+}
+
 export const notificationService = {
   async getUserNotifications(userId: string, pageQuery?: any, limitQuery?: any) {
     const { page, limit, skip } = paginationHelper(pageQuery, limitQuery);
@@ -150,7 +274,7 @@ export const notificationService = {
         filter.role = { $in: ["user", "partner", "admin"] };
       }
 
-      const usersNearby = await userModel.find(filter).select("_id fcmTokens firstName lastName email location role");
+      const usersNearby = await userModel.find(filter).select("_id fcmTokens firstName lastName email location role language");
 
       console.log(`[Notification Service] Found ${usersNearby.length} target users.`);
 
@@ -172,7 +296,8 @@ export const notificationService = {
       const savedNotifications = await notificationModel.insertMany(notificationsToSave);
 
       // Extract FCM tokens and prepare Socket logic
-      const allTokens: string[] = [];
+      const englishTokens: string[] = [];
+      const frenchTokens: string[] = [];
       let successLog: string[] = [];
       let failLog: string[] = [];
       let io: any; // using any to bypass strict type here easily, or import Server
@@ -225,7 +350,11 @@ export const notificationService = {
 
         // Always collect FCM tokens for push notification
         if (user.fcmTokens && Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
-          allTokens.push(...user.fcmTokens);
+          if (user.language === "en") {
+            englishTokens.push(...user.fcmTokens);
+          } else {
+            frenchTokens.push(...user.fcmTokens);
+          }
           gotFcm = true;
         }
 
@@ -237,8 +366,12 @@ export const notificationService = {
       }
 
       // 3. Send Push Notifications via FCM
-      if (allTokens.length > 0) {
-        await sendPushNotification(allTokens, title, body, { type, ...data });
+      if (englishTokens.length > 0) {
+        await sendPushNotification(englishTokens, title, body, { type, ...data });
+      }
+      if (frenchTokens.length > 0) {
+        const translated = translatePushNotification(title, body, 'fr');
+        await sendPushNotification(frenchTokens, translated.title, translated.body, { type, ...data });
       }
 
       console.log(`[Notification Service] notifyUsersNearby targeted ${usersNearby.length} users.`);
@@ -252,7 +385,7 @@ export const notificationService = {
 
   async notifySingleUser(userId: string, title: string, body: string, type: NotificationType, data?: Record<string, any>) {
     try {
-      const user = await userModel.findById(userId).select("_id fcmTokens firstName lastName email");
+      const user = await userModel.findById(userId).select("_id fcmTokens firstName lastName email language");
       if (!user) return;
 
       const notificationToSave = {
@@ -284,7 +417,8 @@ export const notificationService = {
 
       // Send Push Notifications via FCM
       if (user.fcmTokens && Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
-        await sendPushNotification(user.fcmTokens, title, body, { type, ...data });
+        const translated = translatePushNotification(title, body, user.language || 'fr');
+        await sendPushNotification(user.fcmTokens, translated.title, translated.body, { type, ...data });
         fcmSent = true;
       }
 
@@ -457,7 +591,7 @@ export const notificationService = {
       const relations = await FriendModel.find({
         $or: [{ requester: userId }, { recipient: userId }],
         status: FriendStatus.ACCEPTED
-      }).populate("requester recipient", "_id fcmTokens firstName lastName email");
+      }).populate("requester recipient", "_id fcmTokens firstName lastName email language");
 
       if (!relations.length) return;
 
@@ -476,7 +610,8 @@ export const notificationService = {
 
       const savedNotifications = await notificationModel.insertMany(notificationsToSave);
 
-      const allTokens: string[] = [];
+      const englishTokens: string[] = [];
+      const frenchTokens: string[] = [];
       let successLog: string[] = [];
       let failLog: string[] = [];
       let io: any;
@@ -502,7 +637,11 @@ export const notificationService = {
         }
 
         if (friend.fcmTokens && Array.isArray(friend.fcmTokens) && friend.fcmTokens.length > 0) {
-          allTokens.push(...friend.fcmTokens);
+          if (friend.language === "en") {
+            englishTokens.push(...friend.fcmTokens);
+          } else {
+            frenchTokens.push(...friend.fcmTokens);
+          }
           gotFcm = true;
         }
 
@@ -513,8 +652,12 @@ export const notificationService = {
         }
       }
 
-      if (allTokens.length > 0) {
-        await sendPushNotification(allTokens, title, body, { type, ...data });
+      if (englishTokens.length > 0) {
+        await sendPushNotification(englishTokens, title, body, { type, ...data });
+      }
+      if (frenchTokens.length > 0) {
+        const translated = translatePushNotification(title, body, 'fr');
+        await sendPushNotification(frenchTokens, translated.title, translated.body, { type, ...data });
       }
 
       console.log(`[Notification Service] notifyFriends targeted ${friendsToNotify.length} friends.`);

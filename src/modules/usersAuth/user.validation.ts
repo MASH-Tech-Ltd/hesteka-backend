@@ -45,6 +45,7 @@ export const updateUserSchema = z
     latitude: optionalCoordinate("Latitude", -90, 90),
     longitude: optionalCoordinate("Longitude", -180, 180),
     locationAddress: z.string().optional(),
+    language: z.enum(["en", "fr"]).optional(),
   })
   .strict()
   .refine((data) => (data.latitude === undefined) === (data.longitude === undefined), {

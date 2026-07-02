@@ -71,6 +71,7 @@ export interface IUser extends Document {
   };
   rememberMe: boolean;
   fcmTokens: string[];
+  language?: string;
   lastLogin: Date;
   stripeCustomerId?: string;
   blockedUsers: Types.ObjectId[]; // users blocked by this user
@@ -121,4 +122,5 @@ export interface UpdateUserPayload {
   instagram?: string;
   twitter?: string;
   linkedin?: string;
+  language?: string;
 }
