@@ -112,6 +112,7 @@ const createStory = async (
       });
     });
 
+    await story.populate("user", "firstName lastName profileImage");
     return story;
   } catch (error) {
     // Rollback — delete uploaded media if DB save fails
