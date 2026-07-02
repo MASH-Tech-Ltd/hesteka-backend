@@ -50,6 +50,7 @@ export const userService = {
       to,
       region,
       department,
+      partnerType,
       sort,
       sortBy,
       page: pagebody,
@@ -106,6 +107,10 @@ export const userService = {
 
     if (department && department !== "all") {
       filter.department = { $regex: `\\b${department}\\b`, $options: "i" };
+    }
+
+    if (partnerType && partnerType !== "all") {
+      filter.partnerType = partnerType;
     }
 
     if (from || to) {
