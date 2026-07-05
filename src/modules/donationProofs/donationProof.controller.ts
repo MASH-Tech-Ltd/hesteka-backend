@@ -65,3 +65,16 @@ export const getValidationStats = asyncHandler(async (req: Request, res: Respons
   const result = await donationProofService.getValidationStats(period);
   ApiResponse.sendSuccess(res, 200, "Validation stats fetched successfully", result);
 });
+
+//: get partner proofs (Partner)
+export const getPartnerProofs = asyncHandler(async (req: Request, res: Response) => {
+  const { proofs, meta } = await donationProofService.getPartnerProofs(req);
+  ApiResponse.sendSuccess(res, 200, "Partner donation proofs fetched successfully", proofs, meta);
+});
+
+//: get partner validation stats (Partner)
+export const getPartnerValidationStats = asyncHandler(async (req: Request, res: Response) => {
+  const period = (req.query.period as string) || "monthly";
+  const result = await donationProofService.getPartnerValidationStats(req, period);
+  ApiResponse.sendSuccess(res, 200, "Partner validation stats fetched successfully", result);
+});

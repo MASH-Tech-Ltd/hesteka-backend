@@ -34,7 +34,7 @@ export const updateUserSchema = z
     city: z.string().optional(),
     postalCode: z
       .string()
-      .regex(/^[A-Za-z0-9\s\-]{3,10}$/, "Invalid postal code format")
+      .regex(/^[0-9]{5}$/, "Postal code must be exactly 5 digits")
       .optional(),
     country: z.string().optional(),
     region: z.string().optional(),
@@ -42,6 +42,10 @@ export const updateUserSchema = z
     status: statusSchema.optional(),
     image: z.any().optional(),
     website: z.string().url("Invalid website URL").optional().or(z.literal("")),
+    facebook: z.string().url("Invalid Facebook URL").optional().or(z.literal("")),
+    instagram: z.string().url("Invalid Instagram URL").optional().or(z.literal("")),
+    twitter: z.string().url("Invalid Twitter URL").optional().or(z.literal("")),
+    linkedin: z.string().url("Invalid LinkedIn URL").optional().or(z.literal("")),
     latitude: optionalCoordinate("Latitude", -90, 90),
     longitude: optionalCoordinate("Longitude", -180, 180),
     locationAddress: z.string().optional(),

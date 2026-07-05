@@ -15,7 +15,9 @@ import {
   getValidationStats,
   getAcceptedValues,
   validateAll,
-  getAllProofs
+  getAllProofs,
+  getPartnerProofs,
+  getPartnerValidationStats
 } from "./donationProof.controller";
 
 const router = Router();
@@ -58,6 +60,21 @@ router.get(
   authGuard,
   allowRole("admin"),
   getAllProofs
+);
+
+// Partner routes
+router.get(
+  "/partner/proofs",
+  authGuard,
+  allowRole("partners"),
+  getPartnerProofs
+);
+
+router.get(
+  "/partner/stats",
+  authGuard,
+  allowRole("partners"),
+  getPartnerValidationStats
 );
 
 router.patch(
