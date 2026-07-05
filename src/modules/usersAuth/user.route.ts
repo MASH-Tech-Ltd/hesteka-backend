@@ -17,6 +17,7 @@ import {
   unblockUser,
   getBlockedUsers,
   deleteUserByAdmin,
+  getAllLocations,
 } from "./user.controller";
 import { allowRole, authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
@@ -33,6 +34,8 @@ import { rateLimiter } from "../../middleware/rateLimiter.middleware";
 const router = Router();
 
 router.get("/get-all-user", authGuard, allowRole("admin"), getalluser);
+
+router.get("/get-all-locations", authGuard, allowRole("admin"), getAllLocations);
 
 router.get("/get-unique-locations", authGuard, allowRole("admin"), getUniqueLocations);
 

@@ -1,5 +1,6 @@
 // modules/user/user.service.ts
 import mongoose, { Types } from "mongoose";
+import { getOnlineUserIds } from "../../socket/server";
 import fs from "fs";
 import { userModel } from "./user.models";
 import CustomError from "../../helpers/CustomError";
@@ -39,6 +40,43 @@ export const userService = {
     const cities = await userModel.distinct("city", { status: "active", city: { $nin: [null, ""] } });
     return cities;
   },
+
+  // get all user locations
+  async getAllLocations() {
+    const usersWithLocation = await userModel.find({ "location.coordinates": { $exists: true, $ne: [] }, role: { $nin: ["admin", "partners"] } }).select("firstName lastName email role status location profileImage partnerType").lean();
+    
+    const onlineIdsArray = getOnlineUserIds();
+    const onlineIds = new Set(onlineIdsArray);
+    
+    // Find which online users are MISSING from the map
+    const usersWithLocationIds = new Set(usersWithLocation.map(u => u._id.toString()));
+    const missingOnlineIds = onlineIdsArray.filter(id => !usersWithLocationIds.has(id));
+    
+    let allUsers: any[] = [...usersWithLocation];
+    
+    // Fetch missing online users and assign them a default coordinate (Paris, France) so they appear on the Live Map
+    if (missingOnlineIds.length > 0) {
+      const missingUsers = await userModel.find({ _id: { $in: missingOnlineIds }, role: { $nin: ["admin"] } }).select("firstName lastName email role status profileImage partnerType").lean();
+      
+      const missingUsersWithDefaultLocation = missingUsers.map(u => ({
+        ...u,
+        location: {
+          type: "Point",
+          coordinates: [2.3522, 48.8566], // Default longitude, latitude
+        }
+      }));
+      
+      allUsers = [...allUsers, ...missingUsersWithDefaultLocation];
+    }
+
+    const usersWithOnlineStatus = allUsers.map(u => ({
+      ...u,
+      isOnline: onlineIds.has(u._id.toString())
+    }));
+    
+    return usersWithOnlineStatus;
+  },
+
 
   //get all users
   async getAllUsers(req: any) {

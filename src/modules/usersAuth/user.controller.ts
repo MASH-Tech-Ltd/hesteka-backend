@@ -12,6 +12,13 @@ export const getalluser = asyncHandler(async (req, res) => {
   ApiResponse.sendSuccess(res, 200, "User fetched successfully", users, meta);
 });
 
+//: get all user locations for map
+export const getAllLocations = asyncHandler(async (req, res) => {
+  const users = await userService.getAllLocations();
+  ApiResponse.sendSuccess(res, 200, "User locations fetched successfully", users);
+});
+
+
 //: get unique locations
 export const getUniqueLocations = asyncHandler(async (req, res) => {
   const cities = await userService.getUniqueCities();

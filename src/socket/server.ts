@@ -7,7 +7,8 @@ import { AuthenticatedSocket } from "./socket.type";
 import { registerChatHandlers } from "./chat.handler";
 
 let io: Server | null = null;
-const onlineUsers = new Set<string>();
+const onlineSockets = new Set<string>(); // For total raw connection count if needed
+const activeUsers = new Map<string, Set<string>>(); // userId -> Set<socket.id>
 
 
 interface TokenPayload extends JwtPayload {
@@ -84,8 +85,17 @@ export const initSocket = (httpServer: http.Server): Server => {
     console.log(`🔌 Socket connected: ${socket.id} (user: ${socket.userId}, email: ${socket.userEmail})`);
 
     // Track active connection instances (tabs/windows)
-    onlineUsers.add(socket.id);
-    io?.emit("onlineUsersCount", { count: onlineUsers.size });
+    onlineSockets.add(socket.id);
+    
+    // Track unique users
+    if (socket.userId) {
+      if (!activeUsers.has(socket.userId)) {
+        activeUsers.set(socket.userId, new Set());
+      }
+      activeUsers.get(socket.userId)!.add(socket.id);
+    }
+
+    io?.emit("onlineUsersCount", { count: activeUsers.size });
 
     // Personal room for direct user notifications
     if (socket.userId) {
@@ -116,8 +126,19 @@ export const initSocket = (httpServer: http.Server): Server => {
     socket.on("disconnect", async () => {
       console.log(`🔌 Socket disconnected: ${socket.id}`);
       
-      onlineUsers.delete(socket.id);
-      io?.emit("onlineUsersCount", { count: onlineUsers.size });
+      onlineSockets.delete(socket.id);
+      
+      if (socket.userId && activeUsers.has(socket.userId)) {
+        const userSockets = activeUsers.get(socket.userId)!;
+        userSockets.delete(socket.id);
+        
+        // If no more sockets for this user, they are fully offline
+        if (userSockets.size === 0) {
+          activeUsers.delete(socket.userId);
+        }
+      }
+
+      io?.emit("onlineUsersCount", { count: activeUsers.size });
     });
   });
 
@@ -130,5 +151,10 @@ export const getIo = (): Server => {
 };
 
 export const getOnlineUsersCount = (): number => {
-  return onlineUsers.size;
+  return activeUsers.size;
 };
+
+export const getOnlineUserIds = (): string[] => {
+  return Array.from(activeUsers.keys());
+};
+
