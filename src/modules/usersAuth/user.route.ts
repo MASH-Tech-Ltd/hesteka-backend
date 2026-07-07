@@ -48,7 +48,12 @@ router.get("/get-partner-stats", authGuard, allowRole("partners"), getPartnerSta
 router.patch(
   "/update-user",
   authGuard,
-  upload.single("image"),
+  upload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "partnerImage", maxCount: 1 },
+    { name: "profileImage", maxCount: 1 },
+    { name: "image", maxCount: 1 },
+  ]),
   validateRequest(updateUserSchema),
   updateUser,
 );

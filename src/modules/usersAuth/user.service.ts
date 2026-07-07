@@ -330,8 +330,7 @@ export const userService = {
     const { latitude, longitude, locationAddress, ...data } =
       req.body as UpdateUserPayload;
     const { email, role } = req?.user as { email: string; role: string };
-    const image = req?.file as Express.Multer.File;
-
+    
     if (data.status) {
       if (role === "admin") {
         if (!Object.values(status).includes(data.status as status)) {
@@ -358,6 +357,42 @@ export const userService = {
       updateData["location.address"] = locationAddress;
     }
 
+    const existingUser = await userModel.findOne({ email: email });
+    if (!existingUser) throw new CustomError(400, "User not found");
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const imageFile = files?.image?.[0] || req.file; // Fallback for old 'image' field
+    const profileImageFile = files?.profileImage?.[0] || imageFile;
+    const logoFile = files?.logo?.[0];
+    const partnerImageFile = files?.partnerImage?.[0];
+
+    if (profileImageFile) {
+      if (existingUser.profileImage?.public_id) {
+        await deleteCloudinary(existingUser.profileImage.public_id).catch(console.error);
+      }
+      const profileImageResult = await uploadCloudinary(profileImageFile.path);
+      updateData.profileImage = profileImageResult;
+      if (fs.existsSync(profileImageFile.path)) fs.unlinkSync(profileImageFile.path);
+    }
+
+    if (logoFile) {
+      if (existingUser.logo?.public_id) {
+        await deleteCloudinary(existingUser.logo.public_id).catch(console.error);
+      }
+      const logoResult = await uploadCloudinary(logoFile.path);
+      updateData.logo = logoResult;
+      if (fs.existsSync(logoFile.path)) fs.unlinkSync(logoFile.path);
+    }
+
+    if (partnerImageFile) {
+      if (existingUser.partnerImage?.public_id) {
+        await deleteCloudinary(existingUser.partnerImage.public_id).catch(console.error);
+      }
+      const partnerImageResult = await uploadCloudinary(partnerImageFile.path);
+      updateData.partnerImage = partnerImageResult;
+      if (fs.existsSync(partnerImageFile.path)) fs.unlinkSync(partnerImageFile.path);
+    }
+
     const user = await userModel.findOneAndUpdate(
       { email: email },
       { $set: updateData },
@@ -366,17 +401,7 @@ export const userService = {
         runValidators: true,
       },
     );
-    if (!user) throw new CustomError(400, "User not found");
 
-    if (image) {
-      if (user.profileImage?.public_id) {
-        await deleteCloudinary(user.profileImage?.public_id);
-      }
-      const result = await uploadCloudinary(image?.path);
-      user.profileImage = result;
-    }
-
-    await user.save();
     return user;
   },
 
