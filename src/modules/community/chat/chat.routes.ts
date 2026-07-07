@@ -17,6 +17,14 @@ chatRoute.get("/local", authGuard, chatController.getLocalChat);
 
 chatRoute.get("/global", authGuard, chatController.getGlobalChat);
 
+chatRoute.get("/:id/comments", authGuard, chatController.getPostComments);
+chatRoute.post(
+  "/:id/comments",
+  authGuard,
+  uploadMediaArray("media", COMMUNITY_CONFIG.CHAT_MEDIA_MAX_COUNT),
+  chatController.createPostComment,
+);
+
 chatRoute.get("/:id", authGuard, chatController.getChatById);
 
 chatRoute.delete("/:id", authGuard, chatController.deleteChat);
@@ -28,4 +36,9 @@ chatRoute.patch(
   chatController.updateChat,
 );
 
-chatRoute.delete("/admin/:id", authGuard, allowRole("admin"), chatController.adminDeleteChat);
+chatRoute.delete(
+  "/admin/:id",
+  authGuard,
+  allowRole("admin"),
+  chatController.adminDeleteChat,
+);

@@ -209,10 +209,17 @@ const getLocalChat = async (query: GetLocalChatQuery) => {
   );
 
   if (user && lat !== undefined && lng !== undefined) {
-    userModel.findByIdAndUpdate(user, {
-      "location.type": "Point",
-      "location.coordinates": [resolvedLocation.lng, resolvedLocation.lat]
-    }).catch(err => console.error("[Chat Service] Failed to update user location silently:", err));
+    userModel
+      .findByIdAndUpdate(user, {
+        "location.type": "Point",
+        "location.coordinates": [resolvedLocation.lng, resolvedLocation.lat],
+      })
+      .catch((err) =>
+        console.error(
+          "[Chat Service] Failed to update user location silently:",
+          err,
+        ),
+      );
   }
 
   const filter = user ? { $or: [geoFilter, { user }] } : geoFilter;
@@ -279,13 +286,19 @@ const getLocalChat = async (query: GetLocalChatQuery) => {
   };
 };
 
-const getGlobalChat = async (query: GetGlobalChatQuery) => {
-  const { page, limit } = query;
+const getGlobalChat = async (query: {
+  page?: number | undefined;
+  limit?: number | undefined;
+  hideComments?: boolean | undefined;
+}) => {
+  const { page, limit, hideComments } = query;
   const pagination = paginationHelper(String(page), String(limit));
+  
+  const filter = hideComments ? { replyTo: null } : {};
 
   const [messages, total] = await Promise.all([
     chatModel
-      .find()
+      .find(filter)
       .populate("user", "firstName lastName email profileImage")
       .populate({
         path: "replyTo",
@@ -299,11 +312,26 @@ const getGlobalChat = async (query: GetGlobalChatQuery) => {
       .skip(pagination.skip)
       .limit(pagination.limit)
       .lean(),
-    chatModel.countDocuments(),
+    chatModel.countDocuments(filter),
   ]);
 
+  const chatIds = messages.map((msg) => msg._id);
+  const repliesCounts = await chatModel.aggregate([
+    { $match: { replyTo: { $in: chatIds } } },
+    { $group: { _id: "$replyTo", count: { $sum: 1 } } }
+  ]);
+
+  const repliesCountMap = new Map(
+    repliesCounts.map(item => [item._id.toString(), item.count])
+  );
+
+  const messagesWithCounts = messages.map(msg => ({
+    ...msg,
+    replyCount: repliesCountMap.get(msg._id.toString()) || 0,
+  }));
+
   return {
-    messages,
+    messages: messagesWithCounts,
     meta: {
       page: pagination.page,
       limit: pagination.limit,
@@ -335,6 +363,36 @@ const getChatById = async (chatId: string): Promise<IChat> => {
   }
 
   return chat;
+};
+
+const getPostComments = async (postId: string, paginationInfo: { page?: number | undefined; limit?: number | undefined }) => {
+  if (!Types.ObjectId.isValid(postId)) {
+    throw new CustomError(400, "Invalid post ID");
+  }
+
+  const pagination = paginationHelper(String(paginationInfo.page), String(paginationInfo.limit));
+  const filter = { replyTo: postId };
+
+  const [comments, total] = await Promise.all([
+    chatModel
+      .find(filter)
+      .populate("user", "firstName lastName profileImage email")
+      .sort({ createdAt: 1 }) // Older comments first
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean(),
+    chatModel.countDocuments(filter),
+  ]);
+
+  return {
+    comments,
+    meta: {
+      page: pagination.page,
+      limit: pagination.limit,
+      total,
+      totalPages: Math.ceil(total / pagination.limit),
+    },
+  };
 };
 
 const deleteChat = async (
@@ -470,6 +528,7 @@ export const chatService = {
   getLocalChat,
   getGlobalChat,
   getChatById,
+  getPostComments,
   deleteChat,
   adminDeleteChat,
   broadcastToGeohashes,

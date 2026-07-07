@@ -10,10 +10,12 @@ import { NotificationType } from "../notifications/notification.interface";
 import { getIo } from "../../socket/server";
 import { userModel } from "../usersAuth/user.models";
 import { pointTransactionModel } from "../points/point.models";
-import { PointTransactionType, PointTransactionSource } from "../points/point.interface";
+import {
+  PointTransactionType,
+  PointTransactionSource,
+} from "../points/point.interface";
 import { pointConfigModel } from "../points/pointConfig.models";
 import { myanimalModel } from "../myanimal/myanimal.models";
-
 
 const deleteCloudinaryQuietly = async (publicId?: string): Promise<void> => {
   if (!publicId) return;
@@ -46,7 +48,7 @@ export const reportService = {
     }
 
     // Parse location if it comes stringified
-    if (body.location && typeof body.location === 'string') {
+    if (body.location && typeof body.location === "string") {
       try {
         locationData = JSON.parse(body.location);
       } catch (e) {
@@ -57,7 +59,9 @@ export const reportService = {
     }
 
     // Process images
-    const multerFiles = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const multerFiles = req.files as {
+      [fieldname: string]: Express.Multer.File[];
+    };
     const files = multerFiles?.["images"] || [];
     let images: {
       public_id: string;
@@ -81,7 +85,10 @@ export const reportService = {
           });
         }
       }
-    } else if (sourceAnimal?.photo?.public_id && sourceAnimal?.photo?.secure_url) {
+    } else if (
+      sourceAnimal?.photo?.public_id &&
+      sourceAnimal?.photo?.secure_url
+    ) {
       images.push({
         public_id: sourceAnimal.photo.public_id,
         secure_url: sourceAnimal.photo.secure_url,
@@ -100,14 +107,15 @@ export const reportService = {
 
     // Auto-generate title if missing
     if (!payload.title && payload.animalName) {
-      const statusLabel = payload.status.charAt(0).toUpperCase() + payload.status.slice(1);
+      const statusLabel =
+        payload.status.charAt(0).toUpperCase() + payload.status.slice(1);
       payload.title = `${statusLabel} ${payload.species} - ${payload.animalName}`;
     }
 
-    if (payload.isPhoneVisible === 'true') payload.isPhoneVisible = true;
-    if (payload.isPhoneVisible === 'false') payload.isPhoneVisible = false;
-    if (payload.isEmailVisible === 'true') payload.isEmailVisible = true;
-    if (payload.isEmailVisible === 'false') payload.isEmailVisible = false;
+    if (payload.isPhoneVisible === "true") payload.isPhoneVisible = true;
+    if (payload.isPhoneVisible === "false") payload.isPhoneVisible = false;
+    if (payload.isEmailVisible === "true") payload.isEmailVisible = true;
+    if (payload.isEmailVisible === "false") payload.isEmailVisible = false;
 
     const newReport = await reportModel.create(payload);
 
@@ -117,7 +125,7 @@ export const reportService = {
       const pointsToAward = config?.pointsPerReport || 10;
 
       await userModel.findByIdAndUpdate(authorId, {
-        $inc: { pointsBalance: pointsToAward }
+        $inc: { pointsBalance: pointsToAward },
       });
 
       await pointTransactionModel.create({
@@ -133,14 +141,15 @@ export const reportService = {
       await newReport.save();
 
       // Notify the user that their report was successful and they earned points
-      notificationService.notifySingleUser(
-        authorId.toString(),
-        "Signalement publié !",
-        `Votre signalement "${newReport.title}" a été créé avec succès. Vous avez gagné ${pointsToAward} points !`,
-        NotificationType.POINTS_EARNED,
-        { reportId: newReport._id.toString() }
-      ).catch((err) => console.error("Author Notification Error:", err));
-
+      notificationService
+        .notifySingleUser(
+          authorId.toString(),
+          "Signalement publié !",
+          `Votre signalement "${newReport.title}" a été créé avec succès. Vous avez gagné ${pointsToAward} points !`,
+          NotificationType.POINTS_EARNED,
+          { reportId: newReport._id.toString() },
+        )
+        .catch((err) => console.error("Author Notification Error:", err));
     } catch (pointError) {
       console.error("Failed to award points for report:", pointError);
     }
@@ -148,28 +157,59 @@ export const reportService = {
     // Fire & Forget Notification
     const friendTitle = "Nouveau signalement !";
     const friendDesc = `Votre ami a créé un nouveau signalement "${newReport.title}".`;
-    
-    notificationService.notifyFriends(authorId.toString(), friendTitle, friendDesc, NotificationType.NEW_REPORT, { reportId: newReport._id.toString() })
+
+    notificationService
+      .notifyFriends(
+        authorId.toString(),
+        friendTitle,
+        friendDesc,
+        NotificationType.NEW_REPORT,
+        { reportId: newReport._id.toString() },
+      )
       .catch((err) => console.error("Friend Notification Error:", err));
 
     const nearbyTitle = "Nouveau signalement à proximité !";
     const nearbyDesc = `Un nouveau signalement "${newReport.title}" vient d'être créé près de chez vous.`;
-    
-    if (newReport.location && newReport.location.coordinates && newReport.location.coordinates.length >= 2) {
+
+    if (
+      newReport.location &&
+      newReport.location.coordinates &&
+      newReport.location.coordinates.length >= 2
+    ) {
       const lng = newReport.location.coordinates[0] as number;
       const lat = newReport.location.coordinates[1] as number;
-      notificationService.notifyUsersNearby(nearbyTitle, nearbyDesc, NotificationType.NEW_REPORT, lat, lng, 15, { reportId: newReport._id.toString() })
+      notificationService
+        .notifyUsersNearby(
+          nearbyTitle,
+          nearbyDesc,
+          NotificationType.NEW_REPORT,
+          lat,
+          lng,
+          15,
+          { reportId: newReport._id.toString() },
+        )
         .catch((err) => console.error("Notification Error:", err));
     } else {
-      notificationService.notifyUsersNearby(nearbyTitle, nearbyDesc, NotificationType.NEW_REPORT, undefined, undefined, 15, { reportId: newReport._id.toString() })
+      notificationService
+        .notifyUsersNearby(
+          nearbyTitle,
+          nearbyDesc,
+          NotificationType.NEW_REPORT,
+          undefined,
+          undefined,
+          15,
+          { reportId: newReport._id.toString() },
+        )
         .catch((err) => console.error("Notification Error:", err));
     }
 
-    notificationService.notifyAdmins(
-      "Nouveau signalement créé",
-      `Un nouveau signalement "${newReport.title}" nécessite votre attention.`,
-      NotificationType.NEW_REPORT
-    ).catch((err) => console.error("Admin Notification Error:", err));
+    notificationService
+      .notifyAdmins(
+        "Nouveau signalement créé",
+        `Un nouveau signalement "${newReport.title}" nécessite votre attention.`,
+        NotificationType.NEW_REPORT,
+      )
+      .catch((err) => console.error("Admin Notification Error:", err));
 
     try {
       const io = getIo();
@@ -210,10 +250,16 @@ export const reportService = {
       const radiusKm = radius !== undefined ? parseFloat(radius as string) : 5;
 
       if (isNaN(latNum) || isNaN(lngNum)) {
-        throw new CustomError(400, "Invalid lat/lng values. Must be valid numbers.");
+        throw new CustomError(
+          400,
+          "Invalid lat/lng values. Must be valid numbers.",
+        );
       }
       if (isNaN(radiusKm) || radiusKm <= 0) {
-        throw new CustomError(400, "Invalid radius value. Must be a positive number (km).");
+        throw new CustomError(
+          400,
+          "Invalid radius value. Must be a positive number (km).",
+        );
       }
 
       // Convert km to radians for $centerSphere (Earth radius = 6378.1 km)
@@ -225,10 +271,17 @@ export const reportService = {
 
       // Silently update the user's actual location in the database to keep it fresh
       if (req.user?._id) {
-        userModel.findByIdAndUpdate(req.user._id, {
-          "location.type": "Point",
-          "location.coordinates": [lngNum, latNum]
-        }).catch(err => console.error("[Report Service] Failed to update user location silently:", err));
+        userModel
+          .findByIdAndUpdate(req.user._id, {
+            "location.type": "Point",
+            "location.coordinates": [lngNum, latNum],
+          })
+          .catch((err) =>
+            console.error(
+              "[Report Service] Failed to update user location silently:",
+              err,
+            ),
+          );
       }
     }
 
@@ -249,7 +302,7 @@ export const reportService = {
       if (!validStatuses.includes(status as string)) {
         throw new CustomError(
           400,
-          `Invalid status. Must be one of: ${validStatuses.join(", ")}, or 'all'`
+          `Invalid status. Must be one of: ${validStatuses.join(", ")}, or 'all'`,
         );
       }
       filter.status = status;
@@ -272,15 +325,24 @@ export const reportService = {
       };
 
       if (from && !isValidDate(from)) {
-        throw new CustomError(400, "Invalid 'from' date. Format must be YYYY-MM-DD or ISO");
+        throw new CustomError(
+          400,
+          "Invalid 'from' date. Format must be YYYY-MM-DD or ISO",
+        );
       }
 
       if (to && !isValidDate(to)) {
-        throw new CustomError(400, "Invalid 'to' date. Format must be YYYY-MM-DD or ISO");
+        throw new CustomError(
+          400,
+          "Invalid 'to' date. Format must be YYYY-MM-DD or ISO",
+        );
       }
 
       if (from && to && new Date(from as string) > new Date(to as string)) {
-        throw new CustomError(400, "'from' date cannot be greater than 'to' date");
+        throw new CustomError(
+          400,
+          "'from' date cannot be greater than 'to' date",
+        );
       }
 
       filter.createdAt = {};
@@ -300,7 +362,10 @@ export const reportService = {
 
     // $geoWithin is compatible with regular sort — always apply it
     if (sort && sort !== "ascending" && sort !== "descending") {
-      throw new CustomError(400, "Invalid sort value. Must be 'ascending' or 'descending'");
+      throw new CustomError(
+        400,
+        "Invalid sort value. Must be 'ascending' or 'descending'",
+      );
     }
 
     const sortFields: Record<string, string> = {
@@ -313,7 +378,10 @@ export const reportService = {
     const sortByValue = typeof sortBy === "string" ? sortBy : "date";
     const sortField = sortFields[sortByValue.toLowerCase()] ?? null;
     if (!sortField) {
-      throw new CustomError(400, `Invalid sortBy value. Must be one of: ${Object.keys(sortFields).join(", ")}`);
+      throw new CustomError(
+        400,
+        `Invalid sortBy value. Must be one of: ${Object.keys(sortFields).join(", ")}`,
+      );
     }
     const sortOrder: 1 | -1 = sort === "descending" ? -1 : 1;
 
@@ -331,20 +399,29 @@ export const reportService = {
           select: "-__v -report",
           populate: [
             { path: "author", select: "firstName lastName profileImage" },
-            { path: "replies", select: "-__v", populate: { path: "author", select: "firstName lastName profileImage" } },
-            { path: "likes", select: "firstName lastName profileImage" }
-          ]
+            {
+              path: "replies",
+              select: "-__v",
+              populate: {
+                path: "author",
+                select: "firstName lastName profileImage",
+              },
+            },
+            { path: "likes", select: "firstName lastName profileImage" },
+          ],
         })
         .lean(),
       reportModel.countDocuments(filter),
     ]);
 
     // Manually filter out child comments from the main comments array (fallback)
-      reports.forEach((report: any) => {
-        if (report.comments && Array.isArray(report.comments)) {
-          report.comments = report.comments.filter((c: any) => c && (c.parent === null || c.parent === undefined));
-        }
-      });
+    reports.forEach((report: any) => {
+      if (report.comments && Array.isArray(report.comments)) {
+        report.comments = report.comments.filter(
+          (c: any) => c && (c.parent === null || c.parent === undefined),
+        );
+      }
+    });
 
     return {
       reports,
@@ -391,10 +468,16 @@ export const reportService = {
       const radiusKm = radius !== undefined ? parseFloat(radius as string) : 5;
 
       if (isNaN(latNum) || isNaN(lngNum)) {
-        throw new CustomError(400, "Invalid lat/lng values. Must be valid numbers.");
+        throw new CustomError(
+          400,
+          "Invalid lat/lng values. Must be valid numbers.",
+        );
       }
       if (isNaN(radiusKm) || radiusKm <= 0) {
-        throw new CustomError(400, "Invalid radius value. Must be a positive number (km).");
+        throw new CustomError(
+          400,
+          "Invalid radius value. Must be a positive number (km).",
+        );
       }
 
       // Convert km to radians for $centerSphere (Earth radius = 6378.1 km)
@@ -406,10 +489,17 @@ export const reportService = {
 
       // Silently update the user's actual location in the database to keep it fresh
       if (req.user?._id) {
-        userModel.findByIdAndUpdate(req.user._id, {
-          "location.type": "Point",
-          "location.coordinates": [lngNum, latNum]
-        }).catch(err => console.error("[Report Service] Failed to update user location silently:", err));
+        userModel
+          .findByIdAndUpdate(req.user._id, {
+            "location.type": "Point",
+            "location.coordinates": [lngNum, latNum],
+          })
+          .catch((err) =>
+            console.error(
+              "[Report Service] Failed to update user location silently:",
+              err,
+            ),
+          );
       }
     }
 
@@ -430,7 +520,7 @@ export const reportService = {
       if (!validStatuses.includes(status as string)) {
         throw new CustomError(
           400,
-          `Invalid status. Must be one of: ${validStatuses.join(", ")}, or 'all'`
+          `Invalid status. Must be one of: ${validStatuses.join(", ")}, or 'all'`,
         );
       }
       filter.status = status;
@@ -449,15 +539,24 @@ export const reportService = {
       };
 
       if (from && !isValidDate(from)) {
-        throw new CustomError(400, "Invalid 'from' date. Format must be YYYY-MM-DD or ISO");
+        throw new CustomError(
+          400,
+          "Invalid 'from' date. Format must be YYYY-MM-DD or ISO",
+        );
       }
 
       if (to && !isValidDate(to)) {
-        throw new CustomError(400, "Invalid 'to' date. Format must be YYYY-MM-DD or ISO");
+        throw new CustomError(
+          400,
+          "Invalid 'to' date. Format must be YYYY-MM-DD or ISO",
+        );
       }
 
       if (from && to && new Date(from as string) > new Date(to as string)) {
-        throw new CustomError(400, "'from' date cannot be greater than 'to' date");
+        throw new CustomError(
+          400,
+          "'from' date cannot be greater than 'to' date",
+        );
       }
 
       filter.createdAt = {};
@@ -476,7 +575,10 @@ export const reportService = {
     }
 
     if (sort && sort !== "ascending" && sort !== "descending") {
-      throw new CustomError(400, "Invalid sort value. Must be 'ascending' or 'descending'");
+      throw new CustomError(
+        400,
+        "Invalid sort value. Must be 'ascending' or 'descending'",
+      );
     }
 
     const sortFields: Record<string, string> = {
@@ -489,7 +591,10 @@ export const reportService = {
     const sortByValue = typeof sortBy === "string" ? sortBy : "date";
     const sortField = sortFields[sortByValue.toLowerCase()] ?? null;
     if (!sortField) {
-      throw new CustomError(400, `Invalid sortBy value. Must be one of: ${Object.keys(sortFields).join(", ")}`);
+      throw new CustomError(
+        400,
+        `Invalid sortBy value. Must be one of: ${Object.keys(sortFields).join(", ")}`,
+      );
     }
     const sortOrder: 1 | -1 = sort === "descending" ? -1 : 1;
 
@@ -507,9 +612,16 @@ export const reportService = {
           select: "-__v -report",
           populate: [
             { path: "author", select: "firstName lastName profileImage" },
-            { path: "replies", select: "-__v", populate: { path: "author", select: "firstName lastName profileImage" } },
-            { path: "likes", select: "firstName lastName profileImage" }
-          ]
+            {
+              path: "replies",
+              select: "-__v",
+              populate: {
+                path: "author",
+                select: "firstName lastName profileImage",
+              },
+            },
+            { path: "likes", select: "firstName lastName profileImage" },
+          ],
         })
         .lean(),
       reportModel.countDocuments(filter),
@@ -518,7 +630,9 @@ export const reportService = {
     // Manually filter out child comments from the main comments array (fallback)
     reports.forEach((report: any) => {
       if (report.comments && Array.isArray(report.comments)) {
-        report.comments = report.comments.filter((c: any) => c && (c.parent === null || c.parent === undefined));
+        report.comments = report.comments.filter(
+          (c: any) => c && (c.parent === null || c.parent === undefined),
+        );
       }
     });
 
@@ -547,9 +661,16 @@ export const reportService = {
         select: "-__v -report",
         populate: [
           { path: "author", select: "firstName lastName profileImage" },
-          { path: "replies", select: "-__v", populate: { path: "author", select: "firstName lastName profileImage" } },
-          { path: "likes", select: "firstName lastName profileImage" }
-        ]
+          {
+            path: "replies",
+            select: "-__v",
+            populate: {
+              path: "author",
+              select: "firstName lastName profileImage",
+            },
+          },
+          { path: "likes", select: "firstName lastName profileImage" },
+        ],
       })
       .lean();
 
@@ -559,7 +680,9 @@ export const reportService = {
 
     // Manually filter out child comments (fallback)
     if (report.comments && Array.isArray(report.comments)) {
-      report.comments = report.comments.filter((c: any) => c && (c.parent === null || c.parent === undefined));
+      report.comments = report.comments.filter(
+        (c: any) => c && (c.parent === null || c.parent === undefined),
+      );
     }
 
     // Silently update the user's actual location in the database to keep it fresh
@@ -567,10 +690,17 @@ export const reportService = {
       const latNum = parseFloat(lat as string);
       const lngNum = parseFloat(lng as string);
       if (!isNaN(latNum) && !isNaN(lngNum)) {
-        userModel.findByIdAndUpdate(req.user._id, {
-          "location.type": "Point",
-          "location.coordinates": [lngNum, latNum]
-        }).catch(err => console.error("[Report Service] Failed to update user location silently:", err));
+        userModel
+          .findByIdAndUpdate(req.user._id, {
+            "location.type": "Point",
+            "location.coordinates": [lngNum, latNum],
+          })
+          .catch((err) =>
+            console.error(
+              "[Report Service] Failed to update user location silently:",
+              err,
+            ),
+          );
       }
     }
 
@@ -591,13 +721,19 @@ export const reportService = {
 
     const userRole = req.user?.role;
     // Verify ownership
-    if (userRole !== "admin" && report.author.toString() !== authorId?.toString()) {
-      throw new CustomError(403, "You are not authorized to update this report");
+    if (
+      userRole !== "admin" &&
+      report.author.toString() !== authorId?.toString()
+    ) {
+      throw new CustomError(
+        403,
+        "You are not authorized to update this report",
+      );
     }
 
     let locationData = report.location;
     // Parse location if it comes stringified
-    if (body.location && typeof body.location === 'string') {
+    if (body.location && typeof body.location === "string") {
       try {
         locationData = JSON.parse(body.location);
       } catch (e) {
@@ -607,7 +743,9 @@ export const reportService = {
       locationData = body.location;
     }
 
-    const multerFiles = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const multerFiles = req.files as {
+      [fieldname: string]: Express.Multer.File[];
+    };
     const files = multerFiles?.["images"] || [];
     let images = report.images;
     const oldPublicIdsToDelete: string[] = [];
@@ -628,16 +766,16 @@ export const reportService = {
 
       images = [];
       for (const file of files) {
-      const result = await uploadCloudinary(file.path);
-      if (result) {
-        images.push({
-          public_id: result.public_id,
-          secure_url: result.secure_url,
-          source: "reportUpload",
-          ownedByReport: true,
-        });
-        newPublicIdsToDeleteOnFailure.push(result.public_id);
-      }
+        const result = await uploadCloudinary(file.path);
+        if (result) {
+          images.push({
+            public_id: result.public_id,
+            secure_url: result.secure_url,
+            source: "reportUpload",
+            ownedByReport: true,
+          });
+          newPublicIdsToDeleteOnFailure.push(result.public_id);
+        }
       }
     }
 
@@ -656,20 +794,21 @@ export const reportService = {
       payload.title = `${statusLabel} ${species} - ${animalName}`;
     }
 
-    if (payload.isPhoneVisible === 'true') payload.isPhoneVisible = true;
-    if (payload.isPhoneVisible === 'false') payload.isPhoneVisible = false;
-    if (payload.isEmailVisible === 'true') payload.isEmailVisible = true;
-    if (payload.isEmailVisible === 'false') payload.isEmailVisible = false;
+    if (payload.isPhoneVisible === "true") payload.isPhoneVisible = true;
+    if (payload.isPhoneVisible === "false") payload.isPhoneVisible = false;
+    if (payload.isEmailVisible === "true") payload.isEmailVisible = true;
+    if (payload.isEmailVisible === "false") payload.isEmailVisible = false;
 
     let updatedReport;
     try {
-      updatedReport = await reportModel.findByIdAndUpdate(
-        reportId,
-        payload,
-        { returnDocument: 'after', runValidators: true }
-      );
+      updatedReport = await reportModel.findByIdAndUpdate(reportId, payload, {
+        returnDocument: "after",
+        runValidators: true,
+      });
     } catch (error) {
-      await Promise.all(newPublicIdsToDeleteOnFailure.map(deleteCloudinaryQuietly));
+      await Promise.all(
+        newPublicIdsToDeleteOnFailure.map(deleteCloudinaryQuietly),
+      );
       throw error;
     }
 
@@ -697,7 +836,10 @@ export const reportService = {
 
       // Verify ownership
       if (report.author.toString() !== authorId && userRole !== "admin") {
-        throw new CustomError(403, "You are not authorized to delete this report");
+        throw new CustomError(
+          403,
+          "You are not authorized to delete this report",
+        );
       }
 
       // 1. Delete associated comments (Cascade)
@@ -759,7 +901,10 @@ export const reportService = {
 
     // Verify ownership
     if (report.author.toString() !== authorId?.toString()) {
-      throw new CustomError(403, "You are not authorized to modify this report");
+      throw new CustomError(
+        403,
+        "You are not authorized to modify this report",
+      );
     }
 
     // Check count limit
@@ -790,7 +935,10 @@ export const reportService = {
     const { public_id } = req.body;
 
     if (!public_id) {
-      throw new CustomError(400, "Please provide public_id of the image to remove");
+      throw new CustomError(
+        400,
+        "Please provide public_id of the image to remove",
+      );
     }
 
     const report = await reportModel.findById(reportId);
@@ -800,11 +948,16 @@ export const reportService = {
 
     // Verify ownership
     if (report.author.toString() !== authorId?.toString()) {
-      throw new CustomError(403, "You are not authorized to modify this report");
+      throw new CustomError(
+        403,
+        "You are not authorized to modify this report",
+      );
     }
 
     // Check if image exists in report
-    const imageToRemove = report.images.find(img => img.public_id === public_id);
+    const imageToRemove = report.images.find(
+      (img) => img.public_id === public_id,
+    );
     if (!imageToRemove) {
       throw new CustomError(404, "Image not found in this report");
     }
@@ -814,7 +967,7 @@ export const reportService = {
     }
 
     // Remove from array
-    report.images = report.images.filter(img => img.public_id !== public_id);
+    report.images = report.images.filter((img) => img.public_id !== public_id);
     await report.save();
 
     return report;

@@ -419,6 +419,16 @@ export const userService = {
     const existingUser = await userModel.findById(userId);
     if (!existingUser) throw new CustomError(400, "User not found");
 
+    //
+
+    if (data.email && data.email !== existingUser.email) {
+      if (existingUser.provider !== "local") {
+        throw new CustomError(400, "Only local provider emails can be updated.");
+      }
+      const emailExists = await userModel.findOne({ email: data.email });
+      if (emailExists) throw new CustomError(409, "Email already exists");
+    }
+
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
     const logoFile = files?.logo?.[0];
     const partnerImageFile = files?.partnerImage?.[0];

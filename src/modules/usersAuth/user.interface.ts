@@ -100,6 +100,7 @@ export interface IUser extends Document {
 }
 
 export interface UpdateUserPayload {
+  email?: string;
   firstName?: string;
   lastName?: string;
   phone?: string;

@@ -37,7 +37,9 @@ const deleteCloudinaryQuietly = async (publicId?: string): Promise<void> => {
 const getPartnerAccount = async (userId?: unknown) => {
   if (!userId) throw new CustomError(401, "Unauthorized access");
 
-  const partner = await userModel.findById(userId).select("_id role company status");
+  const partner = await userModel
+    .findById(userId)
+    .select("_id role company status");
   if (!partner) throw new CustomError(404, "Partner account not found");
   if (partner.role !== role.PARTNERS && partner.role !== role.ADMIN) {
     throw new CustomError(403, "Only partners can manage local missions");
@@ -53,7 +55,8 @@ const getPartnerAccount = async (userId?: unknown) => {
 const normalizeLocation = (location: unknown) => {
   if (!location) return undefined;
 
-  const parsedLocation = typeof location === "string" ? JSON.parse(location) : location;
+  const parsedLocation =
+    typeof location === "string" ? JSON.parse(location) : location;
   const coordinates = (parsedLocation as any)?.coordinates;
 
   if (!Array.isArray(coordinates) || coordinates.length < 2) return undefined;
@@ -93,29 +96,37 @@ export const localMissionService = {
       const baseTitle = "Nouvelle mission locale disponible !";
       const baseDesc = `Une nouvelle mission "${mission.title}" vient d'être créée près de chez vous. Participez et gagnez des points !`;
 
-      if (mission.location && mission.location.coordinates && mission.location.coordinates.length >= 2) {
+      if (
+        mission.location &&
+        mission.location.coordinates &&
+        mission.location.coordinates.length >= 2
+      ) {
         const lng = mission.location.coordinates[0] as number;
         const lat = mission.location.coordinates[1] as number;
-        notificationService.notifyUsersNearby(
-          baseTitle,
-          baseDesc,
-          NotificationType.NEW_MISSION,
-          lat,
-          lng,
-          20,
-          {
-            missionId: mission._id.toString(),
-            latitude: String(lat),
-            longitude: String(lng),
-          }
-        ).catch((err) => console.error("Notification Error:", err));
+        notificationService
+          .notifyUsersNearby(
+            baseTitle,
+            baseDesc,
+            NotificationType.NEW_MISSION,
+            lat,
+            lng,
+            20,
+            {
+              missionId: mission._id.toString(),
+              latitude: String(lat),
+              longitude: String(lng),
+            },
+          )
+          .catch((err) => console.error("Notification Error:", err));
       }
 
-      notificationService.notifyAdmins(
-        "Nouvelle mission locale",
-        `Le partenaire "${partner.company}" a créé une nouvelle mission "${mission.title}".`,
-        NotificationType.NEW_MISSION
-      ).catch((err) => console.error("Admin Notification Error:", err));
+      notificationService
+        .notifyAdmins(
+          "Nouvelle mission locale",
+          `Le partenaire "${partner.company}" a créé une nouvelle mission "${mission.title}".`,
+          NotificationType.NEW_MISSION,
+        )
+        .catch((err) => console.error("Admin Notification Error:", err));
 
       return await mission.populate("partner", partnerPopulate);
     } catch (error) {
@@ -140,9 +151,15 @@ export const localMissionService = {
       radius, // in km, defaults to 5 km when lat/lng provided
     } = req.query;
 
-    const { page, limit, skip } = paginationHelper(pagebody as string, limitbody as string);
+    const { page, limit, skip } = paginationHelper(
+      pagebody as string,
+      limitbody as string,
+    );
     const filter: any = {};
-    const companyQuery = typeof company === "string" && company.trim() ? company.trim() : undefined;
+    const companyQuery =
+      typeof company === "string" && company.trim()
+        ? company.trim()
+        : undefined;
 
     // Radius / geospatial filter
     const hasGeo = lat !== undefined && lng !== undefined;
@@ -152,10 +169,16 @@ export const localMissionService = {
       const radiusKm = radius !== undefined ? parseFloat(radius as string) : 5;
 
       if (isNaN(latNum) || isNaN(lngNum)) {
-        throw new CustomError(400, "Invalid lat/lng values. Must be valid numbers.");
+        throw new CustomError(
+          400,
+          "Invalid lat/lng values. Must be valid numbers.",
+        );
       }
       if (isNaN(radiusKm) || radiusKm <= 0) {
-        throw new CustomError(400, "Invalid radius value. Must be a positive number (km).");
+        throw new CustomError(
+          400,
+          "Invalid radius value. Must be a positive number (km).",
+        );
       }
 
       // Convert km to radians for $centerSphere (Earth radius = 6378.1 km)
@@ -194,15 +217,24 @@ export const localMissionService = {
       };
 
       if (from && !isValidDate(from)) {
-        throw new CustomError(400, "Invalid 'from' date. Format must be YYYY-MM-DD or ISO");
+        throw new CustomError(
+          400,
+          "Invalid 'from' date. Format must be YYYY-MM-DD or ISO",
+        );
       }
 
       if (to && !isValidDate(to)) {
-        throw new CustomError(400, "Invalid 'to' date. Format must be YYYY-MM-DD or ISO");
+        throw new CustomError(
+          400,
+          "Invalid 'to' date. Format must be YYYY-MM-DD or ISO",
+        );
       }
 
       if (from && to && new Date(from as string) > new Date(to as string)) {
-        throw new CustomError(400, "'from' date cannot be greater than 'to' date");
+        throw new CustomError(
+          400,
+          "'from' date cannot be greater than 'to' date",
+        );
       }
 
       filter.createdAt = {};
@@ -222,7 +254,10 @@ export const localMissionService = {
 
     // $geoWithin is compatible with regular sort — always apply it
     if (sort && sort !== "ascending" && sort !== "descending") {
-      throw new CustomError(400, "Invalid sort value. Must be 'ascending' or 'descending'");
+      throw new CustomError(
+        400,
+        "Invalid sort value. Must be 'ascending' or 'descending'",
+      );
     }
 
     const sortFields: Record<string, string> = {
@@ -234,7 +269,10 @@ export const localMissionService = {
     const sortByValue = typeof sortBy === "string" ? sortBy : "date";
     const sortField = sortFields[sortByValue.toLowerCase()] ?? null;
     if (!sortField) {
-      throw new CustomError(400, `Invalid sortBy value. Must be one of: ${Object.keys(sortFields).join(", ")}`);
+      throw new CustomError(
+        400,
+        `Invalid sortBy value. Must be one of: ${Object.keys(sortFields).join(", ")}`,
+      );
     }
     const sortOrder: 1 | -1 = sort === "ascending" ? 1 : -1;
 
@@ -270,9 +308,12 @@ export const localMissionService = {
 
     const missionsWithStats = await Promise.all(
       missions.map(async (mission) => {
-        const participantsCount = await localMissionParticipationModel.countDocuments({ mission: mission._id });
+        const participantsCount =
+          await localMissionParticipationModel.countDocuments({
+            mission: mission._id,
+          });
         return { ...mission, participantsCount };
-      })
+      }),
     );
 
     return missionsWithStats;
@@ -284,13 +325,22 @@ export const localMissionService = {
 
     const mission = await localMissionModel.findById(missionId);
     if (!mission) throw new CustomError(404, "Local mission not found");
-    if (partner.role !== role.ADMIN && mission.partner.toString() !== partner._id.toString()) {
-      throw new CustomError(403, "You can only view participants for your own local missions");
+    if (
+      partner.role !== role.ADMIN &&
+      mission.partner.toString() !== partner._id.toString()
+    ) {
+      throw new CustomError(
+        403,
+        "You can only view participants for your own local missions",
+      );
     }
 
     return await localMissionParticipationModel
       .find({ mission: mission._id })
-      .populate("user", "firstName lastName email profileImage pointsBalance phone address postalCode country")
+      .populate(
+        "user",
+        "firstName lastName email profileImage pointsBalance phone address postalCode country",
+      )
       .sort({ createdAt: -1 });
   },
 
@@ -313,7 +363,8 @@ export const localMissionService = {
         mission: missionId,
       });
       if (participation) {
-        isJoined = participation.status !== LocalMissionParticipationStatus.REJECTED;
+        isJoined =
+          participation.status !== LocalMissionParticipationStatus.REJECTED;
         participationStatus = participation.status;
       }
     }
@@ -346,13 +397,17 @@ export const localMissionService = {
         mission: mission._id,
       });
 
-      const populatedMission = await mission.populate("partner", partnerPopulate);
+      const populatedMission = await mission.populate(
+        "partner",
+        partnerPopulate,
+      );
       const user = await userModel.findById(userId);
 
       if (user && populatedMission) {
         const partner = populatedMission.partner as any;
 
-        const partnerName = partner.company || (partner.firstName + " " + partner.lastName);
+        const partnerName =
+          partner.company || partner.firstName + " " + partner.lastName;
 
         // Generate email template based on language
         const emailTemplate = isEnglish
@@ -399,33 +454,50 @@ export const localMissionService = {
           email: user.email,
           subject,
           template: emailTemplate,
-        }).catch((err) => console.error("[Mailer] Failed to send mission confirmation email to user:", err));
+        }).catch((err) =>
+          console.error(
+            "[Mailer] Failed to send mission confirmation email to user:",
+            err,
+          ),
+        );
 
         // User in-app notification
-        const userNotifTitle = isEnglish ? "Registration Registered" : "Inscription enregistrée";
+        const userNotifTitle = isEnglish
+          ? "Registration Registered"
+          : "Inscription enregistrée";
         const userNotifBody = isEnglish
           ? `Your registration for the mission "${populatedMission.title}" has been successfully registered.`
           : `Votre inscription à la mission "${populatedMission.title}" a été enregistrée avec succès.`;
 
-        notificationService.notifySingleUser(
-          user._id.toString(),
-          userNotifTitle,
-          userNotifBody,
-          NotificationType.SYSTEM
-        ).catch((err) => console.error("[Notification] Failed to notify user:", err));
+        notificationService
+          .notifySingleUser(
+            user._id.toString(),
+            userNotifTitle,
+            userNotifBody,
+            NotificationType.SYSTEM,
+          )
+          .catch((err) =>
+            console.error("[Notification] Failed to notify user:", err),
+          );
 
         // Partner in-app notification
-        const partnerNotifTitle = isEnglish ? "New Participant!" : "Nouveau participant !";
+        const partnerNotifTitle = isEnglish
+          ? "New Participant!"
+          : "Nouveau participant !";
         const partnerNotifBody = isEnglish
           ? `The user "${user.firstName} ${user.lastName}" has registered for your mission "${populatedMission.title}".`
           : `L'utilisateur "${user.firstName} ${user.lastName}" s'est inscrit à votre mission "${populatedMission.title}".`;
 
-        notificationService.notifySingleUser(
-          partner._id.toString(),
-          partnerNotifTitle,
-          partnerNotifBody,
-          NotificationType.SYSTEM
-        ).catch((err) => console.error("[Notification] Failed to notify partner:", err));
+        notificationService
+          .notifySingleUser(
+            partner._id.toString(),
+            partnerNotifTitle,
+            partnerNotifBody,
+            NotificationType.SYSTEM,
+          )
+          .catch((err) =>
+            console.error("[Notification] Failed to notify partner:", err),
+          );
       }
 
       return {
@@ -438,7 +510,7 @@ export const localMissionService = {
           409,
           isEnglish
             ? "You already joined this local mission"
-            : "Vous avez déjà rejoint cette mission locale"
+            : "Vous avez déjà rejoint cette mission locale",
         );
       }
       throw error;
@@ -449,16 +521,27 @@ export const localMissionService = {
     const partner = await getPartnerAccount(req.user?._id);
     const participationId = req.params.participationId as string;
 
-    const participation = await localMissionParticipationModel.findById(participationId);
-    if (!participation) throw new CustomError(404, "Local mission participation not found");
+    const participation =
+      await localMissionParticipationModel.findById(participationId);
+    if (!participation)
+      throw new CustomError(404, "Local mission participation not found");
     if (participation.status === LocalMissionParticipationStatus.COMPLETED) {
-      throw new CustomError(409, "This local mission is already completed by this user");
+      throw new CustomError(
+        409,
+        "This local mission is already completed by this user",
+      );
     }
 
     const mission = await localMissionModel.findById(participation.mission);
     if (!mission) throw new CustomError(404, "Local mission not found");
-    if (partner.role !== role.ADMIN && mission.partner.toString() !== partner._id.toString()) {
-      throw new CustomError(403, "You can only approve your own local mission participants");
+    if (
+      partner.role !== role.ADMIN &&
+      mission.partner.toString() !== partner._id.toString()
+    ) {
+      throw new CustomError(
+        403,
+        "You can only approve your own local mission participants",
+      );
     }
 
     const points = mission.points ?? 0;
@@ -493,19 +576,25 @@ export const localMissionService = {
               pointsAwarded: points,
               completedAt: new Date(),
             },
-            { returnDocument: 'after', session },
+            { returnDocument: "after", session },
           )
-          .populate("user", "firstName lastName email profileImage pointsBalance");
+          .populate(
+            "user",
+            "firstName lastName email profileImage pointsBalance",
+          );
 
         if (!updatedParticipation) {
-          throw new CustomError(409, "This local mission is already completed by this user");
+          throw new CustomError(
+            409,
+            "This local mission is already completed by this user",
+          );
         }
 
         const updatedUser = await userModel
           .findByIdAndUpdate(
             participation.user,
             { $inc: { pointsBalance: points } },
-            { returnDocument: 'after', session },
+            { returnDocument: "after", session },
           )
           .select("pointsBalance");
 
@@ -521,18 +610,23 @@ export const localMissionService = {
 
       // Fire & Forget Notification
       if (result && result.participation) {
-        notificationService.notifySingleUser(
-          participation.user.toString(),
-          "Points gagnés !",
-          `Félicitations ! Vous avez gagné ${points} points pour votre participation à la mission "${mission.title}".`,
-          NotificationType.POINTS_EARNED
-        ).catch((err) => console.error("Notification Error:", err));
+        notificationService
+          .notifySingleUser(
+            participation.user.toString(),
+            "Points gagnés !",
+            `Félicitations ! Vous avez gagné ${points} points pour votre participation à la mission "${mission.title}".`,
+            NotificationType.POINTS_EARNED,
+          )
+          .catch((err) => console.error("Notification Error:", err));
       }
 
       return result;
     } catch (error: any) {
       if (error?.code === 11000) {
-        throw new CustomError(409, "Points were already awarded for this local mission");
+        throw new CustomError(
+          409,
+          "Points were already awarded for this local mission",
+        );
       }
       throw error;
     } finally {
@@ -545,13 +639,18 @@ export const localMissionService = {
     const missionId = req.params.missionId as string;
     if (!userId) throw new CustomError(401, "Unauthorized access");
 
-    const participation = await localMissionParticipationModel.findOneAndDelete({
-      user: userId,
-      mission: missionId,
-      status: LocalMissionParticipationStatus.PENDING,
-    });
+    const participation = await localMissionParticipationModel.findOneAndDelete(
+      {
+        user: userId,
+        mission: missionId,
+        status: LocalMissionParticipationStatus.PENDING,
+      },
+    );
     if (!participation) {
-      throw new CustomError(404, "Active local mission participation not found for this user");
+      throw new CustomError(
+        404,
+        "Active local mission participation not found for this user",
+      );
     }
 
     return participation;
@@ -561,16 +660,27 @@ export const localMissionService = {
     const partner = await getPartnerAccount(req.user?._id);
     const participationId = req.params.participationId as string;
 
-    const participation = await localMissionParticipationModel.findById(participationId);
-    if (!participation) throw new CustomError(404, "Local mission participation not found");
+    const participation =
+      await localMissionParticipationModel.findById(participationId);
+    if (!participation)
+      throw new CustomError(404, "Local mission participation not found");
     if (participation.status !== LocalMissionParticipationStatus.PENDING) {
-      throw new CustomError(409, `This local mission participation is already ${participation.status}`);
+      throw new CustomError(
+        409,
+        `This local mission participation is already ${participation.status}`,
+      );
     }
 
     const mission = await localMissionModel.findById(participation.mission);
     if (!mission) throw new CustomError(404, "Local mission not found");
-    if (partner.role !== role.ADMIN && mission.partner.toString() !== partner._id.toString()) {
-      throw new CustomError(403, "You can only reject your own local mission participants");
+    if (
+      partner.role !== role.ADMIN &&
+      mission.partner.toString() !== partner._id.toString()
+    ) {
+      throw new CustomError(
+        403,
+        "You can only reject your own local mission participants",
+      );
     }
 
     const updatedParticipation = await localMissionParticipationModel
@@ -579,7 +689,7 @@ export const localMissionService = {
         {
           status: LocalMissionParticipationStatus.REJECTED,
         },
-        { new: true }
+        { new: true },
       )
       .populate("user", "firstName lastName email profileImage pointsBalance");
 
@@ -589,17 +699,21 @@ export const localMissionService = {
         .startsWith("en");
 
       // Send localized notification to user
-      const userNotifTitle = isEnglish ? "Mission not approved" : "Mission non validée";
+      const userNotifTitle = isEnglish
+        ? "Mission not approved"
+        : "Mission non validée";
       const userNotifBody = isEnglish
         ? `Your participation in the mission "${mission.title}" was not approved.`
         : `Votre participation à la mission "${mission.title}" n'a pas été validée.`;
 
-      notificationService.notifySingleUser(
-        participation.user.toString(),
-        userNotifTitle,
-        userNotifBody,
-        NotificationType.SYSTEM
-      ).catch((err) => console.error("Notification Error:", err));
+      notificationService
+        .notifySingleUser(
+          participation.user.toString(),
+          userNotifTitle,
+          userNotifBody,
+          NotificationType.SYSTEM,
+        )
+        .catch((err) => console.error("Notification Error:", err));
     }
 
     return updatedParticipation;
@@ -613,7 +727,10 @@ export const localMissionService = {
 
     const mission = await localMissionModel.findById(missionId);
     if (!mission) throw new CustomError(404, "Local mission not found");
-    if (partner.role !== role.ADMIN && mission.partner.toString() !== partner._id.toString()) {
+    if (
+      partner.role !== role.ADMIN &&
+      mission.partner.toString() !== partner._id.toString()
+    ) {
       throw new CustomError(403, "You can only update your own local missions");
     }
 
@@ -649,20 +766,27 @@ export const localMissionService = {
 
     const mission = await localMissionModel.findById(missionId);
     if (!mission) throw new CustomError(404, "Local mission not found");
-    if (partner.role !== role.ADMIN && mission.partner.toString() !== partner._id.toString()) {
+    if (
+      partner.role !== role.ADMIN &&
+      mission.partner.toString() !== partner._id.toString()
+    ) {
       throw new CustomError(403, "You can only delete your own local missions");
     }
 
     // Fire & Forget Notifications to all participants
     try {
-      const participants = await localMissionParticipationModel.find({ mission: mission._id });
+      const participants = await localMissionParticipationModel.find({
+        mission: mission._id,
+      });
       participants.forEach((p) => {
-        notificationService.notifySingleUser(
-          p.user.toString(),
-          "Mission annulée",
-          `La mission locale "${mission.title}" a été annulée par le partenaire.`,
-          NotificationType.MISSION_CANCELLED
-        ).catch((err) => console.error("Notification Error:", err));
+        notificationService
+          .notifySingleUser(
+            p.user.toString(),
+            "Mission annulée",
+            `La mission locale "${mission.title}" a été annulée par le partenaire.`,
+            NotificationType.MISSION_CANCELLED,
+          )
+          .catch((err) => console.error("Notification Error:", err));
       });
     } catch (err) {
       console.error("Failed to notify participants on mission deletion:", err);

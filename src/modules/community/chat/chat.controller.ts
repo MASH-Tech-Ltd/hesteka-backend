@@ -59,11 +59,12 @@ const getLocalChat = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const getGlobalChat = asyncHandler(async (req: Request, res: Response) => {
-  const { page, limit } = req.query as any;
+  const { page, limit, hideComments } = req.query as any;
 
   const result = await chatService.getGlobalChat({
     page: page ? Number(page) : undefined,
     limit: limit ? Number(limit) : undefined,
+    hideComments: hideComments === "true",
   });
 
   return ApiResponse.sendSuccess(
@@ -82,6 +83,46 @@ const getChatById = asyncHandler(async (req: Request, res: Response) => {
   return ApiResponse.sendSuccess(res, 200, "Chat fetched successfully", chat);
 });
 
+const getPostComments = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { page, limit } = req.query as any;
+  const result = await chatService.getPostComments(id as string, {
+    page: page ? Number(page) : undefined,
+    limit: limit ? Number(limit) : undefined,
+  });
+
+  return ApiResponse.sendSuccess(
+    res,
+    200,
+    "Post comments fetched successfully",
+    result.comments,
+    result.meta,
+  );
+});
+
+const createPostComment = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user?._id;
+  if (!userId) {
+    throw new CustomError(401, "Unauthorized");
+  }
+
+  const { id } = req.params;
+  const { content } = req.body;
+
+  const files = Array.isArray(req.files)
+    ? (req.files as Express.Multer.File[])
+    : [];
+
+  const payload: any = { user: userId, content, replyTo: id };
+
+  const chat = await chatService.createChat(
+    payload,
+    files,
+  );
+
+  return ApiResponse.sendSuccess(res, 201, "Comment created successfully", chat);
+});
+
 const deleteChat = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user?._id;
   if (!userId) {
@@ -98,7 +139,11 @@ const adminDeleteChat = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   await chatService.adminDeleteChat(id as string);
 
-  return ApiResponse.sendSuccess(res, 200, "Message deleted successfully by admin");
+  return ApiResponse.sendSuccess(
+    res,
+    200,
+    "Message deleted successfully by admin",
+  );
 });
 
 const updateChat = asyncHandler(async (req: Request, res: Response) => {
@@ -112,9 +157,13 @@ const updateChat = asyncHandler(async (req: Request, res: Response) => {
 
   let splitRemoveMediaIds: string[] | undefined;
   if (removeMediaIds) {
-    splitRemoveMediaIds = typeof removeMediaIds === "string"
-      ? removeMediaIds.split(",").map(item => item.trim()).filter(Boolean)
-      : removeMediaIds;
+    splitRemoveMediaIds =
+      typeof removeMediaIds === "string"
+        ? removeMediaIds
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : removeMediaIds;
   }
 
   const files = Array.isArray(req.files)
@@ -136,7 +185,12 @@ const updateChat = asyncHandler(async (req: Request, res: Response) => {
     files,
   );
 
-  return ApiResponse.sendSuccess(res, 200, "Post updated successfully", updatedChat);
+  return ApiResponse.sendSuccess(
+    res,
+    200,
+    "Post updated successfully",
+    updatedChat,
+  );
 });
 
 export const chatController = {
@@ -144,6 +198,8 @@ export const chatController = {
   getLocalChat,
   getGlobalChat,
   getChatById,
+  getPostComments,
+  createPostComment,
   deleteChat,
   adminDeleteChat,
   updateChat,

@@ -20,16 +20,39 @@ import { localMissionValidation } from "./localMission.validation";
 const router = Router();
 
 router.get("/get-all-local-missions", getAllLocalMissions);
-router.get("/get-single-local-mission/:missionId", authGuard, getLocalMissionById);
-router.post("/join-local-mission/:missionId", authGuard, allowRole("user"), joinLocalMission);
-router.post("/leave-local-mission/:missionId", authGuard, allowRole("user"), leaveLocalMission);
+router.get(
+  "/get-single-local-mission/:missionId",
+  authGuard,
+  getLocalMissionById,
+);
+router.post(
+  "/join-local-mission/:missionId",
+  authGuard,
+  allowRole("user"),
+  joinLocalMission,
+);
+router.post(
+  "/leave-local-mission/:missionId",
+  authGuard,
+  allowRole("user"),
+  leaveLocalMission,
+);
 
 router.use(authGuard, allowRole("partners", "admin"));
 
 router.get("/get-my-local-missions", getMyLocalMissions);
-router.get("/get-local-mission-participants/:missionId", getLocalMissionParticipants);
-router.patch("/approve-local-mission/:participationId", approveLocalMissionParticipant);
-router.patch("/reject-local-mission/:participationId", rejectLocalMissionParticipant);
+router.get(
+  "/get-local-mission-participants/:missionId",
+  getLocalMissionParticipants,
+);
+router.patch(
+  "/approve-local-mission/:participationId",
+  approveLocalMissionParticipant,
+);
+router.patch(
+  "/reject-local-mission/:participationId",
+  rejectLocalMissionParticipant,
+);
 
 router.post(
   "/create-local-mission",

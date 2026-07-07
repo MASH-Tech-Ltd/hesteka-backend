@@ -11,10 +11,7 @@ import {
 } from "./report.controller";
 import { authGuard, authGuardOptional } from "../../middleware/auth.middleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
-import {
-  createReportSchema,
-  updateReportSchema,
-} from "./report.validation";
+import { createReportSchema, updateReportSchema } from "./report.validation";
 import { upload } from "../../middleware/multer.midleware";
 
 const router = Router();
@@ -33,19 +30,24 @@ router.post(
   "/create-report",
   upload.fields([{ name: "images", maxCount: 3 }]),
   validateRequest(createReportSchema),
-  createReport
+  createReport,
 );
 
 router.patch(
   "/update-report/:reportId",
   upload.fields([{ name: "images", maxCount: 3 }]),
   validateRequest(updateReportSchema),
-  updateReport
+  updateReport,
 );
 
-router.delete("/delete-report/:reportId", authGuard,   deleteReport);
+router.delete("/delete-report/:reportId", authGuard, deleteReport);
 
-router.post("/add-image/:reportId", authGuard, upload.single("image"), addImage);
+router.post(
+  "/add-image/:reportId",
+  authGuard,
+  upload.single("image"),
+  addImage,
+);
 
 router.delete("/remove-image/:reportId", authGuard, removeImage);
 
