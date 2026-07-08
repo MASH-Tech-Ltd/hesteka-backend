@@ -852,6 +852,23 @@ export const donationProofService = {
       },
       categoryTrend: trendData
     };
+  },
+
+  async getCollectionPointDonationsCount() {
+    const result = await donationProofModel.aggregate([
+      {
+        $match: {
+          status: DonationProofStatus.APPROVED,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$quantity" },
+        },
+      },
+    ]);
+    return result[0]?.total ?? 0;
   }
 };
 

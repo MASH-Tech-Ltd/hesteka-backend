@@ -48,10 +48,6 @@ donationRoute.get(
   authGuard,
   donationController.getMyDonations,
 );
-donationRoute.get(
-  "/collection-point-donations-count",
-  donationController.getCollectionPointDonationsCount,
-);
 
 donationRoute.get(
   "/:donationId",

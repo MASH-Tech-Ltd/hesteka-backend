@@ -78,3 +78,15 @@ export const getPartnerValidationStats = asyncHandler(async (req: Request, res: 
   const result = await donationProofService.getPartnerValidationStats(req, period);
   ApiResponse.sendSuccess(res, 200, "Partner validation stats fetched successfully", result);
 });
+
+//: get collection point donations count (Public)
+export const getCollectionPointDonationsCount = asyncHandler(async (req: Request, res: Response) => {
+  const count = await donationProofService.getCollectionPointDonationsCount();
+  ApiResponse.sendSuccess(
+    res,
+    200,
+    "Collection point donations count fetched successfully",
+    { count },
+  );
+});
+
