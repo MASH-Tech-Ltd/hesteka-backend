@@ -711,21 +711,4 @@ export const donationService = {
       doc.end();
     });
   },
-  getCollectionPointDonationsCount: async () => {
-    const result = await donationModel.aggregate([
-      {
-        $match: {
-          method: "collection_point",
-          status: "completed",
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$amount" },
-        },
-      },
-    ]);
-    return result[0]?.total ?? 0;
-  },
 };

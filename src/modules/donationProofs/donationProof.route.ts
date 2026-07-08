@@ -17,7 +17,8 @@ import {
   validateAll,
   getAllProofs,
   getPartnerProofs,
-  getPartnerValidationStats
+  getPartnerValidationStats,
+  getCollectionPointDonationsCount
 } from "./donationProof.controller";
 
 const router = Router();
@@ -30,6 +31,7 @@ router.post(
 );
 
 router.get("/get-accepted-values", getAcceptedValues);
+router.get("/collection-point-donations-count", getCollectionPointDonationsCount);
 
 router.get(
   "/stats",
