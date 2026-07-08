@@ -28,6 +28,7 @@ import { faqRoute } from "../modules/faq/faq.route";
 import { settingsRoute } from "../modules/settings/settings.route";
 import { supportMessageRoute } from "../modules/supportMessages/supportMessage.route";
 import { friendRoute } from "../modules/friends/friend.routes";
+import { supportLinkRoute } from "../modules/supportLink/supportLink.route";
 
 router.use("/user", userRoute);
 router.use("/auth", authRoute);
@@ -58,5 +59,6 @@ router.use("/faq", faqRoute);
 router.use("/settings", settingsRoute);
 router.use("/support-messages", supportMessageRoute);
 router.use("/friends", friendRoute);
+router.use("/support-link", supportLinkRoute);
 
 export default router;
