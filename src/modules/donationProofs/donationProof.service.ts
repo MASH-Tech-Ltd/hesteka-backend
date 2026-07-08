@@ -25,7 +25,7 @@ export const donationProofService = {
   async submitProof(req: Request) {
     const userId = req.user?._id;
     const data = req.body;
-    
+
     // Admin or authenticated user check
     if (!userId && !data.donorEmail) {
       throw new CustomError(401, "User ID or Donor Email is required");
@@ -84,10 +84,10 @@ export const donationProofService = {
 
     try {
       const io = getIo();
-      io.emit("donation_proof_new", { 
-        proofId: donationProof._id, 
+      io.emit("donation_proof_new", {
+        proofId: donationProof._id,
         donorName: finalDonorName,
-        amount: finalAmount 
+        amount: finalAmount
       });
       io.emit("donation_new", {
         method: "collection_point",
@@ -241,7 +241,7 @@ export const donationProofService = {
 
     // 4. Update status in global Donation collection
     const donorEmail = proof.donorEmail || (proof.user as any)?.email || "unknown";
-    const donorName = proof.donorName || 
+    const donorName = proof.donorName ||
       (proof.user ? `${(proof.user as any).firstName} ${(proof.user as any).lastName}` : "Manual Donor");
 
     await donationService.syncPhysicalDonation({
@@ -286,7 +286,7 @@ export const donationProofService = {
 
     // Update status in global Donation collection
     const donorEmail = proof.donorEmail || (proof.user as any)?.email || "unknown";
-    const donorName = proof.donorName || 
+    const donorName = proof.donorName ||
       (proof.user ? `${(proof.user as any).firstName} ${(proof.user as any).lastName}` : "Manual Donor");
 
     await donationService.syncPhysicalDonation({
@@ -319,7 +319,7 @@ export const donationProofService = {
 
   async validateAll() {
     const pendingProofs = await donationProofModel.find({ status: DonationProofStatus.PENDING }).populate("user");
-    
+
     if (pendingProofs.length === 0) {
       return { message: "No pending proofs to validate", count: 0 };
     }
@@ -353,7 +353,7 @@ export const donationProofService = {
 
       // 4. Update status in global Donation collection
       const donorEmail = proof.donorEmail || (proof.user as any)?.email || "unknown";
-      const donorName = proof.donorName || 
+      const donorName = proof.donorName ||
         (proof.user ? `${(proof.user as any).firstName} ${(proof.user as any).lastName}` : "Manual Donor");
 
       await donationService.syncPhysicalDonation({
@@ -495,11 +495,11 @@ export const donationProofService = {
           ],
           categoryTrendRaw: [
             { $match: { createdAt: { $gte: trendStart }, status: DonationProofStatus.APPROVED } },
-            { 
-              $group: { 
-                _id: groupId, 
-                totalQuantity: { $sum: { $ifNull: ["$quantity", "$amount", 0] } } 
-              } 
+            {
+              $group: {
+                _id: groupId,
+                totalQuantity: { $sum: { $ifNull: ["$quantity", "$amount", 0] } }
+              }
             }
           ]
         }
@@ -522,7 +522,7 @@ export const donationProofService = {
     // Format category breakdown - ensure ALL categories are present even if 0
     const categories = Object.values(DonationCategory);
     const totalCurrentMonthApproved = stats.categoryBreakdown.reduce((acc: number, item: any) => acc + item.count, 0);
-    
+
     const depositsByCategory = categories.map(cat => {
       const found = stats.categoryBreakdown.find((item: any) => item._id === cat);
       return {
@@ -533,7 +533,7 @@ export const donationProofService = {
 
     const trendData: any[] = [];
     const monthPrefixes = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-    
+
     if (period === "weekly") {
       const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
       for (let i = 6; i >= 0; i--) {
@@ -587,7 +587,7 @@ export const donationProofService = {
       } else {
         monthObj = trendData.find(m => m.year === item._id.year && m.month === item._id.month);
       }
-      
+
       if (monthObj) {
         if (monthObj[item._id.category] !== undefined) {
           monthObj[item._id.category] += item.totalQuantity;
@@ -730,11 +730,11 @@ export const donationProofService = {
           ],
           categoryTrendRaw: [
             { $match: { ...matchPartner, createdAt: { $gte: trendStart }, status: DonationProofStatus.APPROVED } },
-            { 
-              $group: { 
-                _id: groupId, 
-                totalQuantity: { $sum: { $ifNull: ["$quantity", "$amount", 0] } } 
-              } 
+            {
+              $group: {
+                _id: groupId,
+                totalQuantity: { $sum: { $ifNull: ["$quantity", "$amount", 0] } }
+              }
             }
           ]
         }
@@ -757,7 +757,7 @@ export const donationProofService = {
     // Format category breakdown
     const categories = Object.values(DonationCategory);
     const totalCurrentMonthApproved = stats.categoryBreakdown.reduce((acc: number, item: any) => acc + item.count, 0);
-    
+
     const depositsByCategory = categories.map(cat => {
       const found = stats.categoryBreakdown.find((item: any) => item._id === cat);
       return {
@@ -768,7 +768,7 @@ export const donationProofService = {
 
     const trendData: any[] = [];
     const monthPrefixes = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-    
+
     if (period === "weekly") {
       const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
       for (let i = 6; i >= 0; i--) {
@@ -822,7 +822,7 @@ export const donationProofService = {
       } else {
         monthObj = trendData.find(m => m.year === item._id.year && m.month === item._id.month);
       }
-      
+
       if (monthObj) {
         if (monthObj[item._id.category] !== undefined) {
           monthObj[item._id.category] += item.totalQuantity;
