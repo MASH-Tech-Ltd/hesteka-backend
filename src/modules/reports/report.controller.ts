@@ -88,3 +88,15 @@ export const removeImage = asyncHandler(async (req: Request, res: Response) => {
   const result = await reportService.removeImage(req);
   ApiResponse.sendSuccess(res, 200, "Image removed successfully", result);
 });
+
+export const getMapReports = asyncHandler(
+  async (req: Request, res: Response) => {
+    const reports = await reportService.getMapReports();
+    ApiResponse.sendSuccess(
+      res,
+      200,
+      "Map reports fetched successfully",
+      reports
+    );
+  }
+);

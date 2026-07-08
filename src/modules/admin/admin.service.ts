@@ -221,8 +221,16 @@ export const adminService = {
         .limit(10)
         .populate("author", "firstName lastName"),
       userModel.find().sort({ createdAt: -1 }).limit(10),
-      donationModel.find({ method: { $ne: "collection_point" } }).sort({ createdAt: -1 }).limit(10),
-      donationProofModel.find().sort({ createdAt: -1 }).limit(10).populate("collectionPoint", "title").populate("user", "firstName lastName"),
+      donationModel
+        .find({ method: { $ne: "collection_point" } })
+        .sort({ createdAt: -1 })
+        .limit(10),
+      donationProofModel
+        .find()
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .populate("collectionPoint", "title")
+        .populate("user", "firstName lastName"),
 
       // Missions detail stats for global
       localMissionParticipationModel.countDocuments({
@@ -269,13 +277,15 @@ export const adminService = {
         user: d.donorName,
       });
     });
-    
+
     recentDonationProofs.forEach((p: any) => {
       const qty = p.quantity || p.amount || 0;
       const cat = p.category || "item";
       const cpName = p.collectionPoint?.title || "HESTEKA";
-      const userName = p.donorName || (p.user ? `${p.user.firstName} ${p.user.lastName}` : "Manual Donor");
-      
+      const userName =
+        p.donorName ||
+        (p.user ? `${p.user.firstName} ${p.user.lastName}` : "Manual Donor");
+
       activity.push({
         type: "donation", // Keeping blue dot per original design
         text: `${qty}x ${cat} support proof received \u2013 ${cpName}`,
@@ -385,7 +395,7 @@ export const adminService = {
       config = await adminConfigModel.create(payload);
     } else {
       config = await adminConfigModel.findOneAndUpdate({}, payload, {
-        returnDocument: 'after',
+        returnDocument: "after",
       });
     }
     return config;
@@ -433,7 +443,7 @@ export const adminService = {
       const user = await userModel.findByIdAndUpdate(
         report.author,
         { $inc: { pointsBalance: pointsToAdd } },
-        { session, returnDocument: 'after' },
+        { session, returnDocument: "after" },
       );
 
       if (!user) {
@@ -461,16 +471,22 @@ export const adminService = {
       await session.commitTransaction();
 
       // Fire & Forget Notification
-      import("../notifications/notification.service").then(({ notificationService }) => {
-        import("../notifications/notification.interface").then(({ NotificationType }) => {
-          notificationService.notifySingleUser(
-            report.author.toString(),
-            "Points approuvés !",
-            `Félicitations ! Vous avez gagné ${pointsToAdd} points pour votre signalement "${report.title || report.animalName}".`,
-            NotificationType.POINTS_EARNED
-          ).catch((err) => console.error("Notification Error:", err));
-        });
-      });
+      import("../notifications/notification.service").then(
+        ({ notificationService }) => {
+          import("../notifications/notification.interface").then(
+            ({ NotificationType }) => {
+              notificationService
+                .notifySingleUser(
+                  report.author.toString(),
+                  "Points approuvés !",
+                  `Félicitations ! Vous avez gagné ${pointsToAdd} points pour votre signalement "${report.title || report.animalName}".`,
+                  NotificationType.POINTS_EARNED,
+                )
+                .catch((err) => console.error("Notification Error:", err));
+            },
+          );
+        },
+      );
 
       return {
         pointsAwarded: pointsToAdd,
@@ -603,7 +619,10 @@ export const adminService = {
       },
     ]);
 
-    const completed = stats.completedStats[0] || { totalCollected: 0, avgBasket: 0 };
+    const completed = stats.completedStats[0] || {
+      totalCollected: 0,
+      avgBasket: 0,
+    };
     const pending = stats.pendingStats[0] || { totalPending: 0 };
 
     return {

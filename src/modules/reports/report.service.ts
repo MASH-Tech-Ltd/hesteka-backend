@@ -972,4 +972,32 @@ export const reportService = {
 
     return report;
   },
+
+  // Get all reports optimized for map display
+  async getMapReports() {
+    const reports = await reportModel
+      .find(
+        { "location.coordinates": { $exists: true, $ne: [] } },
+        {
+          _id: 1,
+          animalName: 1,
+          title: 1,
+          images: { $slice: 1 },
+          "location.coordinates": 1,
+          status: 1,
+          species: 1,
+        }
+      )
+      .lean();
+
+    return reports.map((report) => ({
+      _id: report._id,
+      animalName: report.animalName,
+      title: report.title,
+      image: report.images?.[0]?.secure_url || null,
+      coordinates: report.location?.coordinates,
+      status: report.status,
+      species: report.species,
+    }));
+  },
 };

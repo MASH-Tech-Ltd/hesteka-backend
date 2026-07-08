@@ -8,6 +8,7 @@ import {
   addImage,
   removeImage,
   getMyReports,
+  getMapReports,
 } from "./report.controller";
 import { authGuard, authGuardOptional } from "../../middleware/auth.middleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
@@ -20,6 +21,7 @@ const router = Router();
 // If you want everyone to see reports:
 router.get("/get-all-reports", authGuardOptional, getAllReports);
 router.get("/get-single-report/:reportId", authGuardOptional, getReportById);
+router.get("/get-map-reports", getMapReports);
 
 // Protected routes (requires login)
 router.use(authGuard);
