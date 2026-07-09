@@ -537,6 +537,7 @@ export const donationService = {
   syncPhysicalDonation,
   getDonationStats: async () => {
     const [stats] = await donationModel.aggregate([
+      { $match: { method: { $ne: "collection_point" } } },
       {
         $lookup: {
           from: "payments",

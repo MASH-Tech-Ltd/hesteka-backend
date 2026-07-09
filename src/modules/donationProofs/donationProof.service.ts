@@ -58,7 +58,6 @@ export const donationProofService = {
       status: DonationProofStatus.PENDING,
     });
 
-    // Sync with global Donation collection
     let finalDonorEmail = data.donorEmail;
     let finalDonorName = data.donorName;
 
@@ -67,14 +66,6 @@ export const donationProofService = {
       if (!finalDonorEmail) finalDonorEmail = user?.email;
       if (!finalDonorName) finalDonorName = `${user?.firstName} ${user?.lastName}`;
     }
-
-    await donationService.syncPhysicalDonation({
-      amount: finalAmount,
-      donorEmail: finalDonorEmail || "unknown",
-      donorName: finalDonorName || "Manual Donor",
-      status: "pending",
-      referenceId: donationProof._id.toString(),
-    });
 
     notificationService.notifyAdmins(
       "Nouvelle preuve de soutien",
@@ -239,18 +230,7 @@ export const donationProofService = {
       });
     }
 
-    // 4. Update status in global Donation collection
-    const donorEmail = proof.donorEmail || (proof.user as any)?.email || "unknown";
-    const donorName = proof.donorName ||
-      (proof.user ? `${(proof.user as any).firstName} ${(proof.user as any).lastName}` : "Manual Donor");
-
-    await donationService.syncPhysicalDonation({
-      amount: proof.amount,
-      donorEmail,
-      donorName,
-      status: "completed",
-      referenceId: proof._id.toString(),
-    });
+    // Removed syncPhysicalDonation to keep them separate
 
     // 5. Notify user (if registered user)
     if (proof.user) {
@@ -284,18 +264,7 @@ export const donationProofService = {
     if (refusalReason) proof.refusalReason = refusalReason as any;
     await proof.save();
 
-    // Update status in global Donation collection
-    const donorEmail = proof.donorEmail || (proof.user as any)?.email || "unknown";
-    const donorName = proof.donorName ||
-      (proof.user ? `${(proof.user as any).firstName} ${(proof.user as any).lastName}` : "Manual Donor");
-
-    await donationService.syncPhysicalDonation({
-      amount: proof.amount,
-      donorEmail,
-      donorName,
-      status: "cancelled",
-      referenceId: proof._id.toString(),
-    });
+    // Removed syncPhysicalDonation to keep them separate
 
     // Notify user (if registered user)
     if (proof.user) {
@@ -351,18 +320,7 @@ export const donationProofService = {
         });
       }
 
-      // 4. Update status in global Donation collection
-      const donorEmail = proof.donorEmail || (proof.user as any)?.email || "unknown";
-      const donorName = proof.donorName ||
-        (proof.user ? `${(proof.user as any).firstName} ${(proof.user as any).lastName}` : "Manual Donor");
-
-      await donationService.syncPhysicalDonation({
-        amount: proof.amount,
-        donorEmail,
-        donorName,
-        status: "completed",
-        referenceId: proof._id.toString(),
-      });
+      // Removed syncPhysicalDonation to keep them separate
 
       // 5. Notify user (if registered user)
       if (proof.user) {
