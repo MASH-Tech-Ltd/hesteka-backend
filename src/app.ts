@@ -77,6 +77,35 @@ app.use(
 
 app.use("/api/v1", routes);
 
+app.get("/share/report/:id", (req: Request, res: Response) => {
+  const id = req.params.id;
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting to Hesteka...</title>
+    <script type="text/javascript">
+        window.onload = function() {
+            window.location.href = "hesteka://reports/${id}";
+            setTimeout(function() {
+                window.location.href = "https://play.google.com/store/apps/details?id=com.emmafve.app"; 
+            }, 2500);
+        };
+    </script>
+</head>
+<body>
+    <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Redirecting to Hesteka App...</h2>
+        <p>If the app does not open automatically, <a href="https://play.google.com/store/apps/details?id=com.emmafve.app">click here to download</a>.</p>
+    </div>
+</body>
+</html>
+  `;
+  res.send(html);
+});
+
 app.get("/", serverRunningTemplate);
 app.use(notFound);
 
