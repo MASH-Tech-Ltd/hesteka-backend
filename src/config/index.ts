@@ -107,6 +107,14 @@ const config = {
     storeUrl: process.env.SHOPIFY_STORE_URL as string,
     accessToken: process.env.SHOPIFY_ACCESS_TOKEN as string,
   },
+
+  /* ================= App Links ================= */
+  appLinks: {
+    androidPackageName: process.env.ANDROID_PACKAGE_NAME || "com.emmafve.app",
+    androidSha256CertFingerprint: process.env.ANDROID_SHA256_CERT_FINGERPRINT as string,
+    appleTeamId: process.env.APPLE_TEAM_ID as string,
+    appleAppStoreId: process.env.APPLE_APP_STORE_ID as string,
+  },
 };
 
 export default config;

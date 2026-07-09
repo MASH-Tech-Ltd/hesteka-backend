@@ -76,33 +76,48 @@ app.use(
 
 app.use("/api/v1", routes);
 
-app.get("/share/report/:id", (req: Request, res: Response) => {
-  const id = req.params.id;
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirecting to Hesteka...</title>
-    <script type="text/javascript">
-        window.onload = function() {
-            window.location.href = "hesteka://reports/${id}";
-            setTimeout(function() {
-                window.location.href = "https://play.google.com/store/apps/details?id=com.emmafve.app"; 
-            }, 2500);
-        };
-    </script>
-</head>
-<body>
-    <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Redirecting to Hesteka App...</h2>
-        <p>If the app does not open automatically, <a href="https://play.google.com/store/apps/details?id=com.emmafve.app">click here to download</a>.</p>
-    </div>
-</body>
-</html>
-  `;
-  res.send(html);
+// 1. Android App Links Verification
+app.get('/.well-known/assetlinks.json', (req: Request, res: Response) => {
+  res.status(200).json([
+    {
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": config.appLinks.androidPackageName,
+        "sha256_cert_fingerprints": [config.appLinks.androidSha256CertFingerprint]
+      }
+    }
+  ]);
+});
+
+// 2. iOS Universal Links Verification
+app.get('/.well-known/apple-app-site-association', (req: Request, res: Response) => {
+  // ⚠️ Note: The iOS file does not have a JSON extension, but the response type must be JSON.
+  res.setHeader('Content-Type', 'application/json');
+  res.status(200).json({
+    "applinks": {
+      "apps": [],
+      "details": [
+        {
+          "appID": `${config.appLinks.appleTeamId}.${config.appLinks.androidPackageName}`, // Team ID + Bundle ID
+          "paths": [ "/report/*" ] // Links to this path will open in the app
+        }
+      ]
+    }
+  });
+});
+
+// 3. Browser Fallback Route (if the app is not installed on the phone)
+app.get('/report/:id', (req: Request, res: Response) => {
+  const userAgent = req.headers['user-agent'] || '';
+  
+  // If the user clicks from an iPhone and the app is not installed, redirect to Apple Store
+  if (/iPhone|iPad|iPod/i.test(userAgent)) {
+    return res.redirect(`https://apps.apple.com/app/id${config.appLinks.appleAppStoreId}`);
+  }
+  
+  // Redirect to Play Store for Android or other devices
+  res.redirect(`https://play.google.com/store/apps/details?id=${config.appLinks.androidPackageName}`);
 });
 
 app.get("/", serverRunningTemplate);
