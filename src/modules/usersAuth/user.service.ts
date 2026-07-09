@@ -936,6 +936,31 @@ export const userService = {
       throw error;
     }
   },
+  // update user language
+  async updateLanguage(req: any) {
+    const { email } = req?.user as { email: string };
+    const { language } = req.body as { language: string };
+
+    const user = await userModel.findOneAndUpdate(
+      { email: email },
+      { $set: { language: language } },
+      {
+        returnDocument: "after",
+        runValidators: true,
+      },
+    );
+
+    if (!user) throw new CustomError(400, "User not found");
+    return user;
+  },
+
+  // get user language
+  async getLanguage(req: any) {
+    const { email } = req?.user as { email: string };
+    const user = await userModel.findOne({ email: email }).select("language");
+    if (!user) throw new CustomError(400, "User not found");
+    return user.language;
+  },
 
   //update fcm token
   async updateFcmToken(req: any) {

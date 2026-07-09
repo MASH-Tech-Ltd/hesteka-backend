@@ -8,14 +8,102 @@ import { paginationHelper } from "../../utils/pagination";
 import { settingsModel } from "../settings/settings.models";
 
 function translatePushNotification(title: string, body: string, language: string): { title: string; body: string } {
-  if (language !== 'fr') {
-    return { title, body }; // Default to English/original
+  if (language === 'en') {
+    let enTitle = title;
+    let enBody = body;
+
+    // French -> English Title Mapping
+    const titleMappings: Record<string, string> = {
+      'Nouvelle story': 'New Story',
+      'Nouveau signalement !': 'New Report!',
+      'Nouveau signalement à proximité !': 'New Report Nearby!',
+      'Nouveau signalement créé': 'New Report Created',
+      'Nouvelle mission locale': 'New Local Mission',
+      'Nouvelle mission locale disponible !': 'New Local Mission Available!',
+      'Points gagnés !': 'Points Gained!',
+      'Mission annulée': 'Mission Cancelled',
+      'Soutien approuvé !': 'Support Approved!',
+      'Preuve de soutien refusée': 'Support Proof Rejected',
+      'Inscription enregistrée': 'Registration Registered',
+      'Nouveau participant !': 'New Participant!',
+      'Alerte Admin': 'Admin Alert',
+      'Mission non validée': 'Mission not approved',
+      'Notification Système': 'System Notification',
+      'Compte mis à jour': 'Account Updated',
+      'Nouveau commentaire': 'New Comment',
+      'Nouvelle réponse': 'New Reply',
+      'Statut de récompense mis à jour': 'Reward Status Updated',
+      'Nouveau paiement reçu': 'New Payment Received',
+      'Nouvelle preuve de soutien': 'New Support Proof',
+      'Nouveau partenaire inscrit': 'New Partner Registered',
+      "Demande d'ami reçue": 'Friend Request Received',
+      "Demande d'ami acceptée": 'Friend Request Accepted',
+      'Récompense expédiée !': 'Reward Shipped!',
+      'Récompense livrée !': 'Reward Delivered!',
+      'Carte cadeau envoyée !': 'Gift Card Sent!',
+      'Échange refusé': 'Redemption Refused'
+    };
+
+    if (titleMappings[title]) {
+      enTitle = titleMappings[title];
+    }
+
+    // French -> English Body String Replacement Mapping
+    const bodyMappings: [string | RegExp, string][] = [
+      ["vient d'ajouter une nouvelle story !", "just added a new story!"],
+      ["Votre ami a créé un nouveau signalement", "Your friend created a new report"],
+      ["Une nouvelle mission", "A new mission"],
+      ["vient d'être créée près de chez vous. Participez et gagnez des points !", "was just created near you. Participate and earn points!"],
+      ["Un nouveau signalement", "A new report"],
+      ["vient d'être créé près de chez vous.", "was just created near you."],
+      ["nécessite votre attention.", "requires your attention."],
+      ["Le partenaire", "Partner"],
+      ["a créé une nouvelle mission", "created a new mission"],
+      ["Félicitations ! Vous avez gagné", "Congratulations! You earned"],
+      ["points pour votre participation à la mission", "points for participating in the mission"],
+      ["La mission locale", "The local mission"],
+      ["a été annulée par le partenaire.", "has been cancelled by the partner."],
+      ["Votre preuve de soutien de", "Your support proof of"],
+      ["a été approuvée.", "has been approved."],
+      ["Vous avez gagné", "You earned"],
+      ["Votre preuve de soutien a été refusée. Raison :", "Your support proof has been rejected. Reason:"],
+      ["Votre inscription à la mission", "Your registration for the mission"],
+      ["a été enregistrée avec succès.", "has been successfully registered."],
+      ["L'utilisateur", "The user"],
+      ["s'est inscrit à votre mission", "has registered for your mission"],
+      ["Votre participation à la mission", "Your participation in the mission"],
+      ["n'a pas été validée.", "was not approved."],
+      ["Votre compte a été mis à jour avec succès.", "Your account has been successfully updated."],
+      ["a commenté votre signalement", "commented on your report"],
+      ["a répondu à votre commentaire.", "replied to your comment."],
+      ["Le statut de votre échange de récompense a été mis à jour.", "The status of your reward exchange has been updated."],
+      ["Un nouveau paiement a été enregistré. Merci pour votre soutien !", "A new payment has been registered. Thank you for your support!"],
+      ["Une nouvelle preuve de soutien de", "A new support proof of"],
+      ["unités a été soumise et nécessite une approbation.", "units has been submitted and requires approval."],
+      ["Un nouveau partenaire a rejoint la communauté Hesteka.", "A new partner has joined the Hesteka community."],
+      ["vous a envoyé une demande d'ami.", "sent you a friend request."],
+      ["a accepté votre demande d'ami.", "accepted your friend request."],
+      ["Bonne nouvelle ! Votre récompense a été expédiée et est en route.", "Good news! Your reward has been shipped and is on its way."],
+      ["Votre récompense a été livrée. Profitez-en bien !", "Your reward has been delivered. Enjoy!"],
+      ["Bonne nouvelle ! Votre code de carte cadeau a été envoyé par e-mail. Vérifiez votre boîte de réception !", "Good news! Your gift card code has been sent via email. Check your inbox!"],
+      ["Votre demande d'échange de récompense a été refusée. Les points ont été remboursés sur votre solde.", "Your reward redemption request has been refused. The points have been refunded to your balance."]
+    ];
+
+    bodyMappings.forEach(([frStr, enStr]) => {
+      if (typeof frStr === 'string') {
+        enBody = enBody.split(frStr).join(enStr);
+      } else {
+        enBody = enBody.replace(frStr, enStr);
+      }
+    });
+
+    return { title: enTitle, body: enBody };
   }
 
   let frTitle = title;
   let frBody = body;
 
-  // Title translations
+  // Title translations (English -> French)
   if (title === 'New Story') {
     frTitle = 'Nouvelle story';
   } else if (title === 'New Report!') {
@@ -127,6 +215,39 @@ function translatePushNotification(title: string, body: string, language: string
   } else if (body.includes('accepted your friend request.')) {
     frBody = body.replace('accepted your friend request.', "a accepté votre demande d'ami.");
   }
+
+  // Dynamic replacements for animal types & statuses (Lost Cat, Found Dog, etc.) inside the title/body
+  const animalReplacements: [RegExp, string][] = [
+    [/\bLost Cat\b/gi, 'Chat perdu'],
+    [/\bLost Dog\b/gi, 'Chien perdu'],
+    [/\bLost Bird\b/gi, 'Oiseau perdu'],
+    [/\bLost Other\b/gi, 'Autre animal perdu'],
+    [/\bFound Cat\b/gi, 'Chat trouvé'],
+    [/\bFound Dog\b/gi, 'Chien trouvé'],
+    [/\bFound Bird\b/gi, 'Oiseau trouvé'],
+    [/\bFound Other\b/gi, 'Autre animal trouvé'],
+    [/\bRescued Cat\b/gi, 'Chat secouru'],
+    [/\bRescued Dog\b/gi, 'Chien secouru'],
+    [/\bRescued Bird\b/gi, 'Oiseau secouru'],
+    [/\bRescued Other\b/gi, 'Autre animal secouru'],
+    [/\bSighted Cat\b/gi, 'Chat aperçu'],
+    [/\bSighted Dog\b/gi, 'Chien aperçu'],
+    [/\bSighted Bird\b/gi, 'Oiseau aperçu'],
+    [/\bSighted Other\b/gi, 'Autre animal aperçu'],
+    // Fallbacks just in case
+    [/\bLost\b/g, 'Perdu'],
+    [/\bFound\b/g, 'Trouvé'],
+    [/\bRescued\b/g, 'Secouru'],
+    [/\bSighted\b/g, 'Aperçu'],
+    [/\bCat\b/g, 'Chat'],
+    [/\bDog\b/g, 'Chien'],
+    [/\bBird\b/g, 'Oiseau']
+  ];
+
+  animalReplacements.forEach(([regex, replacement]) => {
+    frTitle = frTitle.replace(regex, replacement);
+    frBody = frBody.replace(regex, replacement);
+  });
 
   return { title: frTitle, body: frBody };
 }
@@ -436,7 +557,7 @@ export const notificationService = {
 
   async notifyAdmins(title: string, body: string, type: NotificationType) {
     try {
-      const admins = await userModel.find({ role: "admin", status: "active" }).select("_id fcmTokens firstName lastName email");
+      const admins = await userModel.find({ role: "admin", status: "active" }).select("_id fcmTokens firstName lastName email language");
       if (!admins.length) return;
 
       const notificationsToSave = admins.map(admin => ({
@@ -449,7 +570,8 @@ export const notificationService = {
 
       const savedNotifications = await notificationModel.insertMany(notificationsToSave);
 
-      const allTokens: string[] = [];
+      const englishTokens: string[] = [];
+      const frenchTokens: string[] = [];
       let successLog: string[] = [];
       let failLog: string[] = [];
       let io: any;
@@ -475,7 +597,11 @@ export const notificationService = {
         }
 
         if (admin.fcmTokens && Array.isArray(admin.fcmTokens) && admin.fcmTokens.length > 0) {
-          allTokens.push(...admin.fcmTokens);
+          if (admin.language === "en") {
+            englishTokens.push(...admin.fcmTokens);
+          } else {
+            frenchTokens.push(...admin.fcmTokens);
+          }
           gotFcm = true;
         }
 
@@ -486,8 +612,12 @@ export const notificationService = {
         }
       }
 
-      if (allTokens.length > 0) {
-        await sendPushNotification(allTokens, title, body, { type });
+      if (englishTokens.length > 0) {
+        await sendPushNotification(englishTokens, title, body, { type });
+      }
+      if (frenchTokens.length > 0) {
+        const translated = translatePushNotification(title, body, 'fr');
+        await sendPushNotification(frenchTokens, translated.title, translated.body, { type });
       }
 
       console.log(`[Notification Service] notifyAdmins targeted ${admins.length} admins.`);
@@ -521,7 +651,7 @@ export const notificationService = {
       }
     }
 
-    const targetUsers = await userModel.find(query).select("_id fcmTokens firstName lastName email");
+    const targetUsers = await userModel.find(query).select("_id fcmTokens firstName lastName email language");
 
     if (!targetUsers || targetUsers.length === 0) return;
 
@@ -537,7 +667,8 @@ export const notificationService = {
 
     const savedNotifications = await notificationModel.insertMany(notificationsToSave);
 
-    const allTokens: string[] = [];
+    const englishTokens: string[] = [];
+    const frenchTokens: string[] = [];
     let successLog: string[] = [];
     let failLog: string[] = [];
     let io: any;
@@ -563,7 +694,11 @@ export const notificationService = {
       }
 
       if (u.fcmTokens && Array.isArray(u.fcmTokens) && u.fcmTokens.length > 0) {
-        allTokens.push(...u.fcmTokens);
+        if (u.language === "en") {
+          englishTokens.push(...u.fcmTokens);
+        } else {
+          frenchTokens.push(...u.fcmTokens);
+        }
         gotFcm = true;
       }
 
@@ -574,8 +709,12 @@ export const notificationService = {
       }
     }
 
-    if (allTokens.length > 0) {
-      await sendPushNotification(allTokens, title, message, { type });
+    if (englishTokens.length > 0) {
+      await sendPushNotification(englishTokens, title, message, { type });
+    }
+    if (frenchTokens.length > 0) {
+      const translated = translatePushNotification(title, message, 'fr');
+      await sendPushNotification(frenchTokens, translated.title, translated.body, { type });
     }
 
     console.log(`[Notification Service] sendManualAdminAlert targeted ${targetUsers.length} users.`);

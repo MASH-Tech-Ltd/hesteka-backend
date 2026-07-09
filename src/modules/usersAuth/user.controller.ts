@@ -134,6 +134,22 @@ export const deleteAccount = asyncHandler(
   },
 );
 
+//: update language
+export const updateLanguage = asyncHandler(
+  async (req: Request, res: Response) => {
+    await userService.updateLanguage(req);
+    ApiResponse.sendSuccess(res, 200, "Language updated successfully");
+  },
+);
+
+//: get language
+export const getLanguage = asyncHandler(
+  async (req: Request, res: Response) => {
+    const language = await userService.getLanguage(req);
+    ApiResponse.sendSuccess(res, 200, "Language fetched successfully", { language });
+  },
+);
+
 //: update fcm token
 export const updateFcmToken = asyncHandler(
   async (req: Request, res: Response) => {

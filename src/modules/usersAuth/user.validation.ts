@@ -98,3 +98,11 @@ export const updateFcmTokenSchema = z
     fcmToken: z.string().min(1, "FCM token cannot be empty"),
   })
   .strict();
+
+export const updateLanguageSchema = z
+  .object({
+    language: z.enum(["en", "fr"], {
+      message: "Language must be either 'en' or 'fr'",
+    }),
+  })
+  .strict();

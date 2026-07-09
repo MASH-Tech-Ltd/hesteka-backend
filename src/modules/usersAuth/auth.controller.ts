@@ -86,6 +86,7 @@ export const login = asyncHandler(async (req, res) => {
     firstName: user.firstName,
     lastName: user.lastName,
     role: user.role,
+    language: user.language,
     accessToken,
     refreshToken,
   });
@@ -172,6 +173,7 @@ export const googleLogin = asyncHandler(async (req, res) => {
     firstName: user.firstName,
     lastName: user.lastName,
     role: user.role,
+    language: user.language,
     accessToken,
     refreshToken,
   });
@@ -195,6 +197,7 @@ export const appleLogin = asyncHandler(async (req, res) => {
     firstName: user.firstName,
     lastName: user.lastName,
     role: user.role,
+    language: user.language,
     accessToken,
     refreshToken,
   });

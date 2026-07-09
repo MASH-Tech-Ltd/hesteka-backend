@@ -12,6 +12,8 @@ import {
   updatePassword,
   deleteAccount,
   updateUser,
+  updateLanguage,
+  getLanguage,
   updateFcmToken,
   blockUser,
   unblockUser,
@@ -27,6 +29,7 @@ import {
   deleteAccountSchema,
   updateStatusSchema,
   updateUserSchema,
+  updateLanguageSchema,
   updateFcmTokenSchema,
 } from "./user.validation";
 import { rateLimiter } from "../../middleware/rateLimiter.middleware";
@@ -106,6 +109,19 @@ router.delete(
   authGuard,
   validateRequest(deleteAccountSchema),
   deleteAccount,
+);
+
+router.patch(
+  "/update-language",
+  authGuard,
+  validateRequest(updateLanguageSchema),
+  updateLanguage,
+);
+
+router.get(
+  "/get-language",
+  authGuard,
+  getLanguage,
 );
 
 router.patch(
