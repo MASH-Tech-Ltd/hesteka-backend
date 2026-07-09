@@ -18,13 +18,12 @@ const server = http.createServer(app);
 
 const allowedOrigins = [
   config.frontendUrl,
-  "http://localhost:3000",
-  "http://localhost:3001",
   "http://localhost:3002",
   "http://localhost:5173",
   "http://localhost:4173",
   "https://admin.hesteka.com",
-  "https://hesteka.com",
+  "https://partner.hesteka.com",
+  "https://charity.hesteka.com/",
 ].filter(Boolean);
 
 if (config.env === "development") {

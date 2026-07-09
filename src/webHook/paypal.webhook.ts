@@ -103,9 +103,9 @@ export const paypalWebhookHandler = async (
           const capture = event.resource;
           const captureId = capture.id;
 
-          // ✅ captureId দিয়ে payment খোঁজো
-          // PayPal আগে orderId দিয়ে payment বানিয়েছিলাম,
-          // capture এর পর captureId set করা হয়েছে
+          // ✅ Find payment by captureId
+          // PayPal payment was previously created using orderId,
+          // captureId is set after the capture
           let payment = await paymentModel.findOneAndUpdate(
             {
               provider: PaymentProvider.PAYPAL,
@@ -115,7 +115,7 @@ export const paypalWebhookHandler = async (
             { returnDocument: 'after', session },
           );
 
-          // fallback — যদি captureId দিয়ে না পাওয়া যায় (Race condition), তবে orderId দিয়ে খুঁজি
+          // fallback — if not found by captureId (Race condition), search by orderId
           if (!payment) {
             const orderId = capture.supplementary_data?.related_ids?.order_id;
             console.log(
@@ -173,7 +173,7 @@ export const paypalWebhookHandler = async (
             `Donation and Payment completed for: ${payment.payerEmail}`,
           );
 
-          // ✅ Stripe এর মতো socket emit
+          // ✅ Socket emit similar to Stripe
           const io = getIo();
           io.to(payment.payerEmail).emit("payment:update", {
             orderId: payment.providerTransactionId,
@@ -236,17 +236,17 @@ export const paypalWebhookHandler = async (
 
         break;
       }
+      //TODO: no need to refund  right now just commneted
+      // case "PAYMENT.CAPTURE.REFUNDED": {
+      //   const capture = event.resource;
 
-      case "PAYMENT.CAPTURE.REFUNDED": {
-        const capture = event.resource;
+      //   await paymentModel.findOneAndUpdate(
+      //     { provider: PaymentProvider.PAYPAL, captureId: capture.id },
+      //     { $set: { status: PaymentStatus.REFUNDED } },
+      //   );
 
-        await paymentModel.findOneAndUpdate(
-          { provider: PaymentProvider.PAYPAL, captureId: capture.id },
-          { $set: { status: PaymentStatus.REFUNDED } },
-        );
-
-        break;
-      }
+      //   break;
+      // }
 
       default:
         break;
