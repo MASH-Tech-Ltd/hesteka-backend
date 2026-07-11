@@ -260,35 +260,69 @@ export const userService = {
 
   //get single user
   async getUser(userId: string) {
-    const user = await userModel
+    const userDoc = await userModel
       .findOne({ _id: userId })
       .select(
         "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
       );
-    if (!user) throw new CustomError(400, "User not found");
+    if (!userDoc) throw new CustomError(400, "User not found");
 
-    if (!user.language) {
-      user.language = "fr" as any;
+    const userObj = userDoc.toJSON() as any;
+
+    const allowedFields = [
+      "_id", "firstName", "lastName", "email", "phone", "address", "city", 
+      "postalCode", "country", "region", "department", "company", "website", 
+      "pointsBalance", "selfIntroduction", "profession", "role", "partnerType", 
+      "provider", "profileImage", "status", "isVerified", "fcmTokens", 
+      "language", "location", "blockedUsers", "stripeCustomerId", "description", 
+      "facebook", "instagram", "twitter", "linkedin", "logo", "partnerImage"
+    ];
+
+    allowedFields.forEach((field) => {
+      if (userObj[field] === undefined) {
+        userObj[field] = null;
+      }
+    });
+
+    if (!userObj.language) {
+      userObj.language = "fr";
     }
 
-    return user;
+    return userObj;
   },
 
   //get my profile
   async getmyprofile(req: any) {
     const { email } = req?.user as { email: string };
-    const user = await userModel
+    const userDoc = await userModel
       .findOne({ email: email })
       .select(
         "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -createdAt -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
       );
-    if (!user) throw new CustomError(400, "User not found");
+    if (!userDoc) throw new CustomError(400, "User not found");
 
-    if (!user.language) {
-      user.language = "fr" as any;
+    const userObj = userDoc.toJSON() as any;
+
+    const allowedFields = [
+      "_id", "firstName", "lastName", "email", "phone", "address", "city", 
+      "postalCode", "country", "region", "department", "company", "website", 
+      "pointsBalance", "selfIntroduction", "profession", "role", "partnerType", 
+      "provider", "profileImage", "status", "isVerified", "fcmTokens", 
+      "language", "location", "blockedUsers", "stripeCustomerId", "description", 
+      "facebook", "instagram", "twitter", "linkedin", "logo", "partnerImage"
+    ];
+
+    allowedFields.forEach((field) => {
+      if (userObj[field] === undefined) {
+        userObj[field] = null;
+      }
+    });
+
+    if (!userObj.language) {
+      userObj.language = "fr";
     }
 
-    return user;
+    return userObj;
   },
 
   //get partner stats
