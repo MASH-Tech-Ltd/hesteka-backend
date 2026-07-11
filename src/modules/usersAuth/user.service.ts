@@ -37,46 +37,63 @@ import { SupportMessageModel } from "../supportMessages/supportMessage.models";
 export const userService = {
   // get unique cities for targeting
   async getUniqueCities() {
-    const cities = await userModel.distinct("city", { status: "active", city: { $nin: [null, ""] } });
+    const cities = await userModel.distinct("city", {
+      status: "active",
+      city: { $nin: [null, ""] },
+    });
     return cities;
   },
 
   // get all user locations
   async getAllLocations() {
-    const usersWithLocation = await userModel.find({ "location.coordinates": { $exists: true, $ne: [] }, role: { $nin: ["admin", "partners"] } }).select("firstName lastName email role status location profileImage partnerType").lean();
-    
+    const usersWithLocation = await userModel
+      .find({
+        "location.coordinates": { $exists: true, $ne: [] },
+        role: { $nin: ["admin", "partners"] },
+      })
+      .select(
+        "firstName lastName email role status location profileImage partnerType",
+      )
+      .lean();
+
     const onlineIdsArray = getOnlineUserIds();
     const onlineIds = new Set(onlineIdsArray);
-    
+
     // Find which online users are MISSING from the map
-    const usersWithLocationIds = new Set(usersWithLocation.map(u => u._id.toString()));
-    const missingOnlineIds = onlineIdsArray.filter(id => !usersWithLocationIds.has(id));
-    
+    const usersWithLocationIds = new Set(
+      usersWithLocation.map((u) => u._id.toString()),
+    );
+    const missingOnlineIds = onlineIdsArray.filter(
+      (id) => !usersWithLocationIds.has(id),
+    );
+
     let allUsers: any[] = [...usersWithLocation];
-    
+
     // Fetch missing online users and assign them a default coordinate (Paris, France) so they appear on the Live Map
     if (missingOnlineIds.length > 0) {
-      const missingUsers = await userModel.find({ _id: { $in: missingOnlineIds }, role: { $nin: ["admin"] } }).select("firstName lastName email role status profileImage partnerType").lean();
-      
-      const missingUsersWithDefaultLocation = missingUsers.map(u => ({
+      const missingUsers = await userModel
+        .find({ _id: { $in: missingOnlineIds }, role: { $nin: ["admin"] } })
+        .select("firstName lastName email role status profileImage partnerType")
+        .lean();
+
+      const missingUsersWithDefaultLocation = missingUsers.map((u) => ({
         ...u,
         location: {
           type: "Point",
           coordinates: [2.3522, 48.8566], // Default longitude, latitude
-        }
+        },
       }));
-      
+
       allUsers = [...allUsers, ...missingUsersWithDefaultLocation];
     }
 
-    const usersWithOnlineStatus = allUsers.map(u => ({
+    const usersWithOnlineStatus = allUsers.map((u) => ({
       ...u,
-      isOnline: onlineIds.has(u._id.toString())
+      isOnline: onlineIds.has(u._id.toString()),
     }));
-    
+
     return usersWithOnlineStatus;
   },
-
 
   //get all users
   async getAllUsers(req: any) {
@@ -243,75 +260,39 @@ export const userService = {
 
   //get single user
   async getUser(userId: string) {
-    const user = await userModel
+    const userDoc = await userModel
       .findOne({ _id: userId })
       .select(
         "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
-      ).lean() as any;
-    if (!user) throw new CustomError(400, "User not found");
+      );
+    if (!userDoc) throw new CustomError(400, "User not found");
 
-    const excludedFields = [
-      "password", "passwordReset", "refreshToken", "__v", "createdAt", 
-      "updatedAt", "emailVerifiedAt", "emailVerifiedOtp", "verificationOtp", 
-      "verificationOtpExpire", "isDeleted", "deletedAt", "rememberMe", "resetPassword"
-    ];
-    
-    const responseData: any = { _id: user._id };
-    
-    Object.keys(userModel.schema.paths).forEach((key) => {
-      const baseKey = key.split('.')[0] as string;
-      if (excludedFields.includes(baseKey) || baseKey === '_id') return;
-      if (responseData[baseKey] !== undefined) return;
-      
-      if (user[baseKey] === undefined) {
-        responseData[baseKey] = null;
-      } else {
-        responseData[baseKey] = user[baseKey];
-      }
-    });
+    const user = userDoc.toObject();
 
-    if (!responseData.language) {
-      responseData.language = "fr";
+    if (!user.language) {
+      user.language = "fr";
     }
 
-    return responseData;
+    return user;
   },
 
   //get my profile
   async getmyprofile(req: any) {
     const { email } = req?.user as { email: string };
-    const user = await userModel
+    const userDoc = await userModel
       .findOne({ email: email })
       .select(
         "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -createdAt -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
-      ).lean() as any;
-    if (!user) throw new CustomError(400, "User not found");
+      );
+    if (!userDoc) throw new CustomError(400, "User not found");
 
-    const excludedFields = [
-      "password", "passwordReset", "refreshToken", "__v", "createdAt", 
-      "updatedAt", "emailVerifiedAt", "emailVerifiedOtp", "verificationOtp", 
-      "verificationOtpExpire", "isDeleted", "deletedAt", "rememberMe", "resetPassword"
-    ];
-    
-    const responseData: any = { _id: user._id };
-    
-    Object.keys(userModel.schema.paths).forEach((key) => {
-      const baseKey = key.split('.')[0] as string;
-      if (excludedFields.includes(baseKey) || baseKey === '_id') return;
-      if (responseData[baseKey] !== undefined) return;
-      
-      if (user[baseKey] === undefined) {
-        responseData[baseKey] = null;
-      } else {
-        responseData[baseKey] = user[baseKey];
-      }
-    });
+    const user = userDoc.toObject();
 
-    if (!responseData.language) {
-      responseData.language = "fr";
+    if (!user.language) {
+      user.language = "fr";
     }
 
-    return responseData;
+    return user;
   },
 
   //get partner stats
@@ -319,30 +300,47 @@ export const userService = {
     const partnerId = req.user?._id;
     if (!partnerId) throw new CustomError(401, "Unauthorized");
 
-    const [totalMissions, activeMissions, totalCollectionPoints, activeCollectionPoints] = await Promise.all([
+    const [
+      totalMissions,
+      activeMissions,
+      totalCollectionPoints,
+      activeCollectionPoints,
+    ] = await Promise.all([
       localMissionModel.countDocuments({ partner: partnerId }),
-      localMissionModel.countDocuments({ partner: partnerId, status: "active" }),
+      localMissionModel.countDocuments({
+        partner: partnerId,
+        status: "active",
+      }),
       partnerAdModel.countDocuments({ partner: partnerId }),
-      partnerAdModel.countDocuments({ partner: partnerId, status: "active" })
+      partnerAdModel.countDocuments({ partner: partnerId, status: "active" }),
     ]);
 
-    const missions = await localMissionModel.find({ partner: partnerId }).select("_id");
-    const missionIds = missions.map(m => m._id);
+    const missions = await localMissionModel
+      .find({ partner: partnerId })
+      .select("_id");
+    const missionIds = missions.map((m) => m._id);
 
     const [totalParticipants, completedParticipants] = await Promise.all([
-      localMissionParticipationModel.countDocuments({ mission: { $in: missionIds } }),
-      localMissionParticipationModel.countDocuments({ mission: { $in: missionIds }, status: "completed" })
+      localMissionParticipationModel.countDocuments({
+        mission: { $in: missionIds },
+      }),
+      localMissionParticipationModel.countDocuments({
+        mission: { $in: missionIds },
+        status: "completed",
+      }),
     ]);
 
-    const last6Months = Array.from({ length: 6 }).map((_, i) => {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      return {
-        month: d.getMonth(),
-        year: d.getFullYear(),
-        name: d.toLocaleString('en-US', { month: 'short' })
-      };
-    }).reverse();
+    const last6Months = Array.from({ length: 6 })
+      .map((_, i) => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        return {
+          month: d.getMonth(),
+          year: d.getFullYear(),
+          name: d.toLocaleString("en-US", { month: "short" }),
+        };
+      })
+      .reverse();
 
     const participations = await localMissionParticipationModel.aggregate([
       { $match: { mission: { $in: missionIds } } },
@@ -350,28 +348,36 @@ export const userService = {
         $group: {
           _id: {
             year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" }
+            month: { $month: "$createdAt" },
           },
-          count: { $sum: 1 }
-        }
-      }
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
-    const participationsPerMonth = last6Months.map(m => {
-      const match = participations.find(p => p._id.year === m.year && p._id.month === m.month + 1);
+    const participationsPerMonth = last6Months.map((m) => {
+      const match = participations.find(
+        (p) => p._id.year === m.year && p._id.month === m.month + 1,
+      );
       return {
         name: m.name,
-        participants: match ? match.count : 0
+        participants: match ? match.count : 0,
       };
     });
 
     return {
       overview: {
         missions: { value: totalMissions, active: activeMissions },
-        collectionPoints: { value: totalCollectionPoints, active: activeCollectionPoints },
-        participants: { value: totalParticipants, completed: completedParticipants }
+        collectionPoints: {
+          value: totalCollectionPoints,
+          active: activeCollectionPoints,
+        },
+        participants: {
+          value: totalParticipants,
+          completed: completedParticipants,
+        },
       },
-      participationsPerMonth
+      participationsPerMonth,
     };
   },
 
@@ -380,7 +386,7 @@ export const userService = {
     const { latitude, longitude, locationAddress, ...data } =
       req.body as UpdateUserPayload;
     const { email, role } = req?.user as { email: string; role: string };
-    
+
     if (data.status) {
       if (role === "admin") {
         if (!Object.values(status).includes(data.status as status)) {
@@ -410,7 +416,9 @@ export const userService = {
     const existingUser = await userModel.findOne({ email: email });
     if (!existingUser) throw new CustomError(400, "User not found");
 
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const files = req.files as
+      | { [fieldname: string]: Express.Multer.File[] }
+      | undefined;
     const imageFile = files?.image?.[0] || req.file; // Fallback for old 'image' field
     const profileImageFile = files?.profileImage?.[0] || imageFile;
     const logoFile = files?.logo?.[0];
@@ -418,16 +426,21 @@ export const userService = {
 
     if (profileImageFile) {
       if (existingUser.profileImage?.public_id) {
-        await deleteCloudinary(existingUser.profileImage.public_id).catch(console.error);
+        await deleteCloudinary(existingUser.profileImage.public_id).catch(
+          console.error,
+        );
       }
       const profileImageResult = await uploadCloudinary(profileImageFile.path);
       updateData.profileImage = profileImageResult;
-      if (fs.existsSync(profileImageFile.path)) fs.unlinkSync(profileImageFile.path);
+      if (fs.existsSync(profileImageFile.path))
+        fs.unlinkSync(profileImageFile.path);
     }
 
     if (logoFile) {
       if (existingUser.logo?.public_id) {
-        await deleteCloudinary(existingUser.logo.public_id).catch(console.error);
+        await deleteCloudinary(existingUser.logo.public_id).catch(
+          console.error,
+        );
       }
       const logoResult = await uploadCloudinary(logoFile.path);
       updateData.logo = logoResult;
@@ -436,11 +449,14 @@ export const userService = {
 
     if (partnerImageFile) {
       if (existingUser.partnerImage?.public_id) {
-        await deleteCloudinary(existingUser.partnerImage.public_id).catch(console.error);
+        await deleteCloudinary(existingUser.partnerImage.public_id).catch(
+          console.error,
+        );
       }
       const partnerImageResult = await uploadCloudinary(partnerImageFile.path);
       updateData.partnerImage = partnerImageResult;
-      if (fs.existsSync(partnerImageFile.path)) fs.unlinkSync(partnerImageFile.path);
+      if (fs.existsSync(partnerImageFile.path))
+        fs.unlinkSync(partnerImageFile.path);
     }
 
     const user = await userModel.findOneAndUpdate(
@@ -498,21 +514,26 @@ export const userService = {
 
     if (data.email && data.email !== existingUser.email) {
       if (existingUser.provider !== "local") {
-        throw new CustomError(400, "Only local provider emails can be updated.");
+        throw new CustomError(
+          400,
+          "Only local provider emails can be updated.",
+        );
       }
       const emailExists = await userModel.findOne({ email: data.email });
       if (emailExists) throw new CustomError(409, "Email already exists");
     }
 
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const files = req.files as
+      | { [fieldname: string]: Express.Multer.File[] }
+      | undefined;
     const logoFile = files?.logo?.[0];
     const partnerImageFile = files?.partnerImage?.[0];
     const profileImageFile = files?.profileImage?.[0];
 
     if (profileImageFile) {
       if (existingUser.profileImage?.public_id) {
-        await deleteCloudinary(existingUser.profileImage.public_id).catch((err) =>
-          console.error("Cloudinary profileImage cleanup error:", err),
+        await deleteCloudinary(existingUser.profileImage.public_id).catch(
+          (err) => console.error("Cloudinary profileImage cleanup error:", err),
         );
       }
       const profileImageResult = await uploadCloudinary(profileImageFile.path);
@@ -537,8 +558,8 @@ export const userService = {
 
     if (partnerImageFile) {
       if (existingUser.partnerImage?.public_id) {
-        await deleteCloudinary(existingUser.partnerImage.public_id).catch((err) =>
-          console.error("Cloudinary partnerImage cleanup error:", err),
+        await deleteCloudinary(existingUser.partnerImage.public_id).catch(
+          (err) => console.error("Cloudinary partnerImage cleanup error:", err),
         );
       }
       const partnerImageResult = await uploadCloudinary(partnerImageFile.path);
@@ -694,15 +715,21 @@ export const userService = {
     const anonymizedEmail = `deleted-user-${user._id.toString()}@anonymous.local`;
     const anonymizedName = "Deleted User";
 
-    const [reportIds, userCommentIds, userChatIds, conversationIds, missionIds, partnerAdIds] =
-      await Promise.all([
-        reportModel.find({ author: user._id }).distinct("_id"),
-        commentModel.find({ author: user._id }).distinct("_id"),
-        chatModel.find({ user: user._id }).distinct("_id"),
-        conversationModel.find({ participants: user._id }).distinct("_id"),
-        localMissionModel.find({ partner: user._id }).distinct("_id"),
-        partnerAdModel.find({ partner: user._id }).distinct("_id"),
-      ]);
+    const [
+      reportIds,
+      userCommentIds,
+      userChatIds,
+      conversationIds,
+      missionIds,
+      partnerAdIds,
+    ] = await Promise.all([
+      reportModel.find({ author: user._id }).distinct("_id"),
+      commentModel.find({ author: user._id }).distinct("_id"),
+      chatModel.find({ user: user._id }).distinct("_id"),
+      conversationModel.find({ participants: user._id }).distinct("_id"),
+      localMissionModel.find({ partner: user._id }).distinct("_id"),
+      partnerAdModel.find({ partner: user._id }).distinct("_id"),
+    ]);
 
     const commentIdsToDelete = new Set<string>(
       userCommentIds.map((id) => id.toString()),
@@ -836,15 +863,33 @@ export const userService = {
       const anonymizedEmail = `deleted-user-${user._id.toString()}@anonymous.local`;
       const anonymizedName = "Deleted User";
 
-      const [reportIds, userCommentIds, userChatIds, conversationIds, missionIds, partnerAdIds] =
-        await Promise.all([
-          reportModel.find({ author: user._id }).session(session).distinct("_id"),
-          commentModel.find({ author: user._id }).session(session).distinct("_id"),
-          chatModel.find({ user: user._id }).session(session).distinct("_id"),
-          conversationModel.find({ participants: user._id }).session(session).distinct("_id"),
-          localMissionModel.find({ partner: user._id }).session(session).distinct("_id"),
-          partnerAdModel.find({ partner: user._id }).session(session).distinct("_id"),
-        ]);
+      const [
+        reportIds,
+        userCommentIds,
+        userChatIds,
+        conversationIds,
+        missionIds,
+        partnerAdIds,
+      ] = await Promise.all([
+        reportModel.find({ author: user._id }).session(session).distinct("_id"),
+        commentModel
+          .find({ author: user._id })
+          .session(session)
+          .distinct("_id"),
+        chatModel.find({ user: user._id }).session(session).distinct("_id"),
+        conversationModel
+          .find({ participants: user._id })
+          .session(session)
+          .distinct("_id"),
+        localMissionModel
+          .find({ partner: user._id })
+          .session(session)
+          .distinct("_id"),
+        partnerAdModel
+          .find({ partner: user._id })
+          .session(session)
+          .distinct("_id"),
+      ]);
 
       const commentIdsToDelete = new Set<string>(
         userCommentIds.map((id) => id.toString()),
@@ -887,7 +932,7 @@ export const userService = {
             },
             $unset: { user: "" },
           },
-          { session }
+          { session },
         ),
         donationModel.updateMany(
           { donorEmail: user.email },
@@ -898,7 +943,7 @@ export const userService = {
             },
             $unset: { companyInfo: "" },
           },
-          { session }
+          { session },
         ),
       ]);
 
@@ -906,31 +951,49 @@ export const userService = {
         reportModel.updateMany(
           { comments: { $in: deletedCommentIds } },
           { $pull: { comments: { $in: deletedCommentIds } } },
-          { session }
+          { session },
         ),
-        chatLikeModel.deleteMany({
-          $or: [{ user: user._id }, { chat: { $in: userChatIds } }],
-        }, { session }),
-        chatReportModel.deleteMany({
-          $or: [
-            { reporter: user._id },
-            { reportedUser: user._id },
-            { conversation: { $in: conversationIds } },
-          ],
-        }, { session }),
-        privateMessageModel.deleteMany({
-          $or: [{ sender: user._id }, { conversation: { $in: conversationIds } }],
-        }, { session }),
-        localMissionParticipationModel.deleteMany({
-          $or: [{ user: user._id }, { mission: { $in: missionIds } }],
-        }, { session }),
-        donationProofModel.deleteMany({
-          $or: [
-            { user: user._id },
-            { donorEmail: user.email },
-            { collectionPoint: { $in: partnerAdIds } },
-          ],
-        }, { session }),
+        chatLikeModel.deleteMany(
+          {
+            $or: [{ user: user._id }, { chat: { $in: userChatIds } }],
+          },
+          { session },
+        ),
+        chatReportModel.deleteMany(
+          {
+            $or: [
+              { reporter: user._id },
+              { reportedUser: user._id },
+              { conversation: { $in: conversationIds } },
+            ],
+          },
+          { session },
+        ),
+        privateMessageModel.deleteMany(
+          {
+            $or: [
+              { sender: user._id },
+              { conversation: { $in: conversationIds } },
+            ],
+          },
+          { session },
+        ),
+        localMissionParticipationModel.deleteMany(
+          {
+            $or: [{ user: user._id }, { mission: { $in: missionIds } }],
+          },
+          { session },
+        ),
+        donationProofModel.deleteMany(
+          {
+            $or: [
+              { user: user._id },
+              { donorEmail: user.email },
+              { collectionPoint: { $in: partnerAdIds } },
+            ],
+          },
+          { session },
+        ),
         pointTransactionModel.deleteMany({ user: user._id }, { session }),
         redemptionModel.deleteMany({ user: user._id }, { session }),
         notificationModel.deleteMany({ user: user._id }, { session }),
@@ -938,20 +1001,29 @@ export const userService = {
       ]);
 
       await Promise.all([
-        commentModel.deleteMany({ _id: { $in: deletedCommentIds } }, { session }),
+        commentModel.deleteMany(
+          { _id: { $in: deletedCommentIds } },
+          { session },
+        ),
         reportModel.deleteMany({ _id: { $in: reportIds } }, { session }),
         storyModel.deleteMany({ user: user._id }, { session }),
-        chatModel.deleteMany({
-          $or: [{ user: user._id }, { replyTo: { $in: userChatIds } }],
-        }, { session }),
-        conversationModel.deleteMany({ _id: { $in: conversationIds } }, { session }),
+        chatModel.deleteMany(
+          {
+            $or: [{ user: user._id }, { replyTo: { $in: userChatIds } }],
+          },
+          { session },
+        ),
+        conversationModel.deleteMany(
+          { _id: { $in: conversationIds } },
+          { session },
+        ),
         localMissionModel.deleteMany({ _id: { $in: missionIds } }, { session }),
         partnerAdModel.deleteMany({ _id: { $in: partnerAdIds } }, { session }),
         myanimalModel.deleteMany({ user: user._id }, { session }),
         userModel.updateMany(
           { blockedUsers: user._id },
           { $pull: { blockedUsers: user._id } },
-          { session }
+          { session },
         ),
       ]);
 
@@ -966,13 +1038,13 @@ export const userService = {
           console.error("Cloudinary deletion error:", error),
         );
       }
-      
+
       if (user.logo?.public_id) {
         deleteCloudinary(user.logo.public_id).catch((error) =>
           console.error("Cloudinary deletion error:", error),
         );
       }
-      
+
       if (user.partnerImage?.public_id) {
         deleteCloudinary(user.partnerImage.public_id).catch((error) =>
           console.error("Cloudinary deletion error:", error),
@@ -1016,15 +1088,19 @@ export const userService = {
   async updateFcmToken(req: any) {
     const { email } = req?.user as { email: string };
     const { fcmToken } = req.body as { fcmToken: string };
-    const language = (req.headers["accept-language"] || "fr").startsWith("en") ? "en" : "fr";
+    const language = (req.headers["accept-language"] || "fr").startsWith("en")
+      ? "en"
+      : "fr";
 
-    console.log(`[User Service] updateFcmToken called for ${email} with token: ${fcmToken}, language: ${language}`);
+    console.log(
+      `[User Service] updateFcmToken called for ${email} with token: ${fcmToken}, language: ${language}`,
+    );
 
     const user = await userModel.findOneAndUpdate(
       { email: email },
-      { 
+      {
         $addToSet: { fcmTokens: fcmToken },
-        $set: { language: language }
+        $set: { language: language },
       },
       {
         returnDocument: "after",
