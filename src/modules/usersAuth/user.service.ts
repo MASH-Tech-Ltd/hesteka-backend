@@ -247,14 +247,34 @@ export const userService = {
       .findOne({ _id: userId })
       .select(
         "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
-      ).lean();
+      ).lean() as any;
     if (!user) throw new CustomError(400, "User not found");
 
-    if (!user.language) {
-      user.language = "fr" as any;
+    const excludedFields = [
+      "password", "passwordReset", "refreshToken", "__v", "createdAt", 
+      "updatedAt", "emailVerifiedAt", "emailVerifiedOtp", "verificationOtp", 
+      "verificationOtpExpire", "isDeleted", "deletedAt", "rememberMe", "resetPassword"
+    ];
+    
+    const responseData: any = { _id: user._id };
+    
+    Object.keys(userModel.schema.paths).forEach((key) => {
+      const baseKey = key.split('.')[0] as string;
+      if (excludedFields.includes(baseKey) || baseKey === '_id') return;
+      if (responseData[baseKey] !== undefined) return;
+      
+      if (user[baseKey] === undefined) {
+        responseData[baseKey] = null;
+      } else {
+        responseData[baseKey] = user[baseKey];
+      }
+    });
+
+    if (!responseData.language) {
+      responseData.language = "fr";
     }
 
-    return user;
+    return responseData;
   },
 
   //get my profile
@@ -264,14 +284,34 @@ export const userService = {
       .findOne({ email: email })
       .select(
         "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -createdAt -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
-      ).lean();
+      ).lean() as any;
     if (!user) throw new CustomError(400, "User not found");
+
+    const excludedFields = [
+      "password", "passwordReset", "refreshToken", "__v", "createdAt", 
+      "updatedAt", "emailVerifiedAt", "emailVerifiedOtp", "verificationOtp", 
+      "verificationOtpExpire", "isDeleted", "deletedAt", "rememberMe", "resetPassword"
+    ];
     
-    if (!user.language) {
-      user.language = "fr" as any;
+    const responseData: any = { _id: user._id };
+    
+    Object.keys(userModel.schema.paths).forEach((key) => {
+      const baseKey = key.split('.')[0] as string;
+      if (excludedFields.includes(baseKey) || baseKey === '_id') return;
+      if (responseData[baseKey] !== undefined) return;
+      
+      if (user[baseKey] === undefined) {
+        responseData[baseKey] = null;
+      } else {
+        responseData[baseKey] = user[baseKey];
+      }
+    });
+
+    if (!responseData.language) {
+      responseData.language = "fr";
     }
-    
-    return user;
+
+    return responseData;
   },
 
   //get partner stats
