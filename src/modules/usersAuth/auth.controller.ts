@@ -80,7 +80,7 @@ export const login = asyncHandler(async (req, res) => {
   res.cookie("refreshToken", refreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
   res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(req?.body?.rememberMe)));
 
-  ApiResponse.sendSuccess(res, 200, "Logged in", {
+  const responsePayload = {
     _id: user._id,
     email: user.email,
     firstName: user.firstName,
@@ -89,7 +89,11 @@ export const login = asyncHandler(async (req, res) => {
     language: user.language || "fr",
     accessToken,
     refreshToken,
-  });
+  };
+  
+  console.log("[Auth Controller] Login Response:", responsePayload);
+
+  ApiResponse.sendSuccess(res, 200, "Logged in", responsePayload);
 });
 
 //: Logout user
@@ -167,7 +171,7 @@ export const googleLogin = asyncHandler(async (req, res) => {
   res.cookie("refreshToken", refreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
   res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(user.rememberMe)));
 
-  ApiResponse.sendSuccess(res, 200, "Logged in with Google", {
+  const responsePayload = {
     _id: user._id,
     email: user.email,
     firstName: user.firstName,
@@ -176,7 +180,11 @@ export const googleLogin = asyncHandler(async (req, res) => {
     language: user.language || "fr",
     accessToken,
     refreshToken,
-  });
+  };
+
+  console.log("[Auth Controller] Google Login Response:", responsePayload);
+
+  ApiResponse.sendSuccess(res, 200, "Logged in with Google", responsePayload);
 });
 
 //: Apple Login handler
@@ -191,7 +199,7 @@ export const appleLogin = asyncHandler(async (req, res) => {
   res.cookie("refreshToken", refreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
   res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(user.rememberMe)));
 
-  ApiResponse.sendSuccess(res, 200, "Logged in with Apple", {
+  const responsePayload = {
     _id: user._id,
     email: user.email,
     firstName: user.firstName,
@@ -200,7 +208,11 @@ export const appleLogin = asyncHandler(async (req, res) => {
     language: user.language || "fr",
     accessToken,
     refreshToken,
-  });
+  };
+
+  console.log("[Auth Controller] Apple Login Response:", responsePayload);
+
+  ApiResponse.sendSuccess(res, 200, "Logged in with Apple", responsePayload);
 });
 
 //: resend verification otp

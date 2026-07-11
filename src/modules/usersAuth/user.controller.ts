@@ -35,6 +35,7 @@ export const getSingleUser = asyncHandler(async (req, res) => {
 //: get my profile
 export const getmyprofile = asyncHandler(async (req, res) => {
   const user = await userService.getmyprofile(req);
+  console.log("[User Controller] Get My Profile Response:", user);
   ApiResponse.sendSuccess(res, 200, "Profile data fetched successfully", user);
 });
 
