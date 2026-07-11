@@ -62,6 +62,7 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
     selfIntroduction: result?.selfIntroduction,
     profession: result?.profession,
     role: result?.role,
+    language: result?.language || "fr",
     status: result?.status,
     isVerified: result?.isVerified,
     location: result?.location,

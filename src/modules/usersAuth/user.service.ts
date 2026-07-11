@@ -247,8 +247,13 @@ export const userService = {
       .findOne({ _id: userId })
       .select(
         "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
-      );
+      ).lean();
     if (!user) throw new CustomError(400, "User not found");
+
+    if (!user.language) {
+      user.language = "fr" as any;
+    }
+
     return user;
   },
 
@@ -259,8 +264,13 @@ export const userService = {
       .findOne({ email: email })
       .select(
         "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -createdAt -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
-      );
+      ).lean();
     if (!user) throw new CustomError(400, "User not found");
+    
+    if (!user.language) {
+      user.language = "fr" as any;
+    }
+    
     return user;
   },
 
