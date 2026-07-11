@@ -91,7 +91,7 @@ export const login = asyncHandler(async (req, res) => {
     refreshToken,
   };
   
-  console.log("[Auth Controller] Login Response:", responsePayload);
+  // console.log("[Auth Controller] Login Response:", responsePayload);
 
   ApiResponse.sendSuccess(res, 200, "Logged in", responsePayload);
 });
@@ -164,7 +164,7 @@ export const googleLogin = asyncHandler(async (req, res) => {
   const { idToken, latitude, longitude, locationAddress, city, postalCode, country, fcmToken } = req.body;
   if (!idToken) throw new CustomError(400, "Google idToken is required");
   
-  console.log("[Auth Controller] Google Login - Received FCM Token:", fcmToken);
+  // console.log("[Auth Controller] Google Login - Received FCM Token:", fcmToken);
 
   const { user, accessToken, refreshToken } = await authService.googleLogin(idToken, { latitude, longitude, locationAddress, city, postalCode, country, fcmToken });
 
@@ -182,7 +182,7 @@ export const googleLogin = asyncHandler(async (req, res) => {
     refreshToken,
   };
 
-  console.log("[Auth Controller] Google Login Response:", responsePayload);
+  // console.log("[Auth Controller] Google Login Response:", responsePayload);
 
   ApiResponse.sendSuccess(res, 200, "Logged in with Google", responsePayload);
 });
@@ -192,7 +192,7 @@ export const appleLogin = asyncHandler(async (req, res) => {
   const { idToken, firstName, lastName, latitude, longitude, locationAddress, city, postalCode, country, fcmToken } = req.body;
   if (!idToken) throw new CustomError(400, "Apple idToken is required");
 
-  console.log("[Auth Controller] Apple Login - Received FCM Token:", fcmToken);
+  // console.log("[Auth Controller] Apple Login - Received FCM Token:", fcmToken);
 
   const { user, accessToken, refreshToken } = await authService.appleLogin(idToken, firstName, lastName, { latitude, longitude, locationAddress, city, postalCode, country, fcmToken });
 
@@ -210,7 +210,7 @@ export const appleLogin = asyncHandler(async (req, res) => {
     refreshToken,
   };
 
-  console.log("[Auth Controller] Apple Login Response:", responsePayload);
+  // console.log("[Auth Controller] Apple Login Response:", responsePayload);
 
   ApiResponse.sendSuccess(res, 200, "Logged in with Apple", responsePayload);
 });
