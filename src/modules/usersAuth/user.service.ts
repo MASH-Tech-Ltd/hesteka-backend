@@ -269,14 +269,20 @@ export const userService = {
 
     const userObj = userDoc.toJSON() as any;
 
+    const nonNullableFields = ["phone", "address", "city", "postalCode", "country"];
     const allowedFields = [
-      "_id", "firstName", "lastName", "email", "phone", "address", "city", 
-      "postalCode", "country", "region", "department", "company", "website", 
+      "_id", "firstName", "lastName", "email", "region", "department", "company", "website", 
       "pointsBalance", "selfIntroduction", "profession", "role", "partnerType", 
       "provider", "profileImage", "status", "isVerified", "fcmTokens", 
       "language", "location", "blockedUsers", "stripeCustomerId", "description", 
       "facebook", "instagram", "twitter", "linkedin", "logo", "partnerImage"
     ];
+
+    nonNullableFields.forEach((field) => {
+      if (userObj[field] === undefined || userObj[field] === null) {
+        userObj[field] = "";
+      }
+    });
 
     allowedFields.forEach((field) => {
       if (userObj[field] === undefined) {
@@ -303,14 +309,20 @@ export const userService = {
 
     const userObj = userDoc.toJSON() as any;
 
+    const nonNullableFields = ["phone", "address", "city", "postalCode", "country"];
     const allowedFields = [
-      "_id", "firstName", "lastName", "email", "phone", "address", "city", 
-      "postalCode", "country", "region", "department", "company", "website", 
+      "_id", "firstName", "lastName", "email", "region", "department", "company", "website", 
       "pointsBalance", "selfIntroduction", "profession", "role", "partnerType", 
       "provider", "profileImage", "status", "isVerified", "fcmTokens", 
       "language", "location", "blockedUsers", "stripeCustomerId", "description", 
       "facebook", "instagram", "twitter", "linkedin", "logo", "partnerImage"
     ];
+
+    nonNullableFields.forEach((field) => {
+      if (userObj[field] === undefined || userObj[field] === null) {
+        userObj[field] = "";
+      }
+    });
 
     allowedFields.forEach((field) => {
       if (userObj[field] === undefined) {
