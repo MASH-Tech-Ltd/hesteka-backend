@@ -260,17 +260,15 @@ export const userService = {
 
   //get single user
   async getUser(userId: string) {
-    const userDoc = await userModel
+    const user = await userModel
       .findOne({ _id: userId })
       .select(
         "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
       );
-    if (!userDoc) throw new CustomError(400, "User not found");
-
-    const user = userDoc.toObject();
+    if (!user) throw new CustomError(400, "User not found");
 
     if (!user.language) {
-      user.language = "fr";
+      user.language = "fr" as any;
     }
 
     return user;
@@ -279,17 +277,15 @@ export const userService = {
   //get my profile
   async getmyprofile(req: any) {
     const { email } = req?.user as { email: string };
-    const userDoc = await userModel
+    const user = await userModel
       .findOne({ email: email })
       .select(
         "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -createdAt -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
       );
-    if (!userDoc) throw new CustomError(400, "User not found");
-
-    const user = userDoc.toObject();
+    if (!user) throw new CustomError(400, "User not found");
 
     if (!user.language) {
-      user.language = "fr";
+      user.language = "fr" as any;
     }
 
     return user;
