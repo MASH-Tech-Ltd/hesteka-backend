@@ -2,8 +2,13 @@ import { Request } from "express";
 import { mailer } from "../../helpers/nodeMailer";
 import CustomError from "../../helpers/CustomError";
 import { paginationHelper } from "../../utils/pagination";
-import { CreateSupportMessagePayload, ISupportMessage, SupportMessageStatus } from "./supportMessage.interface";
+import {
+  CreateSupportMessagePayload,
+  ISupportMessage,
+  SupportMessageStatus,
+} from "./supportMessage.interface";
 import { SupportMessageModel } from "./supportMessage.models";
+import { getNewSupportRequestTemplate, getSupportReplyTemplate } from "../../tempaletes/emailTemplates";
 
 export const supportMessageService = {
   async createSupportMessage(req: Request) {
@@ -14,10 +19,27 @@ export const supportMessageService = {
       throw new CustomError(401, "Authentication required");
     }
 
-    return await SupportMessageModel.create({
+    const newMessage = await SupportMessageModel.create({
       ...data,
       user: userId,
     });
+
+    try {
+      await mailer({
+        email: "contact@hesteka.com",
+        subject: `New Support Request: ${data.subject}`,
+        template: getNewSupportRequestTemplate({
+          name: data.name,
+          email: data.email,
+          subject: data.subject,
+          message: data.message,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to send support notification email:", err);
+    }
+
+    return newMessage;
   },
 
   async getMySupportMessages(req: Request) {
@@ -29,7 +51,7 @@ export const supportMessageService = {
     const { page: queryPage, limit: queryLimit } = req.query;
     const { page, limit, skip } = paginationHelper(
       queryPage as string,
-      queryLimit as string
+      queryLimit as string,
     );
 
     const [messages, total] = await Promise.all([
@@ -56,7 +78,7 @@ export const supportMessageService = {
     const { page: queryPage, limit: queryLimit, status, search } = req.query;
     const { page, limit, skip } = paginationHelper(
       queryPage as string,
-      queryLimit as string
+      queryLimit as string,
     );
 
     const filter: any = {};
@@ -97,7 +119,7 @@ export const supportMessageService = {
   async getSupportMessageById(id: string) {
     const message = await SupportMessageModel.findById(id).populate(
       "user",
-      "firstName lastName email"
+      "firstName lastName email",
     );
     if (!message) {
       throw new CustomError(404, "Support message not found");
@@ -122,17 +144,11 @@ export const supportMessageService = {
     await mailer({
       email: message.email,
       subject: `Re: ${message.subject}`,
-      template: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-          <h2 style="color: #4A90E2;">Support Reply</h2>
-          <p>Hi ${message.name},</p>
-          <p>An admin has replied to your recent support ticket regarding <strong>"${message.subject}"</strong>:</p>
-          <div style="padding: 15px; background-color: #f5f5f5; border-left: 4px solid #4A90E2; margin: 20px 0;">
-            <p style="white-space: pre-wrap; margin: 0;">${replyMessage}</p>
-          </div>
-          <p>Best regards,<br/>Sokas Support Team</p>
-        </div>
-      `,
+      template: getSupportReplyTemplate({
+        name: message.name,
+        subject: message.subject,
+        replyMessage: replyMessage,
+      }),
     });
 
     return message;
