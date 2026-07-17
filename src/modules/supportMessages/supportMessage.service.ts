@@ -147,6 +147,7 @@ export const supportMessageService = {
       template: getSupportReplyTemplate({
         name: message.name,
         subject: message.subject,
+        question: message.message,
         replyMessage: replyMessage,
       }),
     });
