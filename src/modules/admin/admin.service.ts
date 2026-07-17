@@ -221,10 +221,32 @@ export const adminService = {
         .limit(10)
         .populate("author", "firstName lastName"),
       userModel.find().sort({ createdAt: -1 }).limit(10),
-      donationModel
-        .find({ method: { $ne: "collection_point" } })
-        .sort({ createdAt: -1 })
-        .limit(10),
+      donationModel.aggregate([
+        { $match: { method: { $ne: "collection_point" } } },
+        {
+          $lookup: {
+            from: "payments",
+            localField: "payment",
+            foreignField: "_id",
+            as: "paymentInfo",
+          },
+        },
+        { $unwind: { path: "$paymentInfo", preserveNullAndEmptyArrays: true } },
+        {
+          $addFields: {
+            realStatus: {
+              $cond: {
+                if: "$paymentInfo",
+                then: "$paymentInfo.status",
+                else: "$status",
+              },
+            },
+          },
+        },
+        { $match: { realStatus: "completed" } },
+        { $sort: { createdAt: -1 } },
+        { $limit: 10 },
+      ]),
       donationProofModel
         .find()
         .sort({ createdAt: -1 })
