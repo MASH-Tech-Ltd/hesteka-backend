@@ -89,6 +89,7 @@ const initiateStripeDonation = async (
     donorEmail,
     donorName,
     isCompanyDonation: isCompanyDonation ?? false,
+    receiptId: generateReceiptId(),
   };
 
   if (companyInfo) {
