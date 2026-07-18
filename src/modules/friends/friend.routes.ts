@@ -11,6 +11,7 @@ router.post("/block/:userId", authGuard, friendController.blockUser);
 router.delete("/unblock/:userId", authGuard, friendController.unblockUser);
 router.delete("/remove/:userId", authGuard, friendController.removeFriend);
 router.get("/my-friends", authGuard, friendController.getMyFriends);
+router.get("/active", authGuard, friendController.getActiveFriends);
 router.get("/pending-requests", authGuard, friendController.getPendingRequests);
 router.get("/search", authGuard, friendController.searchUsers);
 

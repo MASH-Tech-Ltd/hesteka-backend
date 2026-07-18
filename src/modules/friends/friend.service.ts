@@ -4,7 +4,7 @@ import { FriendModel } from "./friend.models";
 import { FriendStatus } from "./friend.interface";
 import { userModel } from "../usersAuth/user.models";
 import { Types } from "mongoose";
-import { getIo } from "../../socket/server";
+import { getIo, getOnlineUserIds } from "../../socket/server";
 import { notificationService } from "../notifications/notification.service";
 import { NotificationType } from "../notifications/notification.interface";
 
@@ -242,13 +242,50 @@ export const friendService = {
       "firstName lastName email image profileImage",
     );
 
+    const onlineIdsArray = getOnlineUserIds();
+    const onlineIds = new Set(onlineIdsArray);
+
     return friends.map((f: any) => {
       const friend =
         f.requester._id.toString() === userId.toString()
           ? f.recipient
           : f.requester;
-      return { relationId: f._id, friend };
+      return { 
+        relationId: f._id, 
+        friend: {
+          ...friend.toObject(),
+          isOnline: onlineIds.has(friend._id.toString())
+        }
+      };
     });
+  },
+
+  async getActiveFriends(req: Request) {
+    const userId = req.user?._id as string;
+    const friends = await FriendModel.find({
+      $or: [{ requester: userId }, { recipient: userId }],
+      status: FriendStatus.ACCEPTED,
+    }).populate(
+      "requester recipient",
+      "firstName lastName email image profileImage",
+    );
+
+    const onlineIdsArray = getOnlineUserIds();
+    const onlineIds = new Set(onlineIdsArray);
+
+    return friends.map((f: any) => {
+      const friend =
+        f.requester._id.toString() === userId.toString()
+          ? f.recipient
+          : f.requester;
+      return { 
+        relationId: f._id, 
+        friend: {
+          ...friend.toObject(),
+          isOnline: true
+        }
+      };
+    }).filter(f => onlineIds.has(f.friend._id.toString()));
   },
 
   async getPendingRequests(req: Request) {

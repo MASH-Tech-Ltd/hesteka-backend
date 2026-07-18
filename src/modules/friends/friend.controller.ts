@@ -39,6 +39,11 @@ export const friendController = {
     ApiResponse.sendSuccess(res, 200, "Friends fetched successfully", friends);
   }),
 
+  getActiveFriends: asyncHandler(async (req: Request, res: Response) => {
+    const activeFriends = await friendService.getActiveFriends(req);
+    ApiResponse.sendSuccess(res, 200, "Active friends fetched successfully", activeFriends);
+  }),
+
   getPendingRequests: asyncHandler(async (req: Request, res: Response) => {
     const requests = await friendService.getPendingRequests(req);
     ApiResponse.sendSuccess(res, 200, "Pending requests fetched successfully", requests);
