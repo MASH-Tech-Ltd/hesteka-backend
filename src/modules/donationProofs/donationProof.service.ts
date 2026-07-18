@@ -19,7 +19,7 @@ import { NotificationType } from "../notifications/notification.interface";
 import { partnerAdModel } from "../partnerAds/partnerAd.models";
 
 import { donationService } from "../donation/donation.service";
-import { getIo } from "../../socket/server";
+import { getIo, emitToAdmin } from "../../socket/server";
 
 export const donationProofService = {
   async submitProof(req: Request) {
@@ -74,13 +74,12 @@ export const donationProofService = {
     ).catch(err => console.error("Admin Notification Error:", err));
 
     try {
-      const io = getIo();
-      io.emit("donation_proof_new", {
+      emitToAdmin("donation_proof_new", {
         proofId: donationProof._id,
         donorName: finalDonorName,
         amount: finalAmount
       });
-      io.emit("donation_new", {
+      emitToAdmin("donation_new", {
         method: "collection_point",
         amount: finalAmount,
         donor: finalDonorEmail
@@ -244,7 +243,7 @@ export const donationProofService = {
 
     // 6. Real-time update for admins
     try {
-      getIo().emit("donation_validation_updated", { proofId, status: proof.status });
+      emitToAdmin("donation_validation_updated", { proofId, status: proof.status });
     } catch (error) {
       console.error("Socket error:", error);
     }
@@ -278,7 +277,7 @@ export const donationProofService = {
 
     // Real-time update for admins
     try {
-      getIo().emit("donation_validation_updated", { proofId, status: proof.status });
+      emitToAdmin("donation_validation_updated", { proofId, status: proof.status });
     } catch (error) {
       console.error("Socket error:", error);
     }
@@ -339,7 +338,7 @@ export const donationProofService = {
 
     // Real-time update for admins
     try {
-      getIo().emit("donation_validation_updated", { bulk: true, count: results.length });
+      emitToAdmin("donation_validation_updated", { bulk: true, count: results.length });
     } catch (error) {
       console.error("Socket error:", error);
     }

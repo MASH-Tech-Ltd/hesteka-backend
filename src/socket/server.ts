@@ -5,7 +5,8 @@ import CustomError from "../helpers/CustomError";
 import config from "../config";
 import { AuthenticatedSocket } from "./socket.type";
 import { registerChatHandlers } from "./chat.handler";
-
+import { userModel } from "../modules/usersAuth/user.models";
+import { role } from "../modules/usersAuth/user.interface";
 let io: Server | null = null;
 const onlineSockets = new Set<string>(); // For total raw connection count if needed
 const activeUsers = new Map<string, Set<string>>(); // userId -> Set<socket.id>
@@ -156,5 +157,18 @@ export const getOnlineUsersCount = (): number => {
 
 export const getOnlineUserIds = (): string[] => {
   return Array.from(activeUsers.keys());
+};
+
+export const emitToAdmin = async (event: string, data: any) => {
+  try {
+    if (!io) return;
+    const admins = await userModel.find({ role: role.ADMIN }).select("_id");
+    console.log(`[Socket] Found ${admins.length} admins to notify for event: ${event}`);
+    admins.forEach((admin) => {
+      io!.to(admin._id.toString()).emit(event, data);
+    });
+  } catch (error) {
+    console.error(`Failed to emit event ${event} to admins:`, error);
+  }
 };
 

@@ -3,7 +3,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import ApiResponse from "../../utils/apiResponse";
 import { donationService } from "./donation.service";
 import { DonationType } from "./donation.interface";
-import { getIo } from "../../socket/server";
+import { emitToAdmin } from "../../socket/server";
 
 const initiateStripeDonation = asyncHandler(
   async (req: Request, res: Response) => {
@@ -28,7 +28,7 @@ const initiateStripeDonation = asyncHandler(
     });
 
     try {
-      getIo().emit("donation_new", { 
+      emitToAdmin("donation_new", { 
         method: "stripe", 
         amount: amount, 
         donor: donorEmail,
@@ -70,7 +70,7 @@ const initiatePayPalDonation = asyncHandler(
     });
 
     try {
-      getIo().emit("donation_new", { 
+      emitToAdmin("donation_new", { 
         method: "paypal", 
         amount: amount, 
         donor: donorEmail,

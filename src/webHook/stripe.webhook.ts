@@ -7,7 +7,7 @@ import { PaymentStatus } from "../modules/payment/payment.interface";
 import { donationService } from "../modules/donation/donation.service";
 import { pointService } from "../modules/points/point.service";
 import config from "../config";
-import { getIo } from "../socket/server";
+import { getIo, emitToAdmin } from "../socket/server";
 import mongoose from "mongoose";
 import { donationModel } from "../modules/donation/donation.models";
 
@@ -55,10 +55,10 @@ export const stripeWebhookHandler = async (
           );
 
           // 🔥 update donation
-          await donationModel.updateOne(
+          const donation = await donationModel.findOneAndUpdate(
             { payment: payment._id },
             { $set: { status: "COMPLETED" } },
-            { session },
+            { session, returnDocument: "after" }
           );
 
           // 🎁 Award points for donation if user ID is available
@@ -86,12 +86,15 @@ export const stripeWebhookHandler = async (
             status: "COMPLETED",
           });
 
-          // Notify admins to refresh their lists
-          io.emit("donation_new", { 
-            method: "stripe", 
-            amount: paymentIntent.amount / 100, 
-            donor: payment.payerEmail 
-          });
+          // Notify admins to refresh their lists ONLY for donations
+          if (donation) {
+            emitToAdmin("donation_new", { 
+              method: "stripe", 
+              amount: paymentIntent.amount / 100, 
+              donor: payment.payerEmail,
+              status: "completed"
+            });
+          }
 
           await session.commitTransaction();
           session.endSession();

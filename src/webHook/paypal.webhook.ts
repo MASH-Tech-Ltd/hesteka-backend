@@ -10,7 +10,7 @@ import {
   PaymentStatus,
   PaymentCurrency,
 } from "../modules/payment/payment.interface";
-import { getIo } from "../socket/server";
+import { getIo, emitToAdmin } from "../socket/server";
 import mongoose from "mongoose";
 
 const verifyPayPalWebhook = async (
@@ -144,10 +144,10 @@ export const paypalWebhookHandler = async (
           }
 
           // ✅ donation update
-          await donationModel.updateOne(
+          const donation = await donationModel.findOneAndUpdate(
             { payment: payment._id },
             { $set: { status: "completed" } }, // Lowercase matches schema enum
-            { session },
+            { session, returnDocument: "after" }
           );
 
           // 🎁 Award points for donation if user ID is available
@@ -181,12 +181,15 @@ export const paypalWebhookHandler = async (
             status: "COMPLETED",
           });
 
-          // Notify admins to refresh their lists
-          io.emit("donation_new", { 
-            method: "paypal", 
-            amount: payment.amount, 
-            donor: payment.payerEmail 
-          });
+          // Notify admins to refresh their lists ONLY for donations
+          if (donation) {
+            emitToAdmin("donation_new", { 
+              method: "paypal", 
+              amount: payment.amount, 
+              donor: payment.payerEmail,
+              status: "completed"
+            });
+          }
 
           await session.commitTransaction();
           session.endSession();
