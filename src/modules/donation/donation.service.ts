@@ -536,9 +536,33 @@ export const donationService = {
   getDonationByReceiptId,
   getMyDonations,
   syncPhysicalDonation,
-  getDonationStats: async () => {
+  deleteDonation: async (id: string) => {
+    const donation = await donationModel.findById(id);
+    if (!donation) throw new CustomError(404, "Donation not found");
+    if (donation.status !== "pending") {
+      throw new CustomError(400, "Only pending donations can be deleted");
+    }
+    await donationModel.findByIdAndDelete(id);
+    return true;
+  },
+  getDonationStats: async (period?: string) => {
+    const matchQuery: any = { method: { $ne: "collection_point" } };
+
+    if (period && period !== "all") {
+      const now = new Date();
+      let startDate = new Date();
+      if (period === "weekly") {
+        startDate.setDate(now.getDate() - 7);
+      } else if (period === "monthly") {
+        startDate.setMonth(now.getMonth() - 1);
+      } else if (period === "yearly") {
+        startDate.setFullYear(now.getFullYear() - 1);
+      }
+      matchQuery.createdAt = { $gte: startDate };
+    }
+
     const [stats] = await donationModel.aggregate([
-      { $match: { method: { $ne: "collection_point" } } },
+      { $match: matchQuery },
       {
         $lookup: {
           from: "payments",
@@ -592,6 +616,116 @@ export const donationService = {
     };
     const pending = stats.pendingStats[0] || { totalPending: 0 };
 
+    let groupStage: any;
+    if (period === "weekly" || period === "monthly") {
+       groupStage = { year: { $year: "$createdAt" }, month: { $month: "$createdAt" }, day: { $dayOfMonth: "$createdAt" } };
+    } else if (period === "yearly") {
+       groupStage = { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } };
+    } else {
+       groupStage = { year: { $year: "$createdAt" } };
+    }
+
+    const chartRaw = await donationModel.aggregate([
+      { $match: matchQuery },
+      {
+        $lookup: {
+          from: "payments",
+          localField: "payment",
+          foreignField: "_id",
+          as: "paymentInfo",
+        },
+      },
+      { $unwind: { path: "$paymentInfo", preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          realStatus: {
+            $cond: {
+              if: "$paymentInfo",
+              then: "$paymentInfo.status",
+              else: "$status",
+            },
+          },
+          realMethod: { $ifNull: ["$paymentInfo.provider", "$method"] }
+        },
+      },
+      {
+        $group: {
+          _id: groupStage,
+          collected: {
+            $sum: { $cond: [{ $eq: ["$realStatus", "completed"] }, "$amount", 0] },
+          },
+          stripe: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ["$realStatus", "completed"] }, { $eq: ["$realMethod", "stripe"] }] },
+                "$amount",
+                0
+              ]
+            }
+          },
+          paypal: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ["$realStatus", "completed"] }, { $eq: ["$realMethod", "paypal"] }] },
+                "$amount",
+                0
+              ]
+            }
+          }
+        },
+      }
+    ]);
+
+    const chartData = [];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const nowDt = new Date();
+
+    if (period === "weekly") {
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(nowDt.getFullYear(), nowDt.getMonth(), nowDt.getDate() - i);
+        const found = chartRaw.find((c: any) => c._id.year === d.getFullYear() && c._id.month === d.getMonth() + 1 && c._id.day === d.getDate());
+        chartData.push({
+          name: `${d.getDate()} ${months[d.getMonth()]}`,
+          collected: found ? found.collected : 0,
+          stripe: found ? found.stripe : 0,
+          paypal: found ? found.paypal : 0,
+        });
+      }
+    } else if (period === "monthly") {
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(nowDt.getFullYear(), nowDt.getMonth(), nowDt.getDate() - i);
+        const found = chartRaw.find((c: any) => c._id.year === d.getFullYear() && c._id.month === d.getMonth() + 1 && c._id.day === d.getDate());
+        chartData.push({
+          name: `${d.getDate()} ${months[d.getMonth()]}`,
+          collected: found ? found.collected : 0,
+          stripe: found ? found.stripe : 0,
+          paypal: found ? found.paypal : 0,
+        });
+      }
+    } else if (period === "yearly") {
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(nowDt.getFullYear(), nowDt.getMonth() - i, 1);
+        const found = chartRaw.find((c: any) => c._id.year === d.getFullYear() && c._id.month === d.getMonth() + 1);
+        chartData.push({
+          name: months[d.getMonth()],
+          collected: found ? found.collected : 0,
+          stripe: found ? found.stripe : 0,
+          paypal: found ? found.paypal : 0,
+        });
+      }
+    } else {
+      for (let i = 4; i >= 0; i--) {
+        const y = nowDt.getFullYear() - i;
+        const found = chartRaw.find((c: any) => c._id.year === y);
+        chartData.push({
+          name: `${y}`,
+          collected: found ? found.collected : 0,
+          stripe: found ? found.stripe : 0,
+          paypal: found ? found.paypal : 0,
+        });
+      }
+    }
+
     return {
       totalTransactions: completed.totalTransactions,
       totalCollected: completed.totalCollected,
@@ -600,6 +734,7 @@ export const donationService = {
       averageBasket: completed.avgBasket
         ? Math.round(completed.avgBasket * 100) / 100
         : 0,
+      chartData,
     };
   },
 

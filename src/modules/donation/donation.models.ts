@@ -71,7 +71,11 @@ donationSchema.index({ donorEmail: 1 });
 donationSchema.index({ type: 1 });
 donationSchema.index({ payment: 1 }, { unique: true, sparse: true });
 donationSchema.index({ createdAt: -1 });
-
+// TTL index to automatically delete "pending" donations after 30 days (2592000 seconds)
+donationSchema.index(
+  { createdAt: 1 },
+  { expireAfterSeconds: 2592000, partialFilterExpression: { status: "pending" } }
+);
 export const donationModel: Model<IDonation> = mongoose.model<IDonation>(
   "Donation",
   donationSchema,

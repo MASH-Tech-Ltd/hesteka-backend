@@ -3,6 +3,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import ApiResponse from "../../utils/apiResponse";
 import { donationService } from "./donation.service";
 import { DonationType } from "./donation.interface";
+import { getIo } from "../../socket/server";
 
 const initiateStripeDonation = asyncHandler(
   async (req: Request, res: Response) => {
@@ -25,6 +26,17 @@ const initiateStripeDonation = asyncHandler(
       payerEmail: donorEmail,
       payerName: donorName,
     });
+
+    try {
+      getIo().emit("donation_new", { 
+        method: "stripe", 
+        amount: amount, 
+        donor: donorEmail,
+        status: "pending" 
+      });
+    } catch (err) {
+      console.error("Socket emit failed", err);
+    }
 
     return ApiResponse.sendSuccess(
       res,
@@ -56,6 +68,17 @@ const initiatePayPalDonation = asyncHandler(
       payerEmail: donorEmail,
       payerName: donorName,
     });
+
+    try {
+      getIo().emit("donation_new", { 
+        method: "paypal", 
+        amount: amount, 
+        donor: donorEmail,
+        status: "pending" 
+      });
+    } catch (err) {
+      console.error("Socket emit failed", err);
+    }
 
     return ApiResponse.sendSuccess(
       res,
@@ -106,7 +129,8 @@ const getSingleDonation = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const getDonationStats = asyncHandler(async (req: Request, res: Response) => {
-  const result = await donationService.getDonationStats();
+  const { period } = req.query;
+  const result = await donationService.getDonationStats(period as string);
   return ApiResponse.sendSuccess(
     res,
     200,
@@ -140,6 +164,16 @@ const sendReceiptEmail = asyncHandler(async (req: Request, res: Response) => {
   );
 });
 
+const deleteDonation = asyncHandler(async (req: Request, res: Response) => {
+  const { donationId } = req.params;
+  await donationService.deleteDonation(donationId as string);
+  return ApiResponse.sendSuccess(
+    res,
+    200,
+    "Donation deleted successfully",
+  );
+});
+
 const getMyDonations = asyncHandler(async (req: Request, res: Response) => {
   const email = req.user?.email;
   if (!email) {
@@ -164,4 +198,5 @@ export const donationController = {
   getDonationByReceiptId,
   getMyDonations,
   sendReceiptEmail,
+  deleteDonation,
 };

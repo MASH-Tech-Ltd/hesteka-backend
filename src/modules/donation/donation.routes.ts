@@ -63,6 +63,13 @@ donationRoute.get(
   donationController.getDonationByReceiptId,
 );
 
+donationRoute.delete(
+  "/:donationId",
+  authGuard,
+  allowRole("admin"),
+  donationController.deleteDonation,
+);
+
 donationRoute.post(
   "/:donationId/send-receipt",
   authGuard,
