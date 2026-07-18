@@ -299,7 +299,7 @@ const sendMessage = async (
       conversationId: conversationId.toString(),
       senderId: sender.toString(),
       senderName,
-      senderImage: senderUser?.profileImage?.secureUrl || "",
+      senderImage: senderUser?.profileImage?.secure_url || "",
     }
   );
 
