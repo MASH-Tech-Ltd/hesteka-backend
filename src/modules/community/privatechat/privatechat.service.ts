@@ -277,7 +277,7 @@ const sendMessage = async (
   // ─── Notification ────────────────────────────────────────────────
   const senderUser = await userModel
     .findById(sender)
-    .select("firstName lastName")
+    .select("firstName lastName profileImage")
     .lean();
 
   const senderName = senderUser
@@ -294,6 +294,13 @@ const sendMessage = async (
     `Nouveau message de ${senderName}`,
     preview,
     NotificationType.SYSTEM,
+    {
+      type: "private_message",
+      conversationId: conversationId.toString(),
+      senderId: sender.toString(),
+      senderName,
+      senderImage: senderUser?.profileImage?.secureUrl || "",
+    }
   );
 
   return populatedMessage;
