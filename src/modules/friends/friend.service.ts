@@ -245,19 +245,21 @@ export const friendService = {
     const onlineIdsArray = getOnlineUserIds();
     const onlineIds = new Set(onlineIdsArray);
 
-    return friends.map((f: any) => {
-      const friend =
-        f.requester._id.toString() === userId.toString()
-          ? f.recipient
-          : f.requester;
-      return { 
-        relationId: f._id, 
-        friend: {
-          ...friend.toObject(),
-          isOnline: onlineIds.has(friend._id.toString())
-        }
-      };
-    });
+    return friends
+      .filter((f: any) => f.requester && f.recipient)
+      .map((f: any) => {
+        const friend =
+          f.requester._id.toString() === userId.toString()
+            ? f.recipient
+            : f.requester;
+        return { 
+          relationId: f._id, 
+          friend: {
+            ...friend.toObject(),
+            isOnline: onlineIds.has(friend._id.toString())
+          }
+        };
+      });
   },
 
   async getActiveFriends(req: Request) {
@@ -273,19 +275,21 @@ export const friendService = {
     const onlineIdsArray = getOnlineUserIds();
     const onlineIds = new Set(onlineIdsArray);
 
-    return friends.map((f: any) => {
-      const friend =
-        f.requester._id.toString() === userId.toString()
-          ? f.recipient
-          : f.requester;
-      return { 
-        relationId: f._id, 
-        friend: {
-          ...friend.toObject(),
-          isOnline: true
-        }
-      };
-    }).filter(f => onlineIds.has(f.friend._id.toString()));
+    return friends
+      .filter((f: any) => f.requester && f.recipient)
+      .map((f: any) => {
+        const friend =
+          f.requester._id.toString() === userId.toString()
+            ? f.recipient
+            : f.requester;
+        return { 
+          relationId: f._id, 
+          friend: {
+            ...friend.toObject(),
+            isOnline: true
+          }
+        };
+      }).filter(f => onlineIds.has(f.friend._id.toString()));
   },
 
   async getPendingRequests(req: Request) {
