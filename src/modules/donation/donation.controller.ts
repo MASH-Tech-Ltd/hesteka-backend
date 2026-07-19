@@ -47,6 +47,21 @@ const initiateStripeDonation = asyncHandler(
   },
 );
 
+const cancelStripeDonation = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { paymentIntentId } = req.body;
+
+    const result = await donationService.cancelStripeDonation(paymentIntentId);
+
+    return ApiResponse.sendSuccess(
+      res,
+      200,
+      "Stripe donation cancelled successfully",
+      result,
+    );
+  },
+);
+
 const initiatePayPalDonation = asyncHandler(
   async (req: Request, res: Response) => {
     const {
@@ -84,6 +99,21 @@ const initiatePayPalDonation = asyncHandler(
       res,
       200,
       "PayPal donation initiated successfully",
+      result,
+    );
+  },
+);
+
+const cancelPayPalDonation = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { orderId } = req.body;
+
+    const result = await donationService.cancelPayPalDonation(orderId);
+
+    return ApiResponse.sendSuccess(
+      res,
+      200,
+      "PayPal donation cancelled successfully",
       result,
     );
   },
@@ -190,7 +220,9 @@ const getMyDonations = asyncHandler(async (req: Request, res: Response) => {
 
 export const donationController = {
   initiateStripeDonation,
+  cancelStripeDonation,
   initiatePayPalDonation,
+  cancelPayPalDonation,
   capturePayPalDonation,
   getAllDonations,
   getSingleDonation,

@@ -158,6 +158,21 @@ const createStripePaymentIntent = async (
   };
 };
 
+const cancelStripePaymentIntent = async (paymentIntentId: string): Promise<any> => {
+  try {
+    const canceledIntent = await stripe.paymentIntents.cancel(paymentIntentId);
+    
+    await paymentModel.findOneAndUpdate(
+      { providerTransactionId: paymentIntentId },
+      { status: PaymentStatus.CANCELLED }
+    );
+    
+    return canceledIntent;
+  } catch (error) {
+    throw new CustomError(500, "Failed to cancel payment intent");
+  }
+};
+
 const handleStripeWebhook = async (
   paymentIntentId: string,
   status: PaymentStatus,
@@ -376,6 +391,7 @@ const handleWebhookPayment = async (
 
 export const paymentService = {
   createStripePaymentIntent,
+  cancelStripePaymentIntent,
   createStripeSetupIntent,
   getPaymentMethods,
   deletePaymentMethod,

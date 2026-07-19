@@ -16,12 +16,21 @@ donationRoute.post(
   validateRequest(createStripeDonationSchema),
   donationController.initiateStripeDonation,
 );
+donationRoute.post(
+  "/stripe/cancel",
+  donationController.cancelStripeDonation,
+);
 
 // PayPal
 donationRoute.post(
   "/paypal/initiate",
   // validateRequest(createPayPalDonationSchema),
   donationController.initiatePayPalDonation,
+);
+
+donationRoute.post(
+  "/paypal/cancel",
+  donationController.cancelPayPalDonation,
 );
 
 donationRoute.post(

@@ -58,7 +58,7 @@ export const stripeWebhookHandler = async (
           const donation = await donationModel.findOneAndUpdate(
             { payment: payment._id },
             { $set: { status: "COMPLETED" } },
-            { session, returnDocument: "after" }
+            { session, returnDocument: "after" },
           );
 
           // 🎁 Award points for donation if user ID is available
@@ -74,11 +74,13 @@ export const stripeWebhookHandler = async (
             }
           }
 
-          notificationService.notifyAdmins(
-            "Payment Received",
-            `A new payment of ${(paymentIntent.amount / 100).toFixed(2)} ${paymentIntent.currency.toUpperCase()} was received from ${payment.payerEmail}.`,
-            NotificationType.NEW_PAYMENT
-          ).catch((err) => console.error("Admin Notification Error:", err));
+          notificationService
+            .notifyAdmins(
+              "Payment Received",
+              `A new payment of ${(paymentIntent.amount / 100).toFixed(2)} ${paymentIntent.currency.toUpperCase()} was received from ${payment.payerEmail}.`,
+              NotificationType.NEW_PAYMENT,
+            )
+            .catch((err) => console.error("Admin Notification Error:", err));
 
           const io = getIo();
           io.to(payment.payerEmail).emit("payment:update", {
@@ -88,11 +90,11 @@ export const stripeWebhookHandler = async (
 
           // Notify admins to refresh their lists ONLY for donations
           if (donation) {
-            emitToAdmin("donation_new", { 
-              method: "stripe", 
-              amount: paymentIntent.amount / 100, 
+            emitToAdmin("donation_new", {
+              method: "stripe",
+              amount: paymentIntent.amount / 100,
               donor: payment.payerEmail,
-              status: "completed"
+              status: "completed",
             });
           }
 

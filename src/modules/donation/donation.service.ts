@@ -100,6 +100,32 @@ const initiateStripeDonation = async (
 
   return result;
 };
+
+const cancelStripeDonation = async (paymentIntentId: string): Promise<any> => {
+  const payment = await paymentModel.findOne({ providerTransactionId: paymentIntentId });
+  if (payment) {
+    const donation = await donationModel.findOneAndUpdate(
+      { payment: payment._id },
+      { status: "cancelled" }
+    );
+    
+    if (donation) {
+      try {
+        const { emitToAdmin } = require("../../socket/server");
+        emitToAdmin("donation_new", { 
+          method: "stripe", 
+          amount: donation.amount, 
+          donor: donation.donorEmail,
+          status: "cancelled" 
+        });
+      } catch (err) {
+        console.error("Socket emit failed on cancel", err);
+      }
+    }
+  }
+  return await paymentService.cancelStripePaymentIntent(paymentIntentId);
+};
+
 // PayPal donation শুরু করা
 // ✅ PENDING donation এখনই create
 const initiatePayPalDonation = async (
@@ -153,6 +179,35 @@ const initiatePayPalDonation = async (
   await donationModel.create(donationData);
 
   return result;
+};
+
+const cancelPayPalDonation = async (orderId: string): Promise<any> => {
+  const payment = await paymentModel.findOne({ providerTransactionId: orderId });
+  if (payment) {
+    await paymentModel.updateOne(
+      { _id: payment._id },
+      { status: "cancelled" }
+    );
+    const donation = await donationModel.findOneAndUpdate(
+      { payment: payment._id },
+      { status: "cancelled" }
+    );
+    
+    if (donation) {
+      try {
+        const { emitToAdmin } = require("../../socket/server");
+        emitToAdmin("donation_new", { 
+          method: "paypal", 
+          amount: donation.amount, 
+          donor: donation.donorEmail,
+          status: "cancelled" 
+        });
+      } catch (err) {
+        console.error("Socket emit failed on cancel", err);
+      }
+    }
+  }
+  return true;
 };
 
 // ✅ শুধু PayPal capture call — DB একদম touch করবে না
@@ -529,7 +584,9 @@ const getMyDonations = async (email: string) => {
 
 export const donationService = {
   initiateStripeDonation,
+  cancelStripeDonation,
   initiatePayPalDonation,
+  cancelPayPalDonation,
   capturePayPalDonation,
   getAllDonations,
   getSingleDonation,
