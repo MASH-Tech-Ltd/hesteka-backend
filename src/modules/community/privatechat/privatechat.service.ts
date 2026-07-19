@@ -300,7 +300,8 @@ const sendMessage = async (
       senderId: sender.toString(),
       senderName,
       senderImage: senderUser?.profileImage?.secure_url || "",
-    }
+    },
+    false // Do not save notification to DB for private messages
   );
 
   return populatedMessage;

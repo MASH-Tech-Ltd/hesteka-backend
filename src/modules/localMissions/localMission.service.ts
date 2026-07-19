@@ -391,6 +391,15 @@ export const localMissionService = {
       .toLowerCase()
       .startsWith("en");
 
+    if (mission.missionDate && new Date(mission.missionDate).getTime() < Date.now()) {
+      throw new CustomError(
+        400,
+        isEnglish
+          ? "This local mission has expired"
+          : "Cette mission locale a expiré",
+      );
+    }
+
     try {
       const participation = await localMissionParticipationModel.create({
         user: userId,

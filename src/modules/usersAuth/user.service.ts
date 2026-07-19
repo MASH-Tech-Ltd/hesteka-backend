@@ -269,13 +269,43 @@ export const userService = {
 
     const userObj = userDoc.toJSON() as any;
 
-    const nonNullableFields = ["phone", "address", "city", "postalCode", "country"];
+    const nonNullableFields = [
+      "phone",
+      "address",
+      "city",
+      "postalCode",
+      "country",
+    ];
     const allowedFields = [
-      "_id", "firstName", "lastName", "email", "region", "department", "company", "website", 
-      "pointsBalance", "selfIntroduction", "profession", "role", "partnerType", 
-      "provider", "profileImage", "status", "isVerified", "fcmTokens", 
-      "language", "location", "blockedUsers", "stripeCustomerId", "description", 
-      "facebook", "instagram", "twitter", "linkedin", "logo", "partnerImage"
+      "_id",
+      "firstName",
+      "lastName",
+      "email",
+      "region",
+      "department",
+      "company",
+      "website",
+      "pointsBalance",
+      "selfIntroduction",
+      "profession",
+      "role",
+      "partnerType",
+      "provider",
+      "profileImage",
+      "status",
+      "isVerified",
+      "fcmTokens",
+      "language",
+      "location",
+      "blockedUsers",
+      "stripeCustomerId",
+      "description",
+      "facebook",
+      "instagram",
+      "twitter",
+      "linkedin",
+      "logo",
+      "partnerImage",
     ];
 
     nonNullableFields.forEach((field) => {
@@ -309,13 +339,43 @@ export const userService = {
 
     const userObj = userDoc.toJSON() as any;
 
-    const nonNullableFields = ["phone", "address", "city", "postalCode", "country"];
+    const nonNullableFields = [
+      "phone",
+      "address",
+      "city",
+      "postalCode",
+      "country",
+    ];
     const allowedFields = [
-      "_id", "firstName", "lastName", "email", "region", "department", "company", "website", 
-      "pointsBalance", "selfIntroduction", "profession", "role", "partnerType", 
-      "provider", "profileImage", "status", "isVerified", "fcmTokens", 
-      "language", "location", "blockedUsers", "stripeCustomerId", "description", 
-      "facebook", "instagram", "twitter", "linkedin", "logo", "partnerImage"
+      "_id",
+      "firstName",
+      "lastName",
+      "email",
+      "region",
+      "department",
+      "company",
+      "website",
+      "pointsBalance",
+      "selfIntroduction",
+      "profession",
+      "role",
+      "partnerType",
+      "provider",
+      "profileImage",
+      "status",
+      "isVerified",
+      "fcmTokens",
+      "language",
+      "location",
+      "blockedUsers",
+      "stripeCustomerId",
+      "description",
+      "facebook",
+      "instagram",
+      "twitter",
+      "linkedin",
+      "logo",
+      "partnerImage",
     ];
 
     nonNullableFields.forEach((field) => {

@@ -504,21 +504,23 @@ export const notificationService = {
     }
   },
 
-  async notifySingleUser(userId: string, title: string, body: string, type: NotificationType, data?: Record<string, any>) {
+  async notifySingleUser(userId: string, title: string, body: string, type: NotificationType, data?: Record<string, any>, saveToDb: boolean = true) {
     try {
       const user = await userModel.findById(userId).select("_id fcmTokens firstName lastName email language");
       if (!user) return;
 
       const notificationToSave = {
+        _id: new Types.ObjectId(),
         user: user._id,
         title,
         description: body,
         type,
         isRead: false,
+        createdAt: new Date(),
         ...(data ? { data } : {}),
       };
 
-      const savedNotification = await notificationModel.create(notificationToSave);
+      const savedNotification = saveToDb ? await notificationModel.create(notificationToSave) : notificationToSave;
 
       let io: any;
       let socketSent = false;
