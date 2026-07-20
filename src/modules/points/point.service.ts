@@ -326,10 +326,14 @@ export const pointService = {
     }));
     await pointTransactionModel.insertMany(transactionsToInsert);
 
+    const notificationBody = note
+      ? `Vous avez reçu ${points} points de la part de l'administrateur.\n\n${note}`
+      : `Vous avez reçu ${points} points de la part de l'administrateur.`;
+
     const notificationsToInsert = userIds.map((id) => ({
       user: id,
       title: "Points reçus !",
-      description: `Vous avez reçu ${points} points de la part de l'administrateur.`,
+      description: notificationBody,
       type: NotificationType.POINTS_EARNED,
       isRead: false,
     }));
