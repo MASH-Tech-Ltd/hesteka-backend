@@ -15,8 +15,16 @@ export const assignCustomPointsSchema = z
   })
   .strict();
 
+export const assignCustomPointsToAllSchema = z
+  .object({
+    points: z.coerce.number().int("Points must be a whole number").positive("Points must be greater than 0"),
+    note: z.string().trim().max(500, "Note cannot exceed 500 characters").optional(),
+  })
+  .strict();
+
 export const pointValidation = {
   redeemPointsSchema,
   assignCustomPointsSchema,
+  assignCustomPointsToAllSchema,
 };
 

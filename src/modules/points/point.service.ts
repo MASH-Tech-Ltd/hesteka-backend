@@ -10,8 +10,9 @@ import {
 import { pointTransactionModel } from "./point.models";
 import { pointConfigModel } from "./pointConfig.models";
 import { UpdatePointConfigPayload } from "./pointConfig.interface";
-import { AssignCustomPointsPayload } from "./point.interface";
+import { AssignCustomPointsPayload, AssignCustomPointsToAllPayload } from "./point.interface";
 import { notificationService } from "../notifications/notification.service";
+import { notificationModel } from "../notifications/notification.models";
 import { NotificationType } from "../notifications/notification.interface";
 
 export const pointService = {
@@ -297,8 +298,46 @@ export const pointService = {
     };
   },
 
-  async getAllPointHistory(req: Request) {
-    const { page: pagebody, limit: limitbody, search, type, source, sort, sortBy, from, to } = req.query;
+  async assignCustomPointsToAll(req: Request) {
+    const { points, note } = req.body as AssignCustomPointsToAllPayload;
+
+    const allUsers = await userModel.find({ role: "user" }).select("_id");
+    const userIds = allUsers.map((u) => u._id);
+
+    if (userIds.length === 0) {
+      throw new CustomError(404, "No users found");
+    }
+
+    await userModel.updateMany(
+      { _id: { $in: userIds } },
+      { $inc: { pointsBalance: points } }
+    );
+
+    const transactionsToInsert = userIds.map((id) => ({
+      user: id,
+      type: PointTransactionType.EARN,
+      source: PointTransactionSource.ADMIN_CUSTOM,
+      points,
+      note: note || `Points customisés attribués par l'administrateur à tous`,
+    }));
+    await pointTransactionModel.insertMany(transactionsToInsert);
+
+    const notificationsToInsert = userIds.map((id) => ({
+      user: id,
+      title: "Points reçus !",
+      description: `Vous avez reçu ${points} points de la part de l'administrateur.`,
+      type: NotificationType.POINTS_EARNED,
+      isRead: false,
+    }));
+    await notificationModel.insertMany(notificationsToInsert);
+
+    return {
+      usersUpdated: userIds.length,
+      pointsAssigned: points,
+    };
+  },
+
+  async getAllPointHistory(req: Request) {    const { page: pagebody, limit: limitbody, search, type, source, sort, sortBy, from, to } = req.query;
     const { page, limit, skip } = paginationHelper(pagebody as string, limitbody as string);
     const filter: any = {};
 

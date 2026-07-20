@@ -12,6 +12,31 @@ import { generateOTP } from "../../utils/otpGenerator";
 import { mailer } from "../../helpers/nodeMailer";
 import { verificationOtpEmailTemplate, forgotPasswordOtpEmailTemplate } from "../../tempaletes/auth.templates";
 import admin from "firebase-admin";
+import { pointTransactionModel } from "../points/point.models";
+import { PointTransactionType, PointTransactionSource } from "../points/point.interface";
+
+async function awardWelcomePoints(userId: string) {
+  try {
+    const points = 50;
+    
+    await userModel.findByIdAndUpdate(userId, { $inc: { pointsBalance: points } });
+    
+    await pointTransactionModel.create({
+      user: userId,
+      type: PointTransactionType.EARN,
+      source: PointTransactionSource.ADMIN_CUSTOM,
+      points,
+      note: "Bonus de bienvenue",
+    });
+    
+    const title = "Bienvenue ! 🐾";
+    const body = `Bienvenue sur Hesteka ! 🐾 \n\nMerci de rejoindre notre communauté. \n\nPour te remercier, 50 points t'attendent déjà sur ton compte, à échanger contre des réductions et récompenses dans l'application. \n\nExplore Hesteka et commence dès maintenant à faire une différence pour les animaux autour de toi. 🧡`;
+    
+    await notificationService.notifySingleUser(userId, title, body, NotificationType.POINTS_EARNED);
+  } catch (error) {
+    console.error(`[Auth] Failed to award welcome points for user ${userId}:`, error);
+  }
+}
 
 // Firebase Admin SDK is already initialized in src/utils/firebase.ts (for FCM)
 // We reuse it here to verify Google & Apple ID tokens issued by Firebase Auth
@@ -45,6 +70,10 @@ export const authService = {
       // verificationOtp: otp,
       // verificationOtpExpire: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
     });
+
+    if (user.role === "user") {
+      await awardWelcomePoints(user._id.toString());
+    }
 
     // try {
     //   await mailer({
@@ -410,6 +439,10 @@ export const authService = {
         ...(extraData?.country ? { country: extraData.country } : {}),
         ...(extraData?.fcmToken ? { fcmTokens: [extraData.fcmToken] } : {}),
       });
+
+      if (user.role === "user" || !user.role) {
+        await awardWelcomePoints(user._id.toString());
+      }
     } else {
       let needsSave = false;
       if (!user.provider) {
@@ -496,6 +529,10 @@ export const authService = {
         ...(extraData?.country ? { country: extraData.country } : {}),
         ...(extraData?.fcmToken ? { fcmTokens: [extraData.fcmToken] } : {}),
       });
+
+      if (user.role === "user" || !user.role) {
+        await awardWelcomePoints(user._id.toString());
+      }
     } else {
       let needsSave = false;
       if (!user.provider) {

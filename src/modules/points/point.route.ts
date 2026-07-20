@@ -27,5 +27,12 @@ router.post(
   validateRequest(pointValidation.assignCustomPointsSchema),
   pointController.assignCustomPoints
 );
+router.post(
+  "/admin/assign-custom-points-to-all",
+  authGuard,
+  allowRole("admin"),
+  validateRequest(pointValidation.assignCustomPointsToAllSchema),
+  pointController.assignCustomPointsToAll
+);
 
 export const pointRoute = router;

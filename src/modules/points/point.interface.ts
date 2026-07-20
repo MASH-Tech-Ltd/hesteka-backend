@@ -34,3 +34,8 @@ export interface AssignCustomPointsPayload {
   points: number;
   note?: string;
 }
+
+export interface AssignCustomPointsToAllPayload {
+  points: number;
+  note?: string;
+}
