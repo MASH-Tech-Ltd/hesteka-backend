@@ -21,6 +21,7 @@ function translatePushNotification(title: string, body: string, language: string
       'Nouvelle mission locale': 'New Local Mission',
       'Nouvelle mission locale disponible !': 'New Local Mission Available!',
       'Points gagnés !': 'Points Gained!',
+      'Points reçus !': 'Points Gained!',
       'Mission annulée': 'Mission Cancelled',
       'Soutien approuvé !': 'Support Approved!',
       'Preuve de soutien refusée': 'Support Proof Rejected',
@@ -50,6 +51,7 @@ function translatePushNotification(title: string, body: string, language: string
 
     // French -> English Body String Replacement Mapping
     const bodyMappings: [string | RegExp, string][] = [
+      [/Vous avez reçu (\d+) points de la part de l'administrateur/g, "You received $1 points from the administrator"],
       ["vient d'ajouter une nouvelle story !", "just added a new story!"],
       ["Votre ami a créé un nouveau signalement", "Your friend created a new report"],
       ["Une nouvelle mission", "A new mission"],

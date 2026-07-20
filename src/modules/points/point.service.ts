@@ -284,11 +284,15 @@ export const pointService = {
       note: note || `Points customisés attribués par l'administrateur`,
     });
 
+    const notificationBody = note
+      ? `Vous avez reçu ${points} points de la part de l'administrateur.\n\n${note}`
+      : `Vous avez reçu ${points} points de la part de l'administrateur.`;
+
     // Notify user
     notificationService.notifySingleUser(
       userId,
       "Points reçus !",
-      `Vous avez reçu ${points} points de la part de l'administrateur.`,
+      notificationBody,
       NotificationType.POINTS_EARNED
     ).catch((err) => console.error("Notification Error:", err));
 
