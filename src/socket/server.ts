@@ -92,6 +92,7 @@ export const initSocket = (httpServer: http.Server): Server => {
     if (socket.userId) {
       if (!activeUsers.has(socket.userId)) {
         activeUsers.set(socket.userId, new Set());
+        io?.emit("user:status", { userId: socket.userId, isOnline: true });
       }
       activeUsers.get(socket.userId)!.add(socket.id);
     }
@@ -136,6 +137,7 @@ export const initSocket = (httpServer: http.Server): Server => {
         // If no more sockets for this user, they are fully offline
         if (userSockets.size === 0) {
           activeUsers.delete(socket.userId);
+          io?.emit("user:status", { userId: socket.userId, isOnline: false });
         }
       }
 
