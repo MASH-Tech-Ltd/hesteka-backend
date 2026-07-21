@@ -266,11 +266,16 @@ export const authService = {
   },
 
   //logout
-  async logout(email: string) {
+  async logout(email: string, fcmToken?: string) {
     const user = await userModel.findOne({ email });
     if (!user) throw new CustomError(400, "Email not found");
 
     user.refreshToken = "";
+    if (fcmToken) {
+      user.fcmTokens = (user.fcmTokens || []).filter((t: string) => t !== fcmToken);
+    } else {
+      user.fcmTokens = [];
+    }
     await user.save();
   },
 
