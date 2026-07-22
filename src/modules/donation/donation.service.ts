@@ -104,6 +104,10 @@ const initiateStripeDonation = async (
 const cancelStripeDonation = async (paymentIntentId: string): Promise<any> => {
   const payment = await paymentModel.findOne({ providerTransactionId: paymentIntentId });
   if (payment) {
+    await paymentModel.updateOne(
+      { _id: payment._id },
+      { status: "cancelled" }
+    );
     const donation = await donationModel.findOneAndUpdate(
       { payment: payment._id },
       { status: "cancelled" }
@@ -123,7 +127,13 @@ const cancelStripeDonation = async (paymentIntentId: string): Promise<any> => {
       }
     }
   }
-  return await paymentService.cancelStripePaymentIntent(paymentIntentId);
+  
+  try {
+    return await paymentService.cancelStripePaymentIntent(paymentIntentId);
+  } catch (err) {
+    console.error("Stripe payment intent cancel error:", err);
+    return true;
+  }
 };
 
 // PayPal donation শুরু করা
