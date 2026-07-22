@@ -299,7 +299,7 @@ const getGlobalChat = async (query: {
   const [messages, total] = await Promise.all([
     chatModel
       .find(filter)
-      .populate("user", "firstName lastName email profileImage")
+      .populate("user", "firstName lastName email profileImage address location")
       .populate({
         path: "replyTo",
         select: "content user",
