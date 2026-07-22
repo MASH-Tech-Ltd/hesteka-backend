@@ -27,6 +27,8 @@ import {
 import { partnerAdModel } from "../partnerAds/partnerAd.models";
 import { rewardItemModel, redemptionModel } from "../rewards/reward.models";
 import { getOnlineUsersCount } from "../../socket/server";
+import { SupportMessageModel } from "../supportMessages/supportMessage.models";
+import { SupportMessageStatus } from "../supportMessages/supportMessage.interface";
 
 export const adminService = {
   async getStats() {
@@ -85,6 +87,7 @@ export const adminService = {
       recentDonationProofs,
       inProgressMissions,
       totalDonors,
+      pendingSupportMessages,
       config,
     ] = await Promise.all([
       // Users
@@ -260,6 +263,11 @@ export const adminService = {
       }),
       donationModel.distinct("donorName").then((res) => res.length),
 
+      // Support Messages
+      SupportMessageModel.countDocuments({
+        status: { $in: [SupportMessageStatus.PENDING, "pending", "PENDING"] },
+      }),
+
       // Config
       this.getConfig(),
     ]);
@@ -398,6 +406,9 @@ export const adminService = {
               )
             : 0,
         left: config.crowdfundingGoal - config.crowdfundingTotal,
+      },
+      supportMessages: {
+        pending: pendingSupportMessages,
       },
       activity: activity.slice(0, 9),
     };
