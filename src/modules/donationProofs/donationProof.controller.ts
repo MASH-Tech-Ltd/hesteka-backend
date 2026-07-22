@@ -62,7 +62,9 @@ export const validateAll = asyncHandler(async (req: Request, res: Response) => {
 //: get validation stats (Admin)
 export const getValidationStats = asyncHandler(async (req: Request, res: Response) => {
   const period = (req.query.period as string) || "monthly";
-  const result = await donationProofService.getValidationStats(period);
+  const month = req.query.month ? parseInt(req.query.month as string) : undefined;
+  const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+  const result = await donationProofService.getValidationStats(period, month, year);
   ApiResponse.sendSuccess(res, 200, "Validation stats fetched successfully", result);
 });
 
@@ -75,7 +77,9 @@ export const getPartnerProofs = asyncHandler(async (req: Request, res: Response)
 //: get partner validation stats (Partner)
 export const getPartnerValidationStats = asyncHandler(async (req: Request, res: Response) => {
   const period = (req.query.period as string) || "monthly";
-  const result = await donationProofService.getPartnerValidationStats(req, period);
+  const month = req.query.month ? parseInt(req.query.month as string) : undefined;
+  const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+  const result = await donationProofService.getPartnerValidationStats(req, period, month, year);
   ApiResponse.sendSuccess(res, 200, "Partner validation stats fetched successfully", result);
 });
 

@@ -349,11 +349,16 @@ export const donationProofService = {
     };
   },
 
-  async getValidationStats(period: string = 'monthly') {
+  async getValidationStats(period: string = 'monthly', selectedMonth?: number, selectedYear?: number) {
     const now = new Date();
-    const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    const targetYear = selectedYear ?? now.getFullYear();
+    // Month from query is 1-indexed, JS Date month is 0-indexed
+    const targetMonth = selectedMonth ? selectedMonth - 1 : now.getMonth();
+
+    const startOfCurrentMonth = new Date(targetYear, targetMonth, 1);
+    const startOfLastMonth = new Date(targetYear, targetMonth - 1, 1);
+    const endOfLastMonth = new Date(targetYear, targetMonth, 0, 23, 59, 59, 999);
+    const endOfCurrentMonth = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
 
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
@@ -404,7 +409,7 @@ export const donationProofService = {
             { $count: "count" }
           ],
           currentMonthStats: [
-            { $match: { createdAt: { $gte: startOfCurrentMonth } } },
+            { $match: { createdAt: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth } } },
             {
               $group: {
                 _id: null,
@@ -425,11 +430,11 @@ export const donationProofService = {
             }
           ],
           categoryBreakdown: [
-            { $match: { createdAt: { $gte: startOfCurrentMonth }, status: DonationProofStatus.APPROVED } },
+            { $match: { createdAt: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth }, status: DonationProofStatus.APPROVED } },
             { $group: { _id: { $ifNull: ["$category", DonationCategory.OTHER] }, count: { $sum: 1 } } }
           ],
           refusalReasons: [
-            { $match: { status: DonationProofStatus.REJECTED } },
+            { $match: { createdAt: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth }, status: DonationProofStatus.REJECTED } },
             { $group: { _id: "$refusalReason", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 5 }
@@ -576,7 +581,7 @@ export const donationProofService = {
     };
   },
 
-  async getPartnerValidationStats(req: Request, period: string = 'monthly') {
+  async getPartnerValidationStats(req: Request, period: string = 'monthly', selectedMonth?: number, selectedYear?: number) {
     const userId = req.user?._id;
     if (!userId) throw new CustomError(401, "access denied or session expired ,please login again ");
 
@@ -586,9 +591,13 @@ export const donationProofService = {
     const matchPartner = { collectionPoint: { $in: collectionPointIds } };
 
     const now = new Date();
-    const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    const targetYear = selectedYear ?? now.getFullYear();
+    const targetMonth = selectedMonth ? selectedMonth - 1 : now.getMonth();
+
+    const startOfCurrentMonth = new Date(targetYear, targetMonth, 1);
+    const startOfLastMonth = new Date(targetYear, targetMonth - 1, 1);
+    const endOfLastMonth = new Date(targetYear, targetMonth, 0, 23, 59, 59, 999);
+    const endOfCurrentMonth = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
 
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
@@ -639,7 +648,7 @@ export const donationProofService = {
             { $count: "count" }
           ],
           currentMonthStats: [
-            { $match: { ...matchPartner, createdAt: { $gte: startOfCurrentMonth } } },
+            { $match: { ...matchPartner, createdAt: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth } } },
             {
               $group: {
                 _id: null,
@@ -660,11 +669,11 @@ export const donationProofService = {
             }
           ],
           categoryBreakdown: [
-            { $match: { ...matchPartner, createdAt: { $gte: startOfCurrentMonth }, status: DonationProofStatus.APPROVED } },
+            { $match: { ...matchPartner, createdAt: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth }, status: DonationProofStatus.APPROVED } },
             { $group: { _id: { $ifNull: ["$category", DonationCategory.OTHER] }, count: { $sum: 1 } } }
           ],
           refusalReasons: [
-            { $match: { ...matchPartner, status: DonationProofStatus.REJECTED } },
+            { $match: { ...matchPartner, createdAt: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth }, status: DonationProofStatus.REJECTED } },
             { $group: { _id: "$refusalReason", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 5 }
