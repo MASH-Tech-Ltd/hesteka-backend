@@ -18,10 +18,14 @@ const deletePendingDonations = async () => {
     console.log("Connected successfully!");
 
     console.log("Searching and deleting pending donations...");
-    // Delete all donations where status is "pending"
-    const result = await donationModel.deleteMany({ status: "pending" });
     
+    //!Delete all donations where status is "pending"
+    const result = await donationModel.deleteMany({ status: "pending" });
     console.log(`✅ Successfully deleted ${result.deletedCount} pending donations!`);
+
+    //!delete cancelled donations
+    // const result = await donationModel.deleteMany({ status: "cancelled" });
+    // console.log(`✅ Successfully deleted ${result.deletedCount} cancelled donations!`);
     
     // Disconnect and exit
     await mongoose.disconnect();

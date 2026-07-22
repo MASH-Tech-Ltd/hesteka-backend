@@ -15,6 +15,7 @@ export const createCollectionPointSchema = z
     address: z.string().min(1, "Collection point address is required"),
     latitude: z.any().optional(),
     longitude: z.any().optional(),
+    partner: z.string().optional(),
     location: z
       .preprocess((val) => {
         if (typeof val === "string") {
@@ -34,6 +35,7 @@ export const updatePartnerAdSchema = z
     address: z.string().min(1, "Address cannot be empty").optional(),
     latitude: z.any().optional(),
     longitude: z.any().optional(),
+    partner: z.string().optional(),
     location: z
       .preprocess((val) => {
         if (typeof val === "string") {

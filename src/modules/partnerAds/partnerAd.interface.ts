@@ -35,6 +35,7 @@ export interface CreatePartnerAdPayload {
   location?: IGeoPoint;
   latitude?: number | string;
   longitude?: number | string;
+  partner?: string;
 }
 
 export interface UpdatePartnerAdPayload {
@@ -45,4 +46,5 @@ export interface UpdatePartnerAdPayload {
   latitude?: number | string;
   longitude?: number | string;
   status?: PartnerAdStatus;
+  partner?: string;
 }

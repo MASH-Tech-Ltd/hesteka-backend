@@ -52,7 +52,7 @@ const buildPayload = async (
 
   const payload: any = {
     ...data,
-    partner: partner._id.toString(),
+    partner: data.partner && partner.role === role.ADMIN ? data.partner : partner._id.toString(),
     type: PartnerAdType.COLLECTION_POINT,
     ...(photo ? { photo } : {}),
   };
@@ -257,6 +257,9 @@ export const partnerAdService = {
         type: "Point",
         coordinates: [Number(data.longitude), Number(data.latitude)],
       };
+    }
+    if (data.partner && partner.role !== role.ADMIN) {
+      delete data.partner;
     }
 
     Object.assign(ad, data);
