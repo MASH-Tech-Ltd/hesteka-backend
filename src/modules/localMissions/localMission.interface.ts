@@ -30,6 +30,8 @@ export interface ILocalMission extends Document {
   };
   status: LocalMissionStatus;
   missionDate?: Date;
+  region?: string;
+  department?: string;
 }
 
 export interface CreateLocalMissionPayload {
@@ -40,6 +42,9 @@ export interface CreateLocalMissionPayload {
   duration: string;
   points?: number;
   missionDate?: Date;
+  region?: string;
+  department?: string;
+  notifyAllFrance?: boolean | string;
 }
 
 export interface UpdateLocalMissionPayload {
@@ -51,6 +56,8 @@ export interface UpdateLocalMissionPayload {
   points?: number;
   status?: LocalMissionStatus;
   missionDate?: Date;
+  region?: string;
+  department?: string;
 }
 
 export interface ILocalMissionParticipation extends Document {

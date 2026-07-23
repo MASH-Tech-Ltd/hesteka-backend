@@ -96,7 +96,27 @@ export const localMissionService = {
       const baseTitle = "Nouvelle mission locale disponible !";
       const baseDesc = `Une nouvelle mission "${mission.title}" vient d'être créée près de chez vous. Participez et gagnez des points !`;
 
-      if (
+      if (data.notifyAllFrance === true || data.notifyAllFrance === "true") {
+        notificationService
+          .notifyUsersByRegion(
+            "all",
+            baseTitle,
+            baseDesc,
+            NotificationType.NEW_MISSION,
+            { missionId: mission._id.toString() }
+          )
+          .catch((err) => console.error("Notification Error (All France):", err));
+      } else if (mission.region) {
+        notificationService
+          .notifyUsersByRegion(
+            mission.region,
+            baseTitle,
+            baseDesc,
+            NotificationType.NEW_MISSION,
+            { missionId: mission._id.toString() }
+          )
+          .catch((err) => console.error("Notification Error (Region):", err));
+      } else if (
         mission.location &&
         mission.location.coordinates &&
         mission.location.coordinates.length >= 2
@@ -117,7 +137,7 @@ export const localMissionService = {
               longitude: String(lng),
             },
           )
-          .catch((err) => console.error("Notification Error:", err));
+          .catch((err) => console.error("Notification Error (Nearby):", err));
       }
 
       notificationService

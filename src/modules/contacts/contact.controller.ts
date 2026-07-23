@@ -43,7 +43,7 @@ export const getContactStats = asyncHandler(async (req: Request, res: Response) 
   ApiResponse.sendSuccess(res, 200, "Contact stats fetched successfully", stats);
 });
 
-import { departments, regions } from "../../utils/franceLocations";
+import { departments, regions, countries } from "../../utils/franceLocations";
 export const getLocations = asyncHandler(async (req: Request, res: Response) => {
-  ApiResponse.sendSuccess(res, 200, "Locations fetched successfully", { departments, regions });
+  ApiResponse.sendSuccess(res, 200, "Locations fetched successfully", { departments, regions, countries });
 });

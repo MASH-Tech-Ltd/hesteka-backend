@@ -506,6 +506,86 @@ export const notificationService = {
     }
   },
 
+  async notifyUsersByRegion(region: string | "all", title: string, body: string, type: NotificationType, data?: Record<string, any>) {
+    try {
+      const filter: any = { role: "user", status: "active" };
+      if (region !== "all") {
+        filter.region = region;
+      }
+      const usersToNotify = await userModel.find(filter).select("_id fcmTokens firstName lastName email language");
+      
+      if (!usersToNotify.length) return;
+
+      const notificationsToSave = usersToNotify.map(user => ({
+        user: user._id,
+        title,
+        description: body,
+        type,
+        isRead: false,
+        ...(data ? { data } : {}),
+      }));
+
+      const savedNotifications = await notificationModel.insertMany(notificationsToSave);
+
+      const englishTokens: string[] = [];
+      const frenchTokens: string[] = [];
+      let successLog: string[] = [];
+      let failLog: string[] = [];
+      let io: any;
+      try {
+        io = getIo();
+      } catch (err) { }
+
+      for (let idx = 0; idx < usersToNotify.length; idx++) {
+        const user = usersToNotify[idx] as any;
+        if (!user) continue;
+
+        const userIdStr = user._id.toString();
+        const userInfo = `${user.firstName || 'User'} ${user.lastName || ''} (${user.email || 'No email'})`;
+        let gotSocket = false;
+        let gotFcm = false;
+
+        if (io) {
+          const sockets = await io.in(userIdStr).fetchSockets();
+          if (sockets.length > 0) {
+            io.to(userIdStr).emit("notification:new", savedNotifications[idx]);
+            gotSocket = true;
+          }
+        }
+
+        if (user.fcmTokens && Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
+          if (user.language === "en") {
+            englishTokens.push(...user.fcmTokens);
+          } else {
+            frenchTokens.push(...user.fcmTokens);
+          }
+          gotFcm = true;
+        }
+
+        if (gotSocket || gotFcm) {
+          successLog.push(`${userInfo} -> [Socket: ${gotSocket ? 'Yes' : 'No'}, FCM: ${gotFcm ? 'Yes' : 'No'}]`);
+        } else {
+          failLog.push(`${userInfo}`);
+        }
+      }
+
+      if (englishTokens.length > 0) {
+        await sendPushNotification(englishTokens, title, body, { type, ...data });
+      }
+      if (frenchTokens.length > 0) {
+        const translated = translatePushNotification(title, body, 'fr');
+        await sendPushNotification(frenchTokens, translated.title, translated.body, { type, ...data });
+      }
+
+      console.log(`[Notification Service] notifyUsersByRegion (${region}) targeted ${usersToNotify.length} users.`);
+      if (successLog.length > 0) console.log(`   ✅ Sent to:\n      ${successLog.join('\n      ')}`);
+      if (failLog.length > 0) console.log(`   ❌ Did NOT receive (No socket/FCM):\n      ${failLog.join('\n      ')}`);
+
+    } catch (error) {
+      console.error(` Failed in notifyUsersByRegion (${region}):`, error);
+    }
+  },
+
   async notifySingleUser(userId: string, title: string, body: string, type: NotificationType, data?: Record<string, any>, saveToDb: boolean = true) {
     try {
       const user = await userModel.findById(userId).select("_id fcmTokens firstName lastName email language");

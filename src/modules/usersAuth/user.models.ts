@@ -44,6 +44,7 @@ const userSchema = new Schema<IUser>(
       type: String,
       required: false,
       trim: true,
+      default: "France",
     },
     region: {
       type: String,

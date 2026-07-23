@@ -56,6 +56,14 @@ const localMissionSchema = new Schema<ILocalMission>(
       type: Date,
       default: null,
     },
+    region: {
+      type: String,
+      trim: true,
+    },
+    department: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,

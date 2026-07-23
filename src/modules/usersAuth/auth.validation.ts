@@ -25,6 +25,9 @@ export const registerUserSchema = z
       .max(16, "Password must be at most 16 characters")
       .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, "Password must contain at least 1 uppercase, 1 lowercase, and 1 number"),
     role: z.enum(["user", "admin", "partners"]).default("user").optional(),
+    region: z.string().optional(),
+    department: z.string().optional(),
+    country: z.string().optional(),
   })
   .strict();
 

@@ -28,6 +28,9 @@ export const createLocalMissionSchema = z
     duration: z.string().min(1, "Local mission duration is required"),
     points: pointsSchema,
     missionDate: z.union([z.coerce.date(), z.string().length(0)]).optional().transform(val => val === "" ? null : val),
+    region: z.string().optional(),
+    department: z.string().optional(),
+    notifyAllFrance: z.union([z.boolean(), z.string()]).optional().transform(val => val === "true" || val === true),
     image: z.any().optional(),
     createdAt: z.any().optional(),
   })
@@ -43,6 +46,8 @@ export const updateLocalMissionSchema = z
     points: pointsSchema,
     status: z.enum(Object.values(LocalMissionStatus) as [string, ...string[]]).optional(),
     missionDate: z.union([z.coerce.date(), z.string().length(0)]).optional().transform(val => val === "" ? null : val),
+    region: z.string().optional(),
+    department: z.string().optional(),
     image: z.any().optional(),
     createdAt: z.any().optional(),
   })
