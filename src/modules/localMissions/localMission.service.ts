@@ -276,7 +276,7 @@ export const localMissionService = {
     }
     const sortOrder: 1 | -1 = sort === "ascending" ? 1 : -1;
 
-    const [missions, total] = await Promise.all([
+    const [missionsRaw, total] = await Promise.all([
       localMissionModel
         .find(filter)
         .populate("partner", partnerPopulate)
@@ -286,6 +286,19 @@ export const localMissionService = {
         .lean(),
       localMissionModel.countDocuments(filter),
     ]);
+
+    const missions = await Promise.all(
+      missionsRaw.map(async (mission) => {
+        const participantsCount = await localMissionParticipationModel.countDocuments({
+          mission: mission._id,
+        });
+        const pendingRequestsCount = await localMissionParticipationModel.countDocuments({
+          mission: mission._id,
+          status: "pending", // from LocalMissionParticipationStatus.PENDING
+        });
+        return { ...mission, participantsCount, pendingRequestsCount };
+      })
+    );
 
     return {
       missions,
