@@ -470,6 +470,7 @@ export const authService = {
       if (extraData?.fcmToken && (!user.fcmTokens || !user.fcmTokens.includes(extraData.fcmToken))) {
          if (!user.fcmTokens) user.fcmTokens = [];
          user.fcmTokens.push(extraData.fcmToken);
+         user.markModified('fcmTokens');
          needsSave = true;
       }
 
@@ -556,6 +557,7 @@ export const authService = {
       if (extraData?.fcmToken && (!user.fcmTokens || !user.fcmTokens.includes(extraData.fcmToken))) {
          if (!user.fcmTokens) user.fcmTokens = [];
          user.fcmTokens.push(extraData.fcmToken);
+         user.markModified('fcmTokens');
          needsSave = true;
       }
 
