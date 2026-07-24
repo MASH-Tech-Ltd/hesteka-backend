@@ -50,6 +50,7 @@ export const updateUserSchema = z
     longitude: optionalCoordinate("Longitude", -180, 180),
     locationAddress: z.string().optional(),
     language: z.enum(["en", "fr"]).optional(),
+    partnerType: z.enum(["association", "brand", "collection_point"]).optional(),
   })
   .strict()
   .refine((data) => (data.latitude === undefined) === (data.longitude === undefined), {

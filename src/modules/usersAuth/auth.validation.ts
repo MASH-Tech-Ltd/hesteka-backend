@@ -75,6 +75,7 @@ export const registerPartnerSchema = registerUserSchema
     ),
     region: z.string().optional(),
     department: z.string().optional(),
+    partnerType: z.enum(["association", "brand", "collection_point"]).optional(),
   })
   .refine(
     (data) => (data.latitude === undefined) === (data.longitude === undefined),
