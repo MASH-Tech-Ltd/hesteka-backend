@@ -9,8 +9,6 @@ const adminConfigSchema = new Schema<IAdminConfig>(
     pointsPerStoryApproval: { type: Number, default: 20 },
     pointsPerReportResolved: { type: Number, default: 30 },
     pointsPerReport: { type: Number, default: 10 },
-    
-    // Crowdfunding
     crowdfundingTotal: { type: Number, default: 0 },
     crowdfundingGoal: { type: Number, default: 5000 },
   },

@@ -39,18 +39,7 @@ export const updateConfig = asyncHandler(
   },
 );
 
-//: get crowdfunding stats (Public)
-export const getCrowdfundingStats = asyncHandler(
-  async (req: Request, res: Response) => {
-    const stats = await adminService.getCrowdfundingStats();
-    ApiResponse.sendSuccess(
-      res,
-      200,
-      "Crowdfunding statistics fetched successfully",
-      stats,
-    );
-  },
-);
+
 
 //: approve report points (Admin)
 export const approveReportPoints = asyncHandler(

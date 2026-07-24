@@ -6,7 +6,6 @@ import {
   getStats,
   getConfig,
   updateConfig,
-  getCrowdfundingStats,
   approveReportPoints,
   getUserStats,
   getReportStats,
@@ -20,9 +19,6 @@ import {
 } from "./admin.controller";
 
 const router = Router();
-
-// Public routes
-router.get("/crowdfunding", getCrowdfundingStats);
 
 // Admin routes
 router.get("/stats", authGuard, allowRole("admin"), getStats);

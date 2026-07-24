@@ -5,6 +5,8 @@ import { deleteCloudinary, uploadCloudinary } from "../../helpers/cloudinary";
 import { paginationHelper } from "../../utils/pagination";
 import { role } from "../usersAuth/user.interface";
 import { userModel } from "../usersAuth/user.models";
+import { mailer } from "../../helpers/nodeMailer";
+import { participantAlertTemplate } from "../../templates/participantAlertTemplate";
 import {
   PointTransactionSource,
   PointTransactionType,
@@ -20,7 +22,6 @@ import { localMissionModel } from "./localMission.models";
 import { localMissionParticipationModel } from "./localMissionParticipation.models";
 import { notificationService } from "../notifications/notification.service";
 import { NotificationType } from "../notifications/notification.interface";
-import { mailer } from "../../helpers/nodeMailer";
 
 const partnerPopulate = "firstName lastName email profileImage company";
 
@@ -540,6 +541,13 @@ export const localMissionService = {
           .catch((err) =>
             console.error("[Notification] Failed to notify partner:", err),
           );
+
+        // Send Admin Alert Email
+        mailer({
+          subject: "New Local Mission Participant Request",
+          email: process.env.ADMIN_EMAILS || "contact@hesteka.com",
+          template: participantAlertTemplate(populatedMission, `${user.firstName} ${user.lastName}`),
+        }).catch((err) => console.error("Failed to send admin participant alert email", err));
       }
 
       return {
@@ -601,7 +609,7 @@ export const localMissionService = {
               type: PointTransactionType.EARN,
               source: PointTransactionSource.LOCAL_MISSION,
               points,
-              note: `Completed local mission: ${mission.title}`,
+              note: `Mission locale accomplie : ${mission.title}`,
             },
           ],
           { session },

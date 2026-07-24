@@ -7,12 +7,11 @@ export interface IAdminConfig extends Document {
   pointsPerStoryApproval: number;
   pointsPerReportResolved: number;
   
-  // Crowdfunding
-  crowdfundingTotal: number;
-  crowdfundingGoal: number;
-  
   pointsPerReport: number;
   
+  crowdfundingTotal?: number;
+  crowdfundingGoal?: number;
+
   createdAt: Date;
   updatedAt: Date;
 }

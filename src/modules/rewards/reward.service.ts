@@ -210,7 +210,7 @@ export const rewardService = {
               type: PointTransactionType.REDEEM,
               source: PointTransactionSource.REWARD_ITEM,
               points: -reward.points,
-              note: `Redeemed reward: ${reward.title}`,
+              note: `Récompense réclamée : ${reward.title}`,
             },
           ],
           { session },
@@ -435,7 +435,7 @@ export const rewardService = {
                 type: PointTransactionType.EARN,
                 source: PointTransactionSource.REWARD_ITEM,
                 points: redemption.pointsAtRedemption,
-                note: `Refund for cancelled redemption: ${redemptionId}`,
+                note: `Remboursement pour réclamation annulée : ${redemptionId}`,
               },
             ],
             { session }

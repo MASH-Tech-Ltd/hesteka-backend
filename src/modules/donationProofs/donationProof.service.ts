@@ -225,7 +225,7 @@ export const donationProofService = {
         type: PointTransactionType.EARN,
         source: PointTransactionSource.PHYSICAL_DONATION,
         points: pointsAwarded,
-        note: `Points earned from physical donation of ${proof.amount}. ${adminNote || ""}`,
+        note: `Points gagnés pour le dépôt de ${proof.amount} article(s). ${adminNote || ""}`,
       });
     }
 
@@ -293,20 +293,20 @@ export const donationProofService = {
     }
 
     const config = await pointConfigModel.findOne();
-    const pointsPerDonation = config ? (config.isDoublePointsActive ? config.pointsPerDonation * 2 : config.pointsPerDonation) : 15;
+    const pointsToAward = config ? (config.isDoublePointsActive ? config.pointsPerDonation * 2 : config.pointsPerDonation) : 15;
     const adminNote = "Bulk validate by admin";
 
     const validationPromises = pendingProofs.map(async (proof) => {
       // 1. Update proof status
       proof.status = DonationProofStatus.APPROVED;
-      proof.pointsAwarded = pointsPerDonation;
+      proof.pointsAwarded = pointsToAward;
       proof.adminNote = adminNote;
       await proof.save();
 
       // 2. Award points to user (if registered user)
       if (proof.user) {
         await userModel.findByIdAndUpdate(proof.user, {
-          $inc: { pointsBalance: pointsPerDonation },
+          $inc: { pointsBalance: pointsToAward },
         });
 
         // 3. Create point transaction
@@ -314,9 +314,9 @@ export const donationProofService = {
           user: proof.user,
           type: PointTransactionType.EARN,
           source: PointTransactionSource.PHYSICAL_DONATION,
-          points: pointsPerDonation,
-          note: `Points earned from physical donation of ${proof.amount}. ${adminNote}`,
-        });
+          points: pointsToAward,
+          note: `Points gagnés pour le dépôt de ${proof.amount} article(s). ${adminNote}`,
+        },);
       }
 
       // Removed syncPhysicalDonation to keep them separate
@@ -326,7 +326,7 @@ export const donationProofService = {
         await notificationService.notifySingleUser(
           (proof.user as any)._id.toString(),
           "Soutien approuvé !",
-          `Votre preuve de soutien de ${proof.amount} a été approuvée par validation groupée. Vous avez gagné ${pointsPerDonation} points.`,
+          `Votre preuve de soutien de ${proof.amount} a été approuvée par validation groupée. Vous avez gagné ${pointsToAward} points.`,
           NotificationType.SYSTEM
         );
       }

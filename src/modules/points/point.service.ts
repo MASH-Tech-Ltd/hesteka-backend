@@ -247,7 +247,7 @@ export const pointService = {
         type: PointTransactionType.EARN,
         source,
         points: pointsToAward,
-        note: `Points awarded for donation of ${amount}. ${isPromotionActive ? "2x multiplier applied." : ""}`,
+        note: `Points attribués pour un don de ${amount}. ${isPromotionActive ? "Multiplicateur x2 appliqué." : ""}`,
       });
 
       return {

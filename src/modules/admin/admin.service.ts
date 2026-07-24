@@ -5,6 +5,8 @@ import { donationModel } from "../donation/donation.models";
 import { donationProofModel } from "../donationProofs/donationProof.models";
 import { pointTransactionModel } from "../points/point.models";
 import { adminConfigModel } from "./admin.models";
+import { crowdfundingService } from "../crowdfunding/crowdfunding.service";
+import { getUluleProjectStats, getUluleProjectDonors } from "../../utils/ululeClient";
 import {
   status as UserStatus,
   role as UserRole,
@@ -89,6 +91,7 @@ export const adminService = {
       totalDonors,
       pendingSupportMessages,
       config,
+      crowdfundingStats,
     ] = await Promise.all([
       // Users
       userModel.countDocuments(),
@@ -270,6 +273,9 @@ export const adminService = {
 
       // Config
       this.getConfig(),
+      
+      // Crowdfunding Stats
+      crowdfundingService.getCrowdfundingStats(),
     ]);
 
     const collectedThisMonth = donationsThisMonth[0]?.total || 0;
@@ -395,17 +401,11 @@ export const adminService = {
         growth: 12,
       },
       crowdfunding: {
-        totalCollected: config.crowdfundingTotal,
-        goalAmount: config.crowdfundingGoal,
-        donors: totalDonors || 0,
-        percentage:
-          config.crowdfundingGoal > 0
-            ? Math.min(
-                100,
-                (config.crowdfundingTotal / config.crowdfundingGoal) * 100,
-              )
-            : 0,
-        left: config.crowdfundingGoal - config.crowdfundingTotal,
+        totalCollected: crowdfundingStats.totalCollected,
+        goalAmount: crowdfundingStats.goalAmount,
+        donors: crowdfundingStats.donorsCount || 0,
+        percentage: crowdfundingStats.percentage || 0,
+        left: crowdfundingStats.goalAmount - crowdfundingStats.totalCollected,
       },
       supportMessages: {
         pending: pendingSupportMessages,
@@ -434,20 +434,7 @@ export const adminService = {
     return config;
   },
 
-  async getCrowdfundingStats() {
-    const config = await this.getConfig();
-    return {
-      totalCollected: config.crowdfundingTotal,
-      goalAmount: config.crowdfundingGoal,
-      percentage:
-        config.crowdfundingGoal > 0
-          ? Math.min(
-              100,
-              (config.crowdfundingTotal / config.crowdfundingGoal) * 100,
-            )
-          : 0,
-    };
-  },
+
 
   async approveReportPoints(reportId: string) {
     const session = await mongoose.startSession();
@@ -491,7 +478,7 @@ export const adminService = {
             type: PointTransactionType.EARN,
             source: PointTransactionSource.ANIMAL_REPORT,
             points: pointsToAdd,
-            note: `Reward for report: ${report.title || report.animalName}`,
+            note: `Récompense pour le signalement : ${report.title || report.animalName}`,
           },
         ],
         { session },

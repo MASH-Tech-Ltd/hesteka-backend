@@ -16,6 +16,8 @@ import {
 } from "../points/point.interface";
 import { pointConfigModel } from "../points/pointConfig.models";
 import { myanimalModel } from "../myanimal/myanimal.models";
+import { mailer } from "../../helpers/nodeMailer";
+import { reportAlertTemplate } from "../../templates/reportAlertTemplate";
 
 const deleteCloudinaryQuietly = async (publicId?: string): Promise<void> => {
   if (!publicId) return;
@@ -119,6 +121,13 @@ export const reportService = {
 
     const newReport = await reportModel.create(payload);
 
+    // Send Admin Alert Email
+    mailer({
+      subject: "New Animal Report Created",
+      email: process.env.ADMIN_EMAILS || "contact@hesteka.com",
+      template: reportAlertTemplate(newReport),
+    }).catch(err => console.error("Failed to send admin report alert email", err));
+
     // Award Points
     try {
       const config = await pointConfigModel.findOne();
@@ -133,7 +142,7 @@ export const reportService = {
         type: PointTransactionType.EARN,
         source: PointTransactionSource.ANIMAL_REPORT,
         points: pointsToAward,
-        note: `Reward for report: ${newReport.title || newReport.animalName}`,
+        note: `Récompense pour le signalement : ${newReport.title || newReport.animalName}`,
       });
 
       // Mark report as point-awarded
