@@ -227,13 +227,28 @@ export class SecurityService {
 
             await this.blockIp(ip, blockReason, "system", null);
 
+            // If userId exists (user is authenticated), block their user account in the database as well
+            let accountBlockedMessage = "";
+            if (userId) {
+              try {
+                const user = await userModel.findById(userId);
+                if (user && user.role !== "admin" && user.status !== status.BLOCKED) {
+                  user.status = status.BLOCKED;
+                  await user.save();
+                  accountBlockedMessage = ` Also suspended user account: ${user.email}.`;
+                }
+              } catch (userBlockErr) {
+                console.error("Failed to auto-block user account during IP block:", userBlockErr);
+              }
+            }
+
             // Log the automatic blocking action so details remain visible in Security Logs
             await securityLogModel.create({
               ip,
               endpoint,
               method,
               userAgent,
-              reason: `🚨 ACTIVE PROTECTION: IP automatically blocked. ${blockReason}`,
+              reason: `🚨 ACTIVE PROTECTION: IP automatically blocked.${accountBlockedMessage} ${blockReason}`,
               userId,
             });
           }

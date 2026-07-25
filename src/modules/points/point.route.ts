@@ -28,6 +28,13 @@ router.post(
   pointController.assignCustomPoints
 );
 router.post(
+  "/admin/deduct-points",
+  authGuard,
+  allowRole("admin"),
+  validateRequest(pointValidation.deductPointsSchema),
+  pointController.deductPoints
+);
+router.post(
   "/admin/assign-custom-points-to-all",
   authGuard,
   allowRole("admin"),

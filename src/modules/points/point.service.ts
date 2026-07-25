@@ -302,6 +302,50 @@ export const pointService = {
     };
   },
 
+  async deductPoints(req: Request) {
+    const { userId, points, note } = req.body;
+
+    const user = await userModel.findById(userId);
+    if (!user) {
+      throw new CustomError(404, "User not found");
+    }
+
+    if ((user.pointsBalance || 0) < points) {
+      throw new CustomError(400, `User only has ${user.pointsBalance || 0} points, cannot deduct ${points} points`);
+    }
+
+    const updatedUser = await userModel.findByIdAndUpdate(
+      userId,
+      { $inc: { pointsBalance: -points } },
+      { returnDocument: 'after' }
+    );
+
+    const transaction = await pointTransactionModel.create({
+      user: userId,
+      type: PointTransactionType.REDEEM,
+      source: PointTransactionSource.ADMIN_CUSTOM,
+      points: -points,
+      note: note || `Points déduits par l'administrateur`,
+    });
+
+    const notificationBody = note
+      ? `L'administrateur a déduit ${points} points de votre solde.\n\n${note}`
+      : `L'administrateur a déduit ${points} points de votre solde.`;
+
+    // Notify user
+    notificationService.notifySingleUser(
+      userId,
+      "Points déduits !",
+      notificationBody,
+      NotificationType.POINTS_EARNED
+    ).catch((err) => console.error("Notification Error:", err));
+
+    return {
+      balance: updatedUser?.pointsBalance || 0,
+      transaction,
+    };
+  },
+
   async assignCustomPointsToAll(req: Request) {
     const { points, note } = req.body as AssignCustomPointsToAllPayload;
 
