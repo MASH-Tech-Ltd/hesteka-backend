@@ -12,7 +12,6 @@ import cors from "cors";
 import { notFound } from "./middleware/notFound";
 import { globalApiLimiter, adminApiLimiter } from "./middleware/rateLimiter.middleware";
 import { ipBlockerMiddleware } from "./middleware/ipBlocker.middleware";
-import { syncIpCache } from "./modules/security/security.service";
 
 const app = express();
 // Required for express-rate-limit when running behind a reverse proxy
@@ -134,8 +133,5 @@ app.use(globalErrorHandler);
 
 // Socket.IO setup
 const io = initSocket(server);
-
-// Initialize IP Block Cache on startup
-syncIpCache().catch(err => console.error("Error initializing IP block cache:", err));
 
 export { server };

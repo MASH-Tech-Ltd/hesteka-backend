@@ -5,7 +5,6 @@ import {
   blockedIpModel,
   securityLogModel,
 } from "../modules/security/security.models";
-import { ipCache } from "../modules/security/security.service";
 
 dotenv.config();
 
@@ -31,7 +30,6 @@ const run = async () => {
     console.log(
       `Deleted ${resBlocked.deletedCount} blocked IP entries for 103.216.58.105.`,
     );
-    ipCache.delete("103.216.58.105");
 
     console.log("Strike history cleaned and test IP unblocked successfully!");
     process.exit(0);

@@ -4,10 +4,6 @@ import { status } from "../usersAuth/user.interface";
 import CustomError from "../../helpers/CustomError";
 import { Types } from "mongoose";
 
-// Dummy exports maintained for compatibility; all checks now query database directly in real-time
-export const ipCache = new Map<string, Date | null>();
-export const syncIpCache = async () => {};
-
 export class SecurityService {
   async blockIp(
     ip: string,

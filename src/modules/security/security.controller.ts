@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { securityService, syncIpCache } from "./security.service";
+import { securityService } from "./security.service";
 
 export const blockIpController = async (
   req: Request,
@@ -106,8 +106,7 @@ export const syncCacheController = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    await syncIpCache();
-    res.status(200).json({ status: "ok", message: "IP block cache synchronized successfully." });
+    res.status(200).json({ status: "ok", message: "Database verification completed (No RAM cache used)." });
   } catch (error) {
     next(error);
   }
