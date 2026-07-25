@@ -7,8 +7,12 @@ import {
   createPayPalOrderSchema,
   capturePayPalOrderSchema,
 } from "./payment.validation";
+import { paymentLimiter } from "../../middleware/rateLimiter.middleware";
 
 export const paymentRoute = express.Router();
+
+// Apply payment rate limiter to all payment endpoints
+paymentRoute.use(paymentLimiter);
 
 // Stripe
 paymentRoute.post(

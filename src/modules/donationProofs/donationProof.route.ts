@@ -20,6 +20,7 @@ import {
   getPartnerValidationStats,
   getCollectionPointDonationsCount
 } from "./donationProof.controller";
+import { contentLimiter } from "../../middleware/rateLimiter.middleware";
 
 const router = Router();
 
@@ -44,6 +45,7 @@ router.get(
 router.post(
   "/submit",
   authGuard,
+  contentLimiter,
   upload.single("image"),
   validateRequest(submitDonationProofSchema),
   submitProof

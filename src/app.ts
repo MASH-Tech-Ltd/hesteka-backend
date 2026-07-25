@@ -10,6 +10,7 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import cors from "cors";
 import { notFound } from "./middleware/notFound";
+import { globalApiLimiter } from "./middleware/rateLimiter.middleware";
 
 const app = express();
 // Required for express-rate-limit when running behind a reverse proxy
@@ -74,7 +75,8 @@ app.use(
   express.static(path.join(process.cwd(), "public", "stamps")),
 );
 
-app.use("/api/v1", routes);
+// Apply global rate limiter to all API endpoints (skips payment webhooks automatically)
+app.use("/api/v1", globalApiLimiter, routes);
 
 // 1. Android App Links Verification
 app.get('/.well-known/assetlinks.json', (req: Request, res: Response) => {

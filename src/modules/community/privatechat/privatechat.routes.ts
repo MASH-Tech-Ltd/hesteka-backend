@@ -3,6 +3,7 @@ import { privateChatController } from "./privatechat.controller";
 import { authGuard } from "../../../middleware/auth.middleware";
 import { uploadMediaArray } from "../../../middleware/multer.midleware";
 import { COMMUNITY_CONFIG } from "../shared/community.config";
+import { contentLimiter } from "../../../middleware/rateLimiter.middleware";
 
 export const privateChatRoute = express.Router();
 
@@ -10,6 +11,7 @@ export const privateChatRoute = express.Router();
 privateChatRoute.post(
   "/conversations",
   authGuard,
+  contentLimiter,
   privateChatController.startOrGetConversation,
 );
 
@@ -24,6 +26,7 @@ privateChatRoute.get(
 privateChatRoute.post(
   "/conversations/:conversationId/messages",
   authGuard,
+  contentLimiter,
   uploadMediaArray("media", COMMUNITY_CONFIG.CHAT_MEDIA_MAX_COUNT),
   privateChatController.sendMessage,
 );

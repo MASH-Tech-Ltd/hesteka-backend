@@ -2,6 +2,7 @@ import express from "express";
 import { authGuard } from "../../middleware/auth.middleware";
 import { uploadMediaArray } from "../../middleware/multer.midleware";
 import { storyController } from "./stories.controller";
+import { contentLimiter } from "../../middleware/rateLimiter.middleware";
 
 export const storyRoute = express.Router();
 
@@ -10,6 +11,7 @@ export const storyRoute = express.Router();
 storyRoute.post(
   "/",
   authGuard,
+  contentLimiter,
   (req, res, next) => {
     uploadMediaArray("media", 1)(req, res, (err) => {
       if (err) return next(err);

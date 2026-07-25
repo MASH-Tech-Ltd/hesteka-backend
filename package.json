@@ -19,7 +19,8 @@
     "seed:words": "ts-node scripts/seedWords.ts",
     "seed:faq": "ts-node scripts/seedFaq.ts",
     "socket:a": "ts-node src/socket/test-client-a.ts",
-    "socket:b": "ts-node src/socket/test-client-b.ts"
+    "socket:b": "ts-node src/socket/test-client-b.ts",
+    "group:emails": "ts-node scripts/groupLocalEmailDomains.ts"
   },
   "keywords": [],
   "author": "",

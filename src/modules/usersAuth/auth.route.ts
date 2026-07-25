@@ -26,18 +26,20 @@ import {
   verifyAccountSchema,
   verifyOtpSchema,
 } from "./auth.validation";
-import { rateLimiter } from "../../middleware/rateLimiter.middleware";
+import { rateLimiter, authLimiter, otpLimiter, passwordLimiter } from "../../middleware/rateLimiter.middleware";
 
 const router = Router();
 
 router.post(
   "/register-user",
+  authLimiter,
   validateRequest(registerUserSchema),
   registration,
 );
 
 router.post(
   "/register-partner",
+  authLimiter,
   upload.fields([
     { name: "logo", maxCount: 1 },
     { name: "partnerImage", maxCount: 1 },
@@ -46,43 +48,52 @@ router.post(
   partnerRegistration,
 );
 
-router.post("/login", rateLimiter(1, 5), validateRequest(loginSchema), login);
+router.post(
+  "/login",
+  rateLimiter(1, 5, "Too many login attempts. Please try again after 1 minute."),
+  validateRequest(loginSchema),
+  login,
+);
 
 router.post("/logout", authGuard, logout);
 
 router.post(
   "/forget-password",
+  otpLimiter,
   validateRequest(forgetPasswordSchema),
   forgetPassword,
 );
 
 router.post(
   "/verify-otp",
+  otpLimiter,
   validateRequest(verifyOtpSchema),
   verifyOtpForgetPassword,
 );
 
 router.post(
   "/reset-password/:token",
+  passwordLimiter,
   validateRequest(resetPasswordSchema),
   resetPassword,
 );
 
 router
   .route("/verify-account")
-  .post(validateRequest(verifyAccountSchema), verifyAccount);
+  .post(otpLimiter, validateRequest(verifyAccountSchema), verifyAccount);
 
 //: Social login routes
-router.post("/google-login", googleLogin);
-router.post("/apple-login", appleLogin);
+router.post("/google-login", authLimiter, googleLogin);
+router.post("/apple-login", authLimiter, appleLogin);
 
 router.post(
   "/account-verification-otp",
+  otpLimiter,
   validateRequest(resendOtpSchema),
   resendVerificationOtp,
 );
 
 //re generate access token
-router.post("/generate-access-token", generateAccessToken);
+router.post("/generate-access-token", authLimiter, generateAccessToken);
 
 export const authRoute = router;

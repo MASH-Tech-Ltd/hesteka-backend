@@ -7,8 +7,12 @@ import {
   createPayPalDonationSchema,
   capturePayPalDonationSchema,
 } from "./donation.validation";
+import { paymentLimiter } from "../../middleware/rateLimiter.middleware";
 
 export const donationRoute = express.Router();
+
+// Apply payment rate limiter to all donation endpoints
+donationRoute.use(paymentLimiter);
 
 // Stripe
 donationRoute.post(

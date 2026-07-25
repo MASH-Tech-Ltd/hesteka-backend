@@ -1,0 +1,90 @@
+{
+  "totalLocalUsers": 723,
+  "categories": [
+    {
+      "category": "Google / Gmail",
+      "totalUsers": 498,
+      "uniqueDomainsCount": 1,
+      "domains": {
+        "gmail.com": 498
+      }
+    },
+    {
+      "category": "Microsoft / Outlook & Hotmail",
+      "totalUsers": 116,
+      "uniqueDomainsCount": 6,
+      "domains": {
+        "outlook.fr": 23,
+        "hotmail.fr": 52,
+        "hotmail.com": 21,
+        "outlook.com": 10,
+        "live.fr": 9,
+        "msn.com": 1
+      }
+    },
+    {
+      "category": "French ISPs & Webmail (Orange, Free, SFR, etc.)",
+      "totalUsers": 31,
+      "uniqueDomainsCount": 8,
+      "domains": {
+        "orange.fr": 12,
+        "free.fr": 2,
+        "laposte.net": 7,
+        "sfr.fr": 5,
+        "wanadoo.fr": 2,
+        "gmx.fr": 1,
+        "neuf.fr": 1,
+        "club-internet.fr": 1
+      }
+    },
+    {
+      "category": "Corporate / Custom / Other Domains",
+      "totalUsers": 29,
+      "uniqueDomainsCount": 23,
+      "domains": {
+        "hesteka.com": 3,
+        "proorca.com": 1,
+        "tresorsdulysse.com": 1,
+        "otonimo.fr": 1,
+        "toutouvert.com": 1,
+        "milou-pets.com": 1,
+        "wyatt-toys.fr": 1,
+        "example.com": 1,
+        "savard.fr": 1,
+        "mailinator.com": 4,
+        "lalogedeloulou.fr": 1,
+        "delmotte1.fr": 1,
+        "aol.fr": 2,
+        "dogdaycare.fr": 1,
+        "paroledanimaux.fr": 1,
+        "interia.pl": 1,
+        "lesamisdesam.org": 1,
+        "grapheme.fr": 1,
+        "stpbb.org": 1,
+        "kiweeto.com": 1,
+        "notretribu.eu": 1,
+        "altplusun.fr": 1,
+        "protonmail.com": 1
+      }
+    },
+    {
+      "category": "Yahoo / Ymail",
+      "totalUsers": 28,
+      "uniqueDomainsCount": 3,
+      "domains": {
+        "yahoo.fr": 20,
+        "yahoo.com": 7,
+        "ymail.com": 1
+      }
+    },
+    {
+      "category": "Apple / iCloud",
+      "totalUsers": 21,
+      "uniqueDomainsCount": 2,
+      "domains": {
+        "icloud.com": 20,
+        "me.com": 1
+      }
+    }
+  ]
+}

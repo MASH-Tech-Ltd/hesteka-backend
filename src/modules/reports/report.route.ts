@@ -14,6 +14,7 @@ import { authGuard, authGuardOptional } from "../../middleware/auth.middleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
 import { createReportSchema, updateReportSchema } from "./report.validation";
 import { upload } from "../../middleware/multer.midleware";
+import { contentLimiter } from "../../middleware/rateLimiter.middleware";
 
 const router = Router();
 
@@ -30,6 +31,7 @@ router.get("/get-my-reports", getMyReports);
 
 router.post(
   "/create-report",
+  contentLimiter,
   upload.fields([{ name: "images", maxCount: 3 }]),
   validateRequest(createReportSchema),
   createReport,
