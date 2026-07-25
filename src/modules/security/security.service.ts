@@ -4,22 +4,9 @@ import { status } from "../usersAuth/user.interface";
 import CustomError from "../../helpers/CustomError";
 import { Types } from "mongoose";
 
-// In-memory map of blocked IPs (IP -> expiresAt) for 0ms overhead checking in middleware
+// Dummy exports maintained for compatibility; all checks now query database directly in real-time
 export const ipCache = new Map<string, Date | null>();
-let isCacheInitialized = false;
-
-export const syncIpCache = async () => {
-  try {
-    const blocked = await blockedIpModel.find({
-      $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
-    }).select("ip expiresAt").lean();
-    ipCache.clear();
-    blocked.forEach((b) => ipCache.set(b.ip, b.expiresAt || null));
-    isCacheInitialized = true;
-  } catch (err) {
-    console.error("Failed to sync IP block cache:", err);
-  }
-};
+export const syncIpCache = async () => {};
 
 export class SecurityService {
   async blockIp(
@@ -47,7 +34,6 @@ export class SecurityService {
       });
     }
 
-    ipCache.set(ip, expiresAt);
     return { success: true, message: `IP ${ip} has been blocked successfully.` };
   }
 
@@ -61,9 +47,27 @@ export class SecurityService {
       throw new CustomError(404, "Blocked IP entry not found");
     }
 
-    ipCache.delete(doc.ip);
     await securityLogModel.updateMany({ ip: doc.ip }, { $set: { resetStrike: true } });
-    return { success: true, message: `IP ${doc.ip} has been unblocked successfully.` };
+
+    // Automatically reactivate any user accounts on the server associated with this IP that were suspended
+    try {
+      const logsWithUsers = await securityLogModel.find({ ip: doc.ip, userId: { $ne: null } }).select("userId").lean();
+      const userIds = logsWithUsers.map((log: any) => log.userId).filter(Boolean);
+      if (userIds.length > 0) {
+        await userModel.updateMany(
+          { _id: { $in: userIds }, status: status.BLOCKED },
+          { $set: { status: status.ACTIVE } }
+        );
+      }
+      await userModel.updateMany(
+        { lastLoginIp: doc.ip, status: status.BLOCKED },
+        { $set: { status: status.ACTIVE } }
+      );
+    } catch (err) {
+      console.error("Failed to unblock associated user accounts on server:", err);
+    }
+
+    return { success: true, message: `IP ${doc.ip} and associated user accounts have been unblocked successfully.` };
   }
 
   async getBlockedIps(page = 1, limit = 20, search = "") {
@@ -152,7 +156,17 @@ export class SecurityService {
     user.status = newStatus;
     await user.save();
 
-    if (block && reason) {
+    if (!block) {
+      // When unblocking a user account, also remove any IP blocks associated with their last login IP from the server
+      if (user.lastLoginIp && user.lastLoginIp !== "unknown") {
+        try {
+          await blockedIpModel.deleteMany({ ip: user.lastLoginIp });
+          await securityLogModel.updateMany({ ip: user.lastLoginIp }, { $set: { resetStrike: true } });
+        } catch (err) {
+          console.error("Failed to unblock user's IP from server:", err);
+        }
+      }
+    } else if (reason) {
       await securityLogModel.create({
         ip: "N/A (Admin Action)",
         endpoint: "/api/v1/security/toggle-block-user",
@@ -318,15 +332,11 @@ export class SecurityService {
   }
 
   async isIpBlocked(ip: string): Promise<boolean> {
-    if (!isCacheInitialized) {
-      await syncIpCache();
-    }
-    if (!ipCache.has(ip)) return false;
+    const dbEntry = await blockedIpModel.findOne({ ip }).select("expiresAt").lean();
+    if (!dbEntry) return false;
 
-    const expiresAt = ipCache.get(ip);
-    if (expiresAt && expiresAt < new Date()) {
-      // Temporary block has expired. Clean up from cache and DB.
-      ipCache.delete(ip);
+    if (dbEntry.expiresAt && new Date(dbEntry.expiresAt) < new Date()) {
+      // Temporary block has expired. Clean up from DB.
       blockedIpModel.deleteOne({ ip }).catch((err) =>
         console.error("Failed to delete expired IP block from DB:", err)
       );
