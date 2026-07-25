@@ -16,5 +16,6 @@ export interface ISecurityLog extends Document {
   userAgent?: string;
   reason: string;
   userId?: Types.ObjectId | string | null;
+  resetStrike?: boolean;
   createdAt: Date;
 }

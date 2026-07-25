@@ -62,6 +62,7 @@ export class SecurityService {
     }
 
     ipCache.delete(doc.ip);
+    await securityLogModel.updateMany({ ip: doc.ip }, { $set: { resetStrike: true } });
     return { success: true, message: `IP ${doc.ip} has been unblocked successfully.` };
   }
 
@@ -205,11 +206,6 @@ export class SecurityService {
         const alreadyBlocked = await this.isIpBlocked(ip);
         if (!alreadyBlocked) {
           const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-          const incidentCount = await securityLogModel.countDocuments({
-            ip,
-            createdAt: { $gte: fifteenMinutesAgo },
-          });
-
           const lowerReason = reason.toLowerCase();
           const isFalseTokenAttempt =
             lowerReason.includes("false token") ||
@@ -229,6 +225,22 @@ export class SecurityService {
               lowerReason.includes("malicious") ||
               lowerReason.includes("active protection")
             );
+
+          let incidentCount = 0;
+          if (isFalseTokenAttempt) {
+            incidentCount = await securityLogModel.countDocuments({
+              ip,
+              createdAt: { $gte: fifteenMinutesAgo },
+              resetStrike: { $ne: true },
+              reason: { $regex: /false token|invalid token|token not found|session expired|authentication failed|unauthorized/i }
+            });
+          } else {
+            incidentCount = await securityLogModel.countDocuments({
+              ip,
+              createdAt: { $gte: fifteenMinutesAgo },
+              resetStrike: { $ne: true }
+            });
+          }
 
           // Auto-block if >= 7 infractions for false token attempts, >= 3 for general rate limit infractions, or immediately on high severity
           if ((isFalseTokenAttempt && incidentCount >= 7) || (!isFalseTokenAttempt && (incidentCount >= 3 || isHighSeverity))) {

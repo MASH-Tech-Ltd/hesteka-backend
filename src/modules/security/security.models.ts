@@ -58,6 +58,10 @@ const securityLogSchema = new Schema<ISecurityLog>(
       ref: "User",
       default: null,
     },
+    resetStrike: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
