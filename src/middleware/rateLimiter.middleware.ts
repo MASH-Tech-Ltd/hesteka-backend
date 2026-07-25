@@ -29,13 +29,17 @@ const logRateLimitIncident = (req: any, reason: string) => {
     }
     const userAgent = req.headers["user-agent"] || "";
 
+    // Skip auto-blocking for Admin dashboard requests or Admin users
+    const skipAutoBlock = isAdminDashboardRequest(req) || req.user?.role === "admin";
+
     securityService.logSecurityIncident(
         clientIp,
         req.originalUrl || req.url,
         req.method,
         reason,
         userAgent,
-        userId
+        userId,
+        skipAutoBlock
     );
 };
 
@@ -49,6 +53,23 @@ export const rateLimiter = (
         max: maxRequests,
         standardHeaders: true,
         legacyHeaders: false,
+        skip: (req) => {
+            // Never skip rate limiters on sensitive auth endpoints to prevent brute-forcing
+            const url = req.originalUrl || req.url || "";
+            const isAuthEndpoint = 
+                url.includes("/login") || 
+                url.includes("/otp") || 
+                url.includes("/register") || 
+                url.includes("/reset-password") ||
+                url.includes("/forgot-password");
+
+            if (isAuthEndpoint) {
+                return false;
+            }
+
+            // Admin dashboard requests and authenticated admin users skip other strict route-specific limits
+            return isAdminDashboardRequest(req) || req.user?.role === "admin";
+        },
         handler: (req, res) => {
             const msg = customMessage || `Too many requests. Please try again after ${windowMinutes} minutes.`;
             logRateLimitIncident(req, `Rate limit exceeded (${maxRequests} req / ${windowMinutes}m): ${msg}`);
@@ -89,7 +110,7 @@ export const isAdminDashboardRequest = (req: any): boolean => {
 
 export const adminApiLimiter = rateLimit({
     windowMs: defaultWindowMinutes * 60 * 1000,
-    max: 3000,
+    max: 10000, // Increased limit from 3000 to 10000 for admin
     standardHeaders: true,
     legacyHeaders: false,
     skip: (req) => {
@@ -97,7 +118,7 @@ export const adminApiLimiter = rateLimit({
     },
     handler: (req, res) => {
         const msg = `Too many requests from Admin client. Please try again after ${defaultWindowMinutes} minutes.`;
-        logRateLimitIncident(req, `Admin API rate limit exceeded (5000 req / ${defaultWindowMinutes}m)`);
+        logRateLimitIncident(req, `Admin API rate limit exceeded (10000 req / ${defaultWindowMinutes}m)`);
         res.status(429).json({
             success: false,
             message: msg,
