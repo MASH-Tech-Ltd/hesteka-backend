@@ -121,7 +121,8 @@ const userSchema = new Schema<IUser>(
       type: Date,
     },
     refreshToken: {
-      type: String,
+      type: [String],
+      default: [],
     },
     resetPassword: {
       otp: { type: String },

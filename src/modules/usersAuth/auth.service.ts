@@ -259,18 +259,23 @@ export const authService = {
     const accessToken = user.createAccessToken();
     const refreshToken = user.createRefreshToken();
 
-    user.refreshToken = refreshToken;
+    const currentTokens = Array.isArray(user.refreshToken) ? user.refreshToken : [];
+    user.refreshToken = [...currentTokens, refreshToken].slice(-3);
     await user.save();
 
     return { user, accessToken, refreshToken };
   },
 
   //logout
-  async logout(email: string, fcmToken?: string) {
+  async logout(email: string, fcmToken?: string, refreshToken?: string) {
     const user = await userModel.findOne({ email });
     if (!user) throw new CustomError(400, "Email not found");
 
-    user.refreshToken = "";
+    if (refreshToken && Array.isArray(user.refreshToken)) {
+      user.refreshToken = user.refreshToken.filter((t) => t !== refreshToken);
+    } else {
+      user.refreshToken = [];
+    }
     if (fcmToken) {
       user.fcmTokens = (user.fcmTokens || []).filter((t: string) => t !== fcmToken);
     } else {
@@ -378,7 +383,7 @@ export const authService = {
 
     const user = await userModel.findById(decoded.userId);
     if (!user) throw new CustomError(400, "User not found");
-    if (user.refreshToken !== refreshToken) {
+    if (!user.refreshToken || !Array.isArray(user.refreshToken) || !user.refreshToken.includes(refreshToken)) {
       throw new CustomError(401, "Invalid refresh token");
     }
 
@@ -395,7 +400,10 @@ export const authService = {
     const accessToken = user.createAccessToken();
     const newRefreshToken = user.createRefreshToken();
     
-    user.refreshToken = newRefreshToken;
+    const currentTokens = Array.isArray(user.refreshToken)
+      ? user.refreshToken.filter((t) => t !== refreshToken)
+      : [];
+    user.refreshToken = [...currentTokens, newRefreshToken].slice(-3);
     await user.save();
 
     return { accessToken, refreshToken: newRefreshToken, rememberMe: user.rememberMe };
@@ -492,7 +500,8 @@ export const authService = {
     const accessToken = user.createAccessToken();
     const refreshToken = user.createRefreshToken();
 
-    user.refreshToken = refreshToken;
+    const currentTokens = Array.isArray(user.refreshToken) ? user.refreshToken : [];
+    user.refreshToken = [...currentTokens, refreshToken].slice(-3);
     await user.save();
 
     return { user, accessToken, refreshToken };
@@ -579,7 +588,8 @@ export const authService = {
     const accessToken = user.createAccessToken();
     const refreshToken = user.createRefreshToken();
 
-    user.refreshToken = refreshToken;
+    const currentTokens = Array.isArray(user.refreshToken) ? user.refreshToken : [];
+    user.refreshToken = [...currentTokens, refreshToken].slice(-3);
     await user.save();
 
     return { user, accessToken, refreshToken };

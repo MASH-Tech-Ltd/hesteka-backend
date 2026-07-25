@@ -121,7 +121,8 @@ export const login = asyncHandler(async (req, res) => {
 export const logout = asyncHandler(async (req: Request, res: Response) => {
   const { email } = req.user as { email: string };
   const fcmToken = req.body?.fcmToken || (req.headers["x-fcm-token"] as string);
-  await authService.logout(email, fcmToken);
+  const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken || (req.headers["x-refresh-token"] as string);
+  await authService.logout(email, fcmToken, refreshToken);
 
   res.clearCookie("refreshToken");
   res.clearCookie("accessToken");

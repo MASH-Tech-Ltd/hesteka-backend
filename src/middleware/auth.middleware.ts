@@ -42,7 +42,7 @@ export const authGuard = async (
 
     const user = await userModel
       .findById(decoded.userId)
-      .select("_id email role status lastLoginIp")
+      .select("_id email role status lastLoginIp refreshToken")
       .lean();
     if (!user) {
       throw new CustomError(401, "User not found!");
@@ -53,6 +53,15 @@ export const authGuard = async (
         403,
         `Your account is ${user.status}. Access denied.`,
       );
+    }
+
+    if (!user.refreshToken || !Array.isArray(user.refreshToken) || user.refreshToken.length === 0) {
+      throw new CustomError(401, "Session expired or logged out!");
+    }
+
+    const refreshToken = req.cookies?.refreshToken || (req.headers["x-refresh-token"] as string);
+    if (refreshToken && !user.refreshToken.includes(refreshToken)) {
+      throw new CustomError(401, "Session expired or invalid refresh token!");
     }
 
     const clientIp = getClientIp(req);
@@ -149,16 +158,24 @@ export const authGuardOptional = async (
 
     const user = await userModel
       .findById(decoded.userId)
-      .select("_id email role status")
+      .select("_id email role status refreshToken")
       .lean();
 
-    if (user && user.status === status.ACTIVE) {
-      req.user = {
-        _id: user._id,
-        email: user.email,
-        role: user.role,
-        status: user.status,
-      };
+    if (
+      user &&
+      user.status === status.ACTIVE &&
+      Array.isArray(user.refreshToken) &&
+      user.refreshToken.length > 0
+    ) {
+      const refreshToken = req.cookies?.refreshToken || (req.headers["x-refresh-token"] as string);
+      if (!refreshToken || user.refreshToken.includes(refreshToken)) {
+        req.user = {
+          _id: user._id,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+        };
+      }
     }
 
     next();

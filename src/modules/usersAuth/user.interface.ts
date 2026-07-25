@@ -62,7 +62,7 @@ export interface IUser extends Document {
   isVerified: boolean;
   verificationOtp: string | null;
   verificationOtpExpire: Date | null;
-  refreshToken: string | null;
+  refreshToken: string[];
   resetPassword: {
     otp: string | null;
     otpExpire: Date | null;
