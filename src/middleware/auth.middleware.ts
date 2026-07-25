@@ -83,7 +83,6 @@ export const authGuard = async (
     next();
   } catch (error: any) {
     if (req.originalUrl?.startsWith("/api/v1/admin") || req.originalUrl?.startsWith("/api/v1/security")) {
-      (req as any)._securityIncidentLogged = true;
       const clientIp = getClientIp(req);
       securityService.logSecurityIncident(
         clientIp,
@@ -93,6 +92,7 @@ export const authGuard = async (
         typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "",
         null
       );
+      (req as any).incidentLogged = true;
     }
     next(error);
   }
@@ -121,7 +121,6 @@ export const allowRole = (...roles: string[]) => {
       next();
     } catch (error: any) {
       if (req.originalUrl?.startsWith("/api/v1/admin") || req.originalUrl?.startsWith("/api/v1/security")) {
-        (req as any)._securityIncidentLogged = true;
         const clientIp = getClientIp(req);
         securityService.logSecurityIncident(
           clientIp,
@@ -131,6 +130,7 @@ export const allowRole = (...roles: string[]) => {
           typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "",
           req.user?._id || null
         );
+        (req as any).incidentLogged = true;
       }
       next(error);
     }

@@ -116,23 +116,24 @@ export const globalErrorHandler = (
       err = new CustomError(400, `Invalid ${castError.path}: ${castError.value}`, { field: castError.path, value: castError.value });
     }
 
-  if ((err.statusCode === 401 || err.statusCode === 403) && !(req as any)._securityIncidentLogged) {
-    const msg = err.message || "";
-    const isNormalExpiration = msg.toLowerCase().includes("expired") && !msg.toLowerCase().includes("invalid");
-    if (!isNormalExpiration) {
-      (req as any)._securityIncidentLogged = true;
-      try {
-        const clientIp = getClientIp(req);
-        securityService.logSecurityIncident(
-          clientIp,
-          req.originalUrl || req.url,
-          req.method,
-          `False/Invalid Token Attempt: ${msg || "Authentication failed"}`,
-          typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "",
-          null
-        );
-      } catch (secErr) {}
-    }
+  if (
+    !(req as any).incidentLogged &&
+    (err.statusCode === 401 ||
+      err.message.toLowerCase().includes("token") ||
+      err.message.toLowerCase().includes("session") ||
+      err.message.toLowerCase().includes("unauthorized"))
+  ) {
+    const clientIp = getClientIp(req);
+    const userAgent = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "";
+    securityService.logSecurityIncident(
+      clientIp,
+      req.originalUrl || req.url,
+      req.method,
+      `False token attempt: ${err.message}`,
+      userAgent,
+      null
+    );
+    (req as any).incidentLogged = true;
   }
 
   if (process.env.NODE_ENV === "development") {
