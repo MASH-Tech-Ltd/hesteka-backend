@@ -26,7 +26,7 @@ const config = {
     accessTokenExpires: process.env.ACCESS_TOKEN_EXPIRES ?? "15m",
 
     refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET as string,
-    refreshTokenExpires: process.env.REFRESH_TOKEN_EXPIRES ?? "7d",
+    refreshTokenExpires: process.env.REFRESH_TOKEN_EXPIRES ?? "5d",
   },
 
   mailer: {

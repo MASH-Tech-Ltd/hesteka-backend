@@ -5,13 +5,15 @@ import config from "../../config";
 import { authService } from "./auth.service";
 import CustomError from "../../helpers/CustomError";
 import { trackUserIpAndLocation } from "../../helpers/getIpLocation";
+import { notificationService } from "../notifications/notification.service";
+import { NotificationType } from "../notifications/notification.interface";
 
 const ACCESS_TOKEN_MAX_AGE = {
-  DEFAULT: 1000 * 60 * 10,
+  DEFAULT: 1000 * 60 * 15,
   REMEMBER_ME: 1000 * 60 * 60 * 24 * 3,
 } as const;
 
-const REFRESH_TOKEN_MAX_AGE = 1000 * 60 * 60 * 24 * 15;
+const REFRESH_TOKEN_MAX_AGE = 1000 * 60 * 60 * 24 * 5;
 
 const cookieOptions = (maxAge?: number): CookieOptions => ({
   httpOnly: true,
@@ -36,15 +38,13 @@ export const registration = asyncHandler(async (req, res) => {
 
 //: Register partner
 export const partnerRegistration = asyncHandler(async (req, res) => {
-  const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+  const files = req.files as
+    | { [fieldname: string]: Express.Multer.File[] }
+    | undefined;
   const logo = files?.logo?.[0];
   const partnerImage = files?.partnerImage?.[0];
 
-  const user = await authService.registerPartner(
-    req.body,
-    logo,
-    partnerImage,
-  );
+  const user = await authService.registerPartner(req.body, logo, partnerImage);
   await trackUserIpAndLocation(req, user, true);
   ApiResponse.sendSuccess(res, 201, "Partner registered successfully", {
     email: user.email,
@@ -77,12 +77,29 @@ export const login = asyncHandler(async (req, res) => {
   const { user, accessToken, refreshToken } = await authService.login(
     req.body.email,
     req.body.password,
-    req?.body?.rememberMe
+    req?.body?.rememberMe,
   );
   await trackUserIpAndLocation(req, user, false);
 
-  res.cookie("refreshToken", refreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
-  res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(req?.body?.rememberMe)));
+  if (!user.location || !user.location.coordinates || user.location.coordinates.length !== 2) {
+    await notificationService.notifySingleUser(
+      user._id.toString(),
+      "Notification Système",
+      "Veuillez activer votre localisation pour profiter de toutes les fonctionnalités.",
+      NotificationType.SYSTEM
+    );
+  }
+
+  res.cookie(
+    "refreshToken",
+    refreshToken,
+    cookieOptions(REFRESH_TOKEN_MAX_AGE),
+  );
+  res.cookie(
+    "accessToken",
+    accessToken,
+    cookieOptions(accessTokenMaxAge(req?.body?.rememberMe)),
+  );
 
   const responsePayload = {
     _id: user._id,
@@ -94,7 +111,7 @@ export const login = asyncHandler(async (req, res) => {
     accessToken,
     refreshToken,
   };
-  
+
   // console.log("[Auth Controller] Login Response:", responsePayload);
 
   ApiResponse.sendSuccess(res, 200, "Logged in", responsePayload);
@@ -103,7 +120,7 @@ export const login = asyncHandler(async (req, res) => {
 //: Logout user
 export const logout = asyncHandler(async (req: Request, res: Response) => {
   const { email } = req.user as { email: string };
-  const fcmToken = req.body?.fcmToken || req.headers["x-fcm-token"] as string;
+  const fcmToken = req.body?.fcmToken || (req.headers["x-fcm-token"] as string);
   await authService.logout(email, fcmToken);
 
   res.clearCookie("refreshToken");
@@ -129,7 +146,7 @@ export const verifyOtpForgetPassword = asyncHandler(async (req, res) => {
   const user = await authService.verifyOtp(email, otp);
   ApiResponse.sendSuccess(res, 200, "Otp is verified", {
     email: user.email,
-    token: user?.resetPassword?.token
+    token: user?.resetPassword?.token,
   });
 });
 
@@ -146,17 +163,30 @@ export const resetPassword = asyncHandler(async (req, res) => {
 
 //: generate access token
 export const generateAccessToken = asyncHandler(async (req, res) => {
-  const refreshToken =
-    req.headers?.authorization?.toString().split("Bearer ")[1];
+  const refreshToken = req.headers?.authorization
+    ?.toString()
+    .split("Bearer ")[1];
 
   if (!refreshToken) {
     throw new CustomError(401, "Refresh token not found");
   }
 
-  const { accessToken, refreshToken: newRefreshToken, rememberMe } = await authService.generateAccessToken(refreshToken);
+  const {
+    accessToken,
+    refreshToken: newRefreshToken,
+    rememberMe,
+  } = await authService.generateAccessToken(refreshToken);
 
-  res.cookie("refreshToken", newRefreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
-  res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(rememberMe)));
+  res.cookie(
+    "refreshToken",
+    newRefreshToken,
+    cookieOptions(REFRESH_TOKEN_MAX_AGE),
+  );
+  res.cookie(
+    "accessToken",
+    accessToken,
+    cookieOptions(accessTokenMaxAge(rememberMe)),
+  );
 
   ApiResponse.sendSuccess(res, 201, "New access token generated", {
     accessToken,
@@ -166,16 +196,44 @@ export const generateAccessToken = asyncHandler(async (req, res) => {
 
 //: Google Login callback/token handler
 export const googleLogin = asyncHandler(async (req, res) => {
-  const { idToken, latitude, longitude, locationAddress, city, postalCode, country, fcmToken } = req.body;
+  const {
+    idToken,
+    latitude,
+    longitude,
+    locationAddress,
+    city,
+    postalCode,
+    country,
+    fcmToken,
+  } = req.body;
   if (!idToken) throw new CustomError(400, "Google idToken is required");
-  
+
   // console.log("[Auth Controller] Google Login - Received FCM Token:", fcmToken);
 
-  const { user, accessToken, refreshToken } = await authService.googleLogin(idToken, { latitude, longitude, locationAddress, city, postalCode, country, fcmToken });
+  const { user, accessToken, refreshToken } = await authService.googleLogin(
+    idToken,
+    {
+      latitude,
+      longitude,
+      locationAddress,
+      city,
+      postalCode,
+      country,
+      fcmToken,
+    },
+  );
   await trackUserIpAndLocation(req, user, false);
 
-  res.cookie("refreshToken", refreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
-  res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(user.rememberMe)));
+  res.cookie(
+    "refreshToken",
+    refreshToken,
+    cookieOptions(REFRESH_TOKEN_MAX_AGE),
+  );
+  res.cookie(
+    "accessToken",
+    accessToken,
+    cookieOptions(accessTokenMaxAge(user.rememberMe)),
+  );
 
   const responsePayload = {
     _id: user._id,
@@ -195,16 +253,48 @@ export const googleLogin = asyncHandler(async (req, res) => {
 
 //: Apple Login handler
 export const appleLogin = asyncHandler(async (req, res) => {
-  const { idToken, firstName, lastName, latitude, longitude, locationAddress, city, postalCode, country, fcmToken } = req.body;
+  const {
+    idToken,
+    firstName,
+    lastName,
+    latitude,
+    longitude,
+    locationAddress,
+    city,
+    postalCode,
+    country,
+    fcmToken,
+  } = req.body;
   if (!idToken) throw new CustomError(400, "Apple idToken is required");
 
   // console.log("[Auth Controller] Apple Login - Received FCM Token:", fcmToken);
 
-  const { user, accessToken, refreshToken } = await authService.appleLogin(idToken, firstName, lastName, { latitude, longitude, locationAddress, city, postalCode, country, fcmToken });
+  const { user, accessToken, refreshToken } = await authService.appleLogin(
+    idToken,
+    firstName,
+    lastName,
+    {
+      latitude,
+      longitude,
+      locationAddress,
+      city,
+      postalCode,
+      country,
+      fcmToken,
+    },
+  );
   await trackUserIpAndLocation(req, user, false);
 
-  res.cookie("refreshToken", refreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
-  res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(user.rememberMe)));
+  res.cookie(
+    "refreshToken",
+    refreshToken,
+    cookieOptions(REFRESH_TOKEN_MAX_AGE),
+  );
+  res.cookie(
+    "accessToken",
+    accessToken,
+    cookieOptions(accessTokenMaxAge(user.rememberMe)),
+  );
 
   const responsePayload = {
     _id: user._id,
