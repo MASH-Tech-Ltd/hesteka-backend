@@ -213,17 +213,35 @@ export class SecurityService {
           const lowerReason = reason.toLowerCase();
           const isHighSeverity =
             lowerReason.includes("probing") ||
-            lowerReason.includes("unauthorized") ||
             lowerReason.includes("brute force") ||
             lowerReason.includes("bot attack") ||
             lowerReason.includes("malicious") ||
             lowerReason.includes("active protection");
 
-          // Auto-block if >= 3 infractions in 15m, or immediately on high severity unusual activity
-          if (incidentCount >= 3 || isHighSeverity) {
+          const isFalseTokenOrUnauthorized =
+            lowerReason.includes("unauthorized") ||
+            lowerReason.includes("false token") ||
+            lowerReason.includes("invalid token") ||
+            lowerReason.includes("invalid refresh token") ||
+            lowerReason.includes("invalid access token") ||
+            lowerReason.includes("session expired") ||
+            lowerReason.includes("access denied") ||
+            lowerReason.includes("token attempt");
+
+          // Auto-block immediately on high severity (probing, brute force, bot attack, malicious)
+          // Auto-block on >= 2 infractions in 15m for false token / unauthorized attempts
+          // Auto-block on >= 3 infractions in 15m for other repeated rate limit or unusual activity
+          const shouldBlock =
+            isHighSeverity ||
+            (isFalseTokenOrUnauthorized && incidentCount >= 3) ||
+            incidentCount >= 3;
+
+          if (shouldBlock) {
             const blockReason = isHighSeverity
               ? `[AUTO-BLOCKED] Severe Unusual Activity: ${reason}`
-              : `[AUTO-BLOCKED] Repeated Rate Limit / Unusual Activity (${incidentCount} infractions in 15m). Latest: ${reason}`;
+              : isFalseTokenOrUnauthorized
+                ? `[AUTO-BLOCKED] Repeated False Token / Unauthorized Attempts (${incidentCount} infractions in 15m). Latest: ${reason}`
+                : `[AUTO-BLOCKED] Repeated Rate Limit / Unusual Activity (${incidentCount} infractions in 15m). Latest: ${reason}`;
 
             await this.blockIp(ip, blockReason, "system", null);
 

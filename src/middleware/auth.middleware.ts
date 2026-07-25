@@ -83,6 +83,7 @@ export const authGuard = async (
     next();
   } catch (error: any) {
     if (req.originalUrl?.startsWith("/api/v1/admin") || req.originalUrl?.startsWith("/api/v1/security")) {
+      (req as any)._securityIncidentLogged = true;
       const clientIp = getClientIp(req);
       securityService.logSecurityIncident(
         clientIp,
@@ -120,6 +121,7 @@ export const allowRole = (...roles: string[]) => {
       next();
     } catch (error: any) {
       if (req.originalUrl?.startsWith("/api/v1/admin") || req.originalUrl?.startsWith("/api/v1/security")) {
+        (req as any)._securityIncidentLogged = true;
         const clientIp = getClientIp(req);
         securityService.logSecurityIncident(
           clientIp,

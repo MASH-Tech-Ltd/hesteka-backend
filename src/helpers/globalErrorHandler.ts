@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import fs from "fs";
 import CustomError from "./CustomError";
+import { securityService } from "../modules/security/security.service";
+import { getClientIp } from "./getIpLocation";
 
 const developmentError = (error: CustomError, res: Response): Response => {
   const fullStack = error.stack ? error.stack.split("\n") : [];
@@ -113,6 +115,25 @@ export const globalErrorHandler = (
       const castError = error as mongoose.Error.CastError;
       err = new CustomError(400, `Invalid ${castError.path}: ${castError.value}`, { field: castError.path, value: castError.value });
     }
+
+  if ((err.statusCode === 401 || err.statusCode === 403) && !(req as any)._securityIncidentLogged) {
+    const msg = err.message || "";
+    const isNormalExpiration = msg.toLowerCase().includes("expired") && !msg.toLowerCase().includes("invalid");
+    if (!isNormalExpiration) {
+      (req as any)._securityIncidentLogged = true;
+      try {
+        const clientIp = getClientIp(req);
+        securityService.logSecurityIncident(
+          clientIp,
+          req.originalUrl || req.url,
+          req.method,
+          `False/Invalid Token Attempt: ${msg || "Authentication failed"}`,
+          typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "",
+          null
+        );
+      } catch (secErr) {}
+    }
+  }
 
   if (process.env.NODE_ENV === "development") {
     return developmentError(err, res);
