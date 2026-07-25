@@ -243,7 +243,7 @@ export const userService = {
         .skip(skip)
         .limit(limit)
         .select(
-          "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -createdAt -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
+          "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
         ),
       userModel.countDocuments(filter),
     ]);
@@ -334,7 +334,7 @@ export const userService = {
     const userDoc = await userModel
       .findOne({ email: email })
       .select(
-        "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -createdAt -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
+        "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
       );
     if (!userDoc) throw new CustomError(400, "User not found");
 
@@ -588,7 +588,7 @@ export const userService = {
         },
       )
       .select(
-        "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -createdAt -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -isDeleted",
+        "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -isDeleted",
       );
     if (!user) throw new CustomError(400, "User not found");
     return user;
@@ -710,7 +710,7 @@ export const userService = {
         { returnDocument: "after" },
       )
       .select(
-        "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -createdAt -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -isDeleted",
+        "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -isDeleted",
       );
 
     if (!user) {
@@ -758,7 +758,7 @@ export const userService = {
         { returnDocument: "after" },
       )
       .select(
-        "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -createdAt -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -isDeleted",
+        "-password -passwordResetToken -passwordResetExpire -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -isDeleted",
       );
 
     if (!user) {
