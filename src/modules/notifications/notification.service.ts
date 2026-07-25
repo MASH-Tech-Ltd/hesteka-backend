@@ -236,11 +236,16 @@ function translatePushNotification(title: string, body: string, language: string
     [/\bSighted Dog\b/gi, 'Chien aperçu'],
     [/\bSighted Bird\b/gi, 'Oiseau aperçu'],
     [/\bSighted Other\b/gi, 'Autre animal aperçu'],
+    [/\bRecovered Cat\b/gi, 'Chat retrouvé'],
+    [/\bRecovered Dog\b/gi, 'Chien retrouvé'],
+    [/\bRecovered Bird\b/gi, 'Oiseau retrouvé'],
+    [/\bRecovered Other\b/gi, 'Autre animal retrouvé'],
     // Fallbacks just in case
     [/\bLost\b/g, 'Perdu'],
     [/\bFound\b/g, 'Trouvé'],
     [/\bRescued\b/g, 'Secouru'],
     [/\bSighted\b/g, 'Aperçu'],
+    [/\bRecovered\b/g, 'Retrouvé'],
     [/\bCat\b/g, 'Chat'],
     [/\bDog\b/g, 'Chien'],
     [/\bBird\b/g, 'Oiseau']

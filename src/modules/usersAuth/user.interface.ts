@@ -72,7 +72,17 @@ export interface IUser extends Document {
   rememberMe: boolean;
   fcmTokens: string[];
   language?: string;
-  lastLogin: Date;
+  lastLogin?: Date;
+  lastLoginIp?: string;
+  lastLoginLocation?: {
+    country?: string;
+    city?: string;
+  };
+  registrationIp?: string;
+  registrationLocation?: {
+    country?: string;
+    city?: string;
+  };
   stripeCustomerId?: string;
   blockedUsers: Types.ObjectId[]; // users blocked by this user
   description?: string;

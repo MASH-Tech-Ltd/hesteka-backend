@@ -11,34 +11,36 @@ import { paymentLimiter } from "../../middleware/rateLimiter.middleware";
 
 export const donationRoute = express.Router();
 
-// Apply payment rate limiter to all donation endpoints
-donationRoute.use(paymentLimiter);
-
 // Stripe
 donationRoute.post(
   "/stripe/initiate",
+  paymentLimiter,
   validateRequest(createStripeDonationSchema),
   donationController.initiateStripeDonation,
 );
 donationRoute.post(
   "/stripe/cancel",
+  paymentLimiter,
   donationController.cancelStripeDonation,
 );
 
 // PayPal
 donationRoute.post(
   "/paypal/initiate",
+  paymentLimiter,
   // validateRequest(createPayPalDonationSchema),
   donationController.initiatePayPalDonation,
 );
 
 donationRoute.post(
   "/paypal/cancel",
+  paymentLimiter,
   donationController.cancelPayPalDonation,
 );
 
 donationRoute.post(
   "/paypal/capture",
+  paymentLimiter,
   // validateRequest(capturePayPalDonationSchema),
   donationController.capturePayPalDonation,
 );

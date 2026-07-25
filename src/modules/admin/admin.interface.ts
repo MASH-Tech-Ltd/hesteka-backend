@@ -27,6 +27,7 @@ export interface IAdminStats {
     resolved: number;
     lost: number;
     sighted: number;
+    recovered?: number;
   };
   donations: {
     collectedThisMonth: number;

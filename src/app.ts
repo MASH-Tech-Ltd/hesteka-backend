@@ -10,7 +10,9 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import cors from "cors";
 import { notFound } from "./middleware/notFound";
-import { globalApiLimiter } from "./middleware/rateLimiter.middleware";
+import { globalApiLimiter, adminApiLimiter } from "./middleware/rateLimiter.middleware";
+import { ipBlockerMiddleware } from "./middleware/ipBlocker.middleware";
+import { syncIpCache } from "./modules/security/security.service";
 
 const app = express();
 // Required for express-rate-limit when running behind a reverse proxy
@@ -75,8 +77,8 @@ app.use(
   express.static(path.join(process.cwd(), "public", "stamps")),
 );
 
-// Apply global rate limiter to all API endpoints (skips payment webhooks automatically)
-app.use("/api/v1", globalApiLimiter, routes);
+// Apply global IP blocker and rate limiters (global & admin) to all API endpoints
+app.use("/api/v1", ipBlockerMiddleware, globalApiLimiter, adminApiLimiter, routes);
 
 // 1. Android App Links Verification
 app.get('/.well-known/assetlinks.json', (req: Request, res: Response) => {
@@ -130,4 +132,8 @@ app.use(globalErrorHandler);
 
 // Socket.IO setup
 const io = initSocket(server);
+
+// Initialize IP Block Cache on startup
+syncIpCache().catch(err => console.error("Error initializing IP block cache:", err));
+
 export { server };

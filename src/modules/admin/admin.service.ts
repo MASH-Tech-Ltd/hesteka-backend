@@ -101,7 +101,7 @@ export const adminService = {
       // Reports
       reportModel.countDocuments(),
       reportModel.countDocuments({
-        status: { $in: [ReportStatus.FOUND, ReportStatus.RESCUED] },
+        status: { $in: [ReportStatus.FOUND, ReportStatus.RESCUED, ReportStatus.RECOVERED] },
       }),
       reportModel.countDocuments({
         status: { $in: [ReportStatus.LOST, ReportStatus.SIGHTED] },
@@ -353,6 +353,7 @@ export const adminService = {
           found: breakdownObj[ReportStatus.FOUND] || 0,
           sheltered: breakdownObj[ReportStatus.RESCUED] || 0,
           injured: breakdownObj[ReportStatus.SIGHTED] || 0,
+          recovered: breakdownObj[ReportStatus.RECOVERED] || 0,
         },
         map: reportsForMap.map((r: any) => ({
           id: r._id,
@@ -542,7 +543,7 @@ export const adminService = {
     const [total, resolved, lost, sighted] = await Promise.all([
       reportModel.countDocuments(),
       reportModel.countDocuments({
-        status: { $in: [ReportStatus.FOUND, ReportStatus.RESCUED] },
+        status: { $in: [ReportStatus.FOUND, ReportStatus.RESCUED, ReportStatus.RECOVERED] },
       }),
       reportModel.countDocuments({ status: ReportStatus.LOST }),
       reportModel.countDocuments({ status: ReportStatus.SIGHTED }),

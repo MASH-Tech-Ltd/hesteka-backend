@@ -307,7 +307,7 @@ export const reportService = {
 
     // Status filter
     if (status && status !== "all") {
-      const validStatuses = ["lost", "found", "rescued", "sighted"];
+      const validStatuses = ["lost", "found", "rescued", "sighted", "recovered"];
       if (!validStatuses.includes(status as string)) {
         throw new CustomError(
           400,
@@ -525,7 +525,7 @@ export const reportService = {
 
     // Status filter
     if (status && status !== "all") {
-      const validStatuses = ["lost", "found", "rescued", "sighted"];
+      const validStatuses = ["lost", "found", "rescued", "sighted", "recovered"];
       if (!validStatuses.includes(status as string)) {
         throw new CustomError(
           400,

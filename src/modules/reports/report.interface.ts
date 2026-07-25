@@ -5,6 +5,7 @@ export enum ReportStatus {
   FOUND = "found",
   RESCUED = "rescued",
   SIGHTED = "sighted",
+  RECOVERED = "recovered",
 }
 
 export enum AnimalSpecies {

@@ -142,6 +142,26 @@ const userSchema = new Schema<IUser>(
       enum: ["en", "fr"],
       default: "fr",
     },
+    lastLogin: {
+      type: Date,
+      required: false,
+    },
+    lastLoginIp: {
+      type: String,
+      required: false,
+    },
+    lastLoginLocation: {
+      country: { type: String, required: false },
+      city: { type: String, required: false },
+    },
+    registrationIp: {
+      type: String,
+      required: false,
+    },
+    registrationLocation: {
+      country: { type: String, required: false },
+      city: { type: String, required: false },
+    },
     location: {
       type: {
         type: String,

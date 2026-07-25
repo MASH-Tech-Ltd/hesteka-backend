@@ -4,6 +4,7 @@ import ApiResponse from "../../utils/apiResponse";
 import config from "../../config";
 import { authService } from "./auth.service";
 import CustomError from "../../helpers/CustomError";
+import { trackUserIpAndLocation } from "../../helpers/getIpLocation";
 
 const ACCESS_TOKEN_MAX_AGE = {
   DEFAULT: 1000 * 60 * 10,
@@ -25,6 +26,7 @@ const accessTokenMaxAge = (rememberMe?: boolean): number =>
 //: Register user
 export const registration = asyncHandler(async (req, res) => {
   const user = await authService.registerUser(req.body);
+  await trackUserIpAndLocation(req, user, true);
   ApiResponse.sendSuccess(res, 201, "User registered successfully", {
     email: user.email,
     firstName: user.firstName,
@@ -43,6 +45,7 @@ export const partnerRegistration = asyncHandler(async (req, res) => {
     logo,
     partnerImage,
   );
+  await trackUserIpAndLocation(req, user, true);
   ApiResponse.sendSuccess(res, 201, "Partner registered successfully", {
     email: user.email,
     firstName: user.firstName,
@@ -76,6 +79,7 @@ export const login = asyncHandler(async (req, res) => {
     req.body.password,
     req?.body?.rememberMe
   );
+  await trackUserIpAndLocation(req, user, false);
 
   res.cookie("refreshToken", refreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
   res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(req?.body?.rememberMe)));
@@ -168,6 +172,7 @@ export const googleLogin = asyncHandler(async (req, res) => {
   // console.log("[Auth Controller] Google Login - Received FCM Token:", fcmToken);
 
   const { user, accessToken, refreshToken } = await authService.googleLogin(idToken, { latitude, longitude, locationAddress, city, postalCode, country, fcmToken });
+  await trackUserIpAndLocation(req, user, false);
 
   res.cookie("refreshToken", refreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
   res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(user.rememberMe)));
@@ -196,6 +201,7 @@ export const appleLogin = asyncHandler(async (req, res) => {
   // console.log("[Auth Controller] Apple Login - Received FCM Token:", fcmToken);
 
   const { user, accessToken, refreshToken } = await authService.appleLogin(idToken, firstName, lastName, { latitude, longitude, locationAddress, city, postalCode, country, fcmToken });
+  await trackUserIpAndLocation(req, user, false);
 
   res.cookie("refreshToken", refreshToken, cookieOptions(REFRESH_TOKEN_MAX_AGE));
   res.cookie("accessToken", accessToken, cookieOptions(accessTokenMaxAge(user.rememberMe)));

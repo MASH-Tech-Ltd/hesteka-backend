@@ -11,12 +11,10 @@ import { paymentLimiter } from "../../middleware/rateLimiter.middleware";
 
 export const paymentRoute = express.Router();
 
-// Apply payment rate limiter to all payment endpoints
-paymentRoute.use(paymentLimiter);
-
 // Stripe
 paymentRoute.post(
   "/stripe/create-payment-intent",
+  paymentLimiter,
   validateRequest(createStripePaymentIntentSchema),
   paymentController.createStripePaymentIntent,
 );
@@ -24,18 +22,21 @@ paymentRoute.post(
 paymentRoute.post(
   "/stripe/create-setup-intent",
   authGuard,
+  paymentLimiter,
   paymentController.createStripeSetupIntent,
 );
 
 // PayPal
 paymentRoute.post(
   "/paypal/create-order",
+  paymentLimiter,
   validateRequest(createPayPalOrderSchema),
   paymentController.createPayPalOrder,
 );
 
 paymentRoute.post(
   "/paypal/capture-order",
+  paymentLimiter,
   validateRequest(capturePayPalOrderSchema),
   paymentController.capturePayPalOrder,
 );
