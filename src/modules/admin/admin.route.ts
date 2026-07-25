@@ -16,6 +16,7 @@ import {
   getCollectionPointStats,
   getAnalytics,
   getOnlineUsers,
+  triggerBackup,
 } from "./admin.controller";
 
 const router = Router();
@@ -53,5 +54,6 @@ router.get(
 );
 
 router.get("/online-users", authGuard, allowRole("admin"), getOnlineUsers);
+router.post("/backup/trigger", authGuard, allowRole("admin"), triggerBackup);
 
 export const adminRoute = router;

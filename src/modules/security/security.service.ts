@@ -4,17 +4,17 @@ import { status } from "../usersAuth/user.interface";
 import CustomError from "../../helpers/CustomError";
 import { Types } from "mongoose";
 
-// In-memory set of blocked IPs for 0ms overhead checking in middleware
-export const ipCache = new Set<string>();
+// In-memory map of blocked IPs (IP -> expiresAt) for 0ms overhead checking in middleware
+export const ipCache = new Map<string, Date | null>();
 let isCacheInitialized = false;
 
 export const syncIpCache = async () => {
   try {
     const blocked = await blockedIpModel.find({
       $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
-    }).select("ip").lean();
+    }).select("ip expiresAt").lean();
     ipCache.clear();
-    blocked.forEach((b) => ipCache.add(b.ip));
+    blocked.forEach((b) => ipCache.set(b.ip, b.expiresAt || null));
     isCacheInitialized = true;
   } catch (err) {
     console.error("Failed to sync IP block cache:", err);
@@ -47,7 +47,7 @@ export class SecurityService {
       });
     }
 
-    ipCache.add(ip);
+    ipCache.set(ip, expiresAt);
     return { success: true, message: `IP ${ip} has been blocked successfully.` };
   }
 
@@ -296,7 +296,18 @@ export class SecurityService {
     if (!isCacheInitialized) {
       await syncIpCache();
     }
-    return ipCache.has(ip);
+    if (!ipCache.has(ip)) return false;
+
+    const expiresAt = ipCache.get(ip);
+    if (expiresAt && expiresAt < new Date()) {
+      // Temporary block has expired. Clean up from cache and DB.
+      ipCache.delete(ip);
+      blockedIpModel.deleteOne({ ip }).catch((err) =>
+        console.error("Failed to delete expired IP block from DB:", err)
+      );
+      return false;
+    }
+    return true;
   }
 }
 

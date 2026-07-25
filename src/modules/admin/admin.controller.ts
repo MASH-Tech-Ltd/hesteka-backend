@@ -3,6 +3,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import ApiResponse from "../../utils/apiResponse";
 import { adminService } from "./admin.service";
 import { getOnlineUsersCount } from "../../socket/server";
+import { runBackup } from "../../database/backup.cron";
 
 //: get global stats (Admin)
 export const getStats = asyncHandler(async (req: Request, res: Response) => {
@@ -168,6 +169,19 @@ export const getOnlineUsers = asyncHandler(
       200,
       "Online users count fetched successfully",
       { online: count },
+    );
+  },
+);
+
+//: manually trigger database backup (Admin)
+export const triggerBackup = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await runBackup();
+    ApiResponse.sendSuccess(
+      res,
+      200,
+      "Database backup completed successfully",
+      result,
     );
   },
 );

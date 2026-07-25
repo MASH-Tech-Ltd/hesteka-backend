@@ -10,6 +10,7 @@ import { connectDatabase } from "./database/db";
 import config from "./config/index";
 import { server } from "./app";
 import { initFirebase } from "./utils/firebase";
+import { startBackupCron } from "./database/backup.cron";
 import 'dotenv/config';
 
 const PORT = config.port ? Number(config.port) : 8000;
@@ -17,6 +18,7 @@ const PORT = config.port ? Number(config.port) : 8000;
 connectDatabase()
   .then(() => {
     initFirebase();
+    startBackupCron();
     server.listen(PORT, () => {
       console.log(chalk.green(`Server running at http://localhost:${PORT}`));
     });

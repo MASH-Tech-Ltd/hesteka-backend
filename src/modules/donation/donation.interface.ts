@@ -21,7 +21,7 @@ export interface IDonation extends Document {
   isCompanyDonation: boolean | null;
   companyInfo?: IDonationCompanyInfo | null;
   referenceId?: string;
-  status: "pending" | "completed" | "cancelled";
+  status: "pending" | "completed" | "cancelled" | "PENDING" | "COMPLETED" | "CANCELLED";
   receiptId: string;
   transactionId?: string;
   createdAt: Date;

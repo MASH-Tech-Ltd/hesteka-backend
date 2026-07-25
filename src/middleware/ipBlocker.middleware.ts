@@ -29,19 +29,8 @@ export const ipBlockerMiddleware = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    let clientIp = "unknown";
-    if (req.ip && typeof req.ip === "string") {
-      clientIp = req.ip;
-    } else if (req.headers["x-forwarded-for"]) {
-      const xff = req.headers["x-forwarded-for"];
-      if (Array.isArray(xff)) {
-        clientIp = xff[0]?.trim() || "unknown";
-      } else if (typeof xff === "string") {
-        clientIp = xff.split(",")[0]?.trim() || "unknown";
-      }
-    } else if (req.socket && req.socket.remoteAddress) {
-      clientIp = req.socket.remoteAddress;
-    }
+    const ip = req?.ip || req?.headers?.["x-real-ip"] || req?.headers?.["x-forwarded-for"] || req?.socket?.remoteAddress || "unknown";
+    const clientIp = (Array.isArray(ip) ? ip[0] : (typeof ip === "string" ? ip.split(",")[0] : ""))?.trim() || "unknown";
 
     const isBlocked = await securityService.isIpBlocked(clientIp);
     if (isBlocked) {

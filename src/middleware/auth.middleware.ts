@@ -6,7 +6,7 @@ import { userModel } from "../modules/usersAuth/user.models";
 import { Types } from "mongoose";
 import { status } from "../modules/usersAuth/user.interface";
 import { securityService } from "../modules/security/security.service";
-import { getIpLocation } from "../helpers/getIpLocation";
+import { getIpLocation, getClientIp } from "../helpers/getIpLocation";
 // import { redisTokenService } from "../helpers/redisTokenService";
 
 interface TokenPayload extends JwtPayload {
@@ -55,8 +55,7 @@ export const authGuard = async (
       );
     }
 
-    const ip = req.ip || req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown";
-    const clientIp = (Array.isArray(ip) ? ip[0] : (typeof ip === "string" ? ip.split(",")[0] : ""))?.trim() || "unknown";
+    const clientIp = getClientIp(req);
     if (clientIp !== "unknown" && (user as any).lastLoginIp !== clientIp) {
       const loc = getIpLocation(req, clientIp);
       userModel.updateOne(
@@ -75,8 +74,7 @@ export const authGuard = async (
     next();
   } catch (error: any) {
     if (req.originalUrl?.startsWith("/api/v1/admin") || req.originalUrl?.startsWith("/api/v1/security")) {
-      const ip = req.ip || req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown";
-      const clientIp = (Array.isArray(ip) ? ip[0] : ip.toString().split(",")[0])?.trim() || "unknown";
+      const clientIp = getClientIp(req);
       securityService.logSecurityIncident(
         clientIp,
         req.originalUrl || req.url,
@@ -113,8 +111,7 @@ export const allowRole = (...roles: string[]) => {
       next();
     } catch (error: any) {
       if (req.originalUrl?.startsWith("/api/v1/admin") || req.originalUrl?.startsWith("/api/v1/security")) {
-        const ip = req.ip || req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown";
-        const clientIp = (Array.isArray(ip) ? ip[0] : ip.toString().split(",")[0])?.trim() || "unknown";
+        const clientIp = getClientIp(req);
         securityService.logSecurityIncident(
           clientIp,
           req.originalUrl || req.url,

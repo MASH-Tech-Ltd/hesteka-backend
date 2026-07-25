@@ -12,6 +12,7 @@ const config = {
   adminEmails: process.env.ADMIN_EMAILS?.split(",") || [],
   /* ================= Database ================= */
   mongoUri: process.env.MONGO_URI as string,
+  backupMongoUri: process.env.BACKUP_MONGO_URI as string,
 
   /* ================= Security ================= */
   bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS) || 10,

@@ -9,13 +9,22 @@ export interface IpLocation {
   timezone?: string | undefined;
 }
 
+export const getClientIp = (req: Request | any): string => {
+  const ip = req?.headers?.["x-forwarded-for"] || req?.headers?.["x-real-ip"] || req?.ip || req?.socket?.remoteAddress || "unknown";
+  let clientIp = (Array.isArray(ip) ? ip[0] : (typeof ip === "string" ? ip.split(",")[0] : ""))?.trim() || "unknown";
+  
+  if (clientIp.startsWith("::ffff:")) {
+    clientIp = clientIp.replace("::ffff:", "");
+  }
+  if (clientIp === "::1") {
+    clientIp = "127.0.0.1";
+  }
+  return clientIp;
+};
+
 export const getIpLocation = (req: Request | any, clientIp?: string): IpLocation => {
   try {
-    let ipToLookup = clientIp;
-    if (!ipToLookup) {
-      const ip = req?.ip || req?.headers?.["x-real-ip"] || req?.headers?.["x-forwarded-for"] || req?.socket?.remoteAddress || "unknown";
-      ipToLookup = (Array.isArray(ip) ? ip[0] : (typeof ip === "string" ? ip.split(",")[0] : ""))?.trim() || "unknown";
-    }
+    let ipToLookup = clientIp || getClientIp(req);
 
     // 1. Check Cloudflare / Vercel Edge Headers first (Instant & 0ms)
     const cfCountry = (req?.headers?.["cf-ipcountry"] || req?.headers?.["x-vercel-ip-country"]) as string;
@@ -60,8 +69,7 @@ export const getIpLocation = (req: Request | any, clientIp?: string): IpLocation
 export const trackUserIpAndLocation = async (req: any, user: any, isRegistration: boolean = false): Promise<void> => {
   try {
     if (!user || !user.save) return;
-    const clientIp = req?.ip || req?.headers?.["x-real-ip"] || req?.headers?.["x-forwarded-for"] || req?.socket?.remoteAddress || "unknown";
-    const ipStr = (Array.isArray(clientIp) ? clientIp[0] : (typeof clientIp === "string" ? clientIp.split(",")[0] : ""))?.trim() || "unknown";
+    const ipStr = getClientIp(req);
     const loc = getIpLocation(req, ipStr);
 
     user.lastLogin = new Date();
