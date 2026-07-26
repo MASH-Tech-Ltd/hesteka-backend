@@ -739,7 +739,7 @@ export const localMissionService = {
         {
           status: LocalMissionParticipationStatus.REJECTED,
         },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .populate("user", "firstName lastName email profileImage pointsBalance");
 

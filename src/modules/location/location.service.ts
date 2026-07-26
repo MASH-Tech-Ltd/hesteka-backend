@@ -44,7 +44,7 @@ class LocationService {
       await locationCacheModel.findOneAndUpdate(
         { key },
         { $set: { data, expiresAt } },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
     } catch (e) {
       console.error("[LocationService] Database cache write error:", e);
@@ -708,7 +708,7 @@ class LocationService {
       await locationApiUsageModel.findOneAndUpdate(
         { date: today, apiType, provider, source },
         { $inc: { count: 1 } },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
     } catch (e) {
       console.error("[LocationService] Database API tracking error:", e);
