@@ -3,6 +3,7 @@ import { userModel } from "../usersAuth/user.models";
 import { status } from "../usersAuth/user.interface";
 import CustomError from "../../helpers/CustomError";
 import { Types } from "mongoose";
+import config from "../../config";
 
 export class SecurityService {
   async blockIp(
@@ -188,7 +189,9 @@ export class SecurityService {
     if (reqHeaders) {
       const explicit = reqHeaders["x-requested-from"] || reqHeaders["x-app-client"] || reqHeaders["x-client-type"];
       if (explicit && typeof explicit === "string") {
-        return explicit.trim().toLowerCase();
+        const val = explicit.trim().toLowerCase();
+        if (val === "user" || val === "web/user" || val === "web/charity") return "web/payment";
+        return val;
       }
       if (reqHeaders["x-admin-dashboard"] === "true" || reqHeaders["x-admin-dashboard"] === "admin") {
         return "web/admin";
@@ -196,16 +199,59 @@ export class SecurityService {
       if (reqHeaders["x-partner-dashboard"] === "true" || reqHeaders["x-partner-dashboard"] === "partner") {
         return "web/partner";
       }
-      const origin = reqHeaders.origin || "";
-      const referer = reqHeaders.referer || "";
-      if (origin.includes("admin.hesteka.com") || referer.includes("admin.hesteka.com")) {
+      if (reqHeaders["x-payment-dashboard"] === "true" || reqHeaders["x-payment-dashboard"] === "payment") {
+        return "web/payment";
+      }
+
+      const origin = (reqHeaders.origin || "").toLowerCase();
+      const referer = (reqHeaders.referer || "").toLowerCase();
+      const host = (reqHeaders.host || "").toLowerCase();
+      const combined = `${origin} ${referer} ${host}`;
+      const isDev = config.env === "development";
+
+      if (combined.includes("admin.hesteka.com") || (isDev && (combined.includes("5173") || combined.includes("3001") || combined.includes("4173")))) {
         return "web/admin";
       }
-      if (origin.includes("partner.hesteka.com") || referer.includes("partner.hesteka.com")) {
+      if (combined.includes("partner.hesteka.com") || (isDev && (combined.includes("3000") || combined.includes("5174")))) {
         return "web/partner";
       }
-      if (origin.includes("charity.hesteka.com") || referer.includes("charity.hesteka.com")) {
-        return "web/charity";
+      if (combined.includes("charity.hesteka.com") || (config?.frontendUrl && combined.includes(config.frontendUrl.toLowerCase())) || (isDev && (combined.includes("5175") || combined.includes("3002") || combined.includes("127.0.0.1")))) {
+        return "web/payment";
+      }
+    }
+
+    if (endpoint && typeof endpoint === "string") {
+      const lowerEp = endpoint.toLowerCase();
+      if (
+        lowerEp.includes("/admin/") ||
+        lowerEp.includes("/admin-auth/") ||
+        lowerEp.includes("/security/") ||
+        lowerEp.includes("/blocked-ips") ||
+        lowerEp.includes("/blocked-users") ||
+        lowerEp.includes("/toggle-block-user") ||
+        lowerEp.includes("/dashboard/")
+      ) {
+        return "web/admin";
+      }
+      if (
+        lowerEp.includes("/partner/") ||
+        lowerEp.includes("/partner-auth/") ||
+        lowerEp.includes("/missions/partner/") ||
+        lowerEp.includes("/partner-ads/") ||
+        lowerEp.includes("/local-missions/") ||
+        lowerEp.includes("/donation-proofs/partner/")
+      ) {
+        return "web/partner";
+      }
+      if (
+        lowerEp.includes("/payment/") ||
+        lowerEp.includes("/payments/") ||
+        lowerEp.includes("/donation/") ||
+        lowerEp.includes("/donations/") ||
+        lowerEp.includes("/stripe") ||
+        lowerEp.includes("/paypal")
+      ) {
+        return "web/payment";
       }
     }
 
@@ -243,40 +289,25 @@ export class SecurityService {
         lowerUA.includes("cfnetwork") ||
         lowerUA.includes("okhttp") ||
         lowerUA.includes("expo") ||
-        lowerUA.includes("react-native")
+        lowerUA.includes("react-native") ||
+        lowerUA.includes("android") ||
+        lowerUA.includes("iphone") ||
+        lowerUA.includes("ipad") ||
+        lowerUA.includes("mobile")
       ) {
         return "mobile app";
       }
-    }
 
-    if (endpoint && typeof endpoint === "string") {
-      const lowerEp = endpoint.toLowerCase();
+      // If it's a browser (Chrome/Safari/Firefox/Edge) and hasn't matched admin/partner above,
+      // default browser traffic to web/payment (since payment is the public-facing web app, not web/user)
       if (
-        lowerEp.includes("/admin/") ||
-        lowerEp.includes("/admin-auth/") ||
-        lowerEp.includes("/security/") ||
-        lowerEp.includes("/blocked-ips") ||
-        lowerEp.includes("/blocked-users") ||
-        lowerEp.includes("/toggle-block-user")
+        lowerUA.includes("mozilla") ||
+        lowerUA.includes("chrome") ||
+        lowerUA.includes("safari") ||
+        lowerUA.includes("firefox") ||
+        lowerUA.includes("edge")
       ) {
-        return "web/admin";
-      }
-      if (
-        lowerEp.includes("/partner/") ||
-        lowerEp.includes("/partner-auth/") ||
-        lowerEp.includes("/missions/partner/")
-      ) {
-        return "web/partner";
-      }
-    }
-
-    if (userAgent && typeof userAgent === "string") {
-      const lowerUA = userAgent.toLowerCase();
-      if (lowerUA.includes("android") || lowerUA.includes("iphone") || lowerUA.includes("ipad") || lowerUA.includes("mobile")) {
-        return "mobile app";
-      }
-      if (lowerUA.includes("mozilla") || lowerUA.includes("chrome") || lowerUA.includes("safari") || lowerUA.includes("firefox") || lowerUA.includes("edge")) {
-        return "web/user";
+        return "web/payment";
       }
     }
 
