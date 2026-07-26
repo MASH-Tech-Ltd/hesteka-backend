@@ -1,3 +1,4 @@
+import { Request } from "express";
 import mongoose from "mongoose";
 import { userModel } from "../usersAuth/user.models";
 import { reportModel } from "../reports/report.models";
@@ -750,5 +751,125 @@ export const adminService = {
         },
       ],
     };
+  },
+
+  async getMissionsWithCoordinates(req: Request) {
+    const {
+      search,
+      company,
+      from,
+      to,
+      status = "all",
+      region,
+      department,
+    } = req.query;
+
+    const filter: any = {
+      "location.coordinates.1": { $exists: true },
+    };
+
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+
+    if (region && typeof region === "string" && region.trim()) {
+      filter.region = region.trim();
+    }
+
+    if (department && typeof department === "string" && department.trim()) {
+      filter.department = department.trim();
+    }
+
+    const companyQuery =
+      typeof company === "string" && company.trim()
+        ? company.trim()
+        : undefined;
+
+    if (companyQuery) {
+      const partners = await userModel
+        .find({
+          role: UserRole.PARTNERS,
+          company: { $regex: companyQuery, $options: "i" },
+        })
+        .select("_id")
+        .lean();
+      filter.partner = { $in: partners.map((partner) => partner._id) };
+    }
+
+    if (search) {
+      const searchRegex = new RegExp(search as string, "i");
+      filter.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+        { address: searchRegex },
+        { duration: searchRegex },
+      ];
+    }
+
+    if (from || to) {
+      const isValidDate = (date: any) => {
+        const parsedDate = new Date(date);
+        return !Number.isNaN(parsedDate.getTime());
+      };
+
+      if (from && !isValidDate(from)) {
+        throw new CustomError(
+          400,
+          "Invalid 'from' date. Format must be YYYY-MM-DD or ISO",
+        );
+      }
+
+      if (to && !isValidDate(to)) {
+        throw new CustomError(
+          400,
+          "Invalid 'to' date. Format must be YYYY-MM-DD or ISO",
+        );
+      }
+
+      if (from && to && new Date(from as string) > new Date(to as string)) {
+        throw new CustomError(
+          400,
+          "'from' date cannot be greater than 'to' date",
+        );
+      }
+
+      filter.createdAt = {};
+
+      if (from) {
+        const fromDate = new Date(from as string);
+        fromDate.setHours(0, 0, 0, 0);
+        filter.createdAt.$gte = fromDate;
+      }
+
+      if (to) {
+        const toDate = new Date(to as string);
+        toDate.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = toDate;
+      }
+    }
+
+    const partnerPopulate = "firstName lastName email profileImage company";
+    const missionsRaw = await localMissionModel
+      .find(filter)
+      .populate("partner", partnerPopulate)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const missions = await Promise.all(
+      missionsRaw.map(async (mission) => {
+        const participantsCount =
+          await localMissionParticipationModel.countDocuments({
+            mission: mission._id,
+          });
+        const pendingRequestsCount =
+          await localMissionParticipationModel.countDocuments({
+            mission: mission._id,
+            status: "pending",
+          });
+        return { ...mission, participantsCount, pendingRequestsCount };
+      }),
+    );
+
+    return missions;
   },
 };

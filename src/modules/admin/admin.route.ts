@@ -17,6 +17,7 @@ import {
   getAnalytics,
   getOnlineUsers,
   triggerBackup,
+  getMissionsWithCoordinates,
 } from "./admin.controller";
 
 const router = Router();
@@ -55,5 +56,18 @@ router.get(
 
 router.get("/online-users", authGuard, allowRole("admin"), getOnlineUsers);
 router.post("/backup/trigger", authGuard, allowRole("admin"), triggerBackup);
+
+router.get(
+  "/missions/coordinates",
+  authGuard,
+  allowRole("admin"),
+  getMissionsWithCoordinates,
+);
+router.get(
+  "/local-missions/coordinates",
+  authGuard,
+  allowRole("admin"),
+  getMissionsWithCoordinates,
+);
 
 export const adminRoute = router;

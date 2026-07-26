@@ -185,3 +185,16 @@ export const triggerBackup = asyncHandler(
     );
   },
 );
+
+//: get missions with coordinates (Admin)
+export const getMissionsWithCoordinates = asyncHandler(
+  async (req: Request, res: Response) => {
+    const missions = await adminService.getMissionsWithCoordinates(req);
+    ApiResponse.sendSuccess(
+      res,
+      200,
+      "Local missions with coordinates fetched successfully",
+      missions,
+    );
+  },
+);
