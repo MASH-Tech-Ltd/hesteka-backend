@@ -252,8 +252,8 @@ export class SecurityService {
             });
           }
 
-          // Auto-block if >= 7 infractions for false token attempts, >= 3 for general rate limit infractions, or immediately on high severity
-          if ((isFalseTokenAttempt && incidentCount >= 7) || (!isFalseTokenAttempt && (incidentCount >= 3 || isHighSeverity))) {
+          // Auto-block if >= 20 infractions for false token attempts, >= 15 for general rate limit infractions, or immediately on high severity
+          if ((isFalseTokenAttempt && incidentCount >= 20) || (!isFalseTokenAttempt && (incidentCount >= 15 || isHighSeverity))) {
             const blockReason = isHighSeverity
               ? `[AUTO-BLOCKED] Severe Unusual Activity: ${reason}`
               : isFalseTokenAttempt

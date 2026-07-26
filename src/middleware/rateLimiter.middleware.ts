@@ -152,6 +152,12 @@ export const authLimiter = rateLimiter(
     "Too many authentication attempts from this IP. Please try again after 15 minutes."
 );
 
+export const accessTokenLimiter = rateLimiter(
+    15,
+    15,
+    "Too many access token generation attempts from this IP. Please try again after 15 minutes."
+);
+
 export const otpLimiter = rateLimiter(
     15,
     5,

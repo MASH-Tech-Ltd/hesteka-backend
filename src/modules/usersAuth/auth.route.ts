@@ -26,7 +26,7 @@ import {
   verifyAccountSchema,
   verifyOtpSchema,
 } from "./auth.validation";
-import { rateLimiter, authLimiter, otpLimiter, passwordLimiter } from "../../middleware/rateLimiter.middleware";
+import { rateLimiter, authLimiter, otpLimiter, passwordLimiter, accessTokenLimiter } from "../../middleware/rateLimiter.middleware";
 
 const router = Router();
 
@@ -94,6 +94,6 @@ router.post(
 );
 
 //re generate access token
-router.post("/generate-access-token", authLimiter, generateAccessToken);
+router.post("/generate-access-token", accessTokenLimiter, generateAccessToken);
 
 export const authRoute = router;
