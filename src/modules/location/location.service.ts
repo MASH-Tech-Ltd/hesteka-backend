@@ -1,7 +1,7 @@
 import axios from "axios";
 import config from "../../config";
 import CustomError from "../../helpers/CustomError";
-import { locationCacheModel } from "./location.models";
+import { locationCacheModel, locationApiUsageModel } from "./location.models";
 import {
   AutocompletePrediction,
   PlaceDetails,
@@ -101,13 +101,17 @@ class LocationService {
    * TTL: 15 minutes (900 seconds)
    */
   async autocomplete(query: AutocompleteQuery): Promise<AutocompletePrediction[]> {
+    const isOsm = this.isOsmProvider();
+    const providerStr = isOsm ? "osm" : "google";
+    this.trackUsage("autocomplete", providerStr);
+
     if (!query.input || query.input.trim() === "") {
       return [];
     }
 
     const inputClean = query.input.trim();
     const lang = query.language || "fr";
-    const providerPrefix = this.isOsmProvider() ? "osm" : "gcp";
+    const providerPrefix = isOsm ? "osm" : "gcp";
 
     // Normalize cache key without sessionToken so identical searches share cache across users
     const cacheKey = `ac:${providerPrefix}:${JSON.stringify({
@@ -352,12 +356,16 @@ class LocationService {
    * TTL: 7 days (604800 seconds)
    */
   async getPlaceDetails(query: PlaceDetailsQuery): Promise<PlaceDetails> {
+    const isOsm = this.isOsmProvider();
+    const providerStr = isOsm ? "osm" : "google";
+    this.trackUsage("details", providerStr);
+
     if (!query.placeId || query.placeId.trim() === "") {
       throw new CustomError(400, "placeId is required");
     }
 
     const lang = query.language || "fr";
-    const providerPrefix = this.isOsmProvider() ? "osm" : "gcp";
+    const providerPrefix = isOsm ? "osm" : "gcp";
     const cacheKey = `pd:${providerPrefix}:${query.placeId.trim()}:${lang}`;
 
     const cached = await this.getFromCache<PlaceDetails>(cacheKey);
@@ -423,7 +431,8 @@ class LocationService {
     } else {
       // GOOGLE PLACES DETAILS
       const apiKey = this.getApiKey();
-      const fields = "place_id,name,formatted_address,geometry,address_components,types";
+      // Using Field Masking to request only name and location (geometry) to avoid extra credit charges
+      const fields = "place_id,name,geometry";
       const params: Record<string, any> = {
         place_id: query.placeId.trim(),
         key: apiKey,
@@ -443,12 +452,12 @@ class LocationService {
 
         if (data.status === "OK" && data.result) {
           const result: PlaceDetails = {
-            place_id: data.result.place_id,
+            place_id: data.result.place_id || query.placeId.trim(),
             name: data.result.name,
-            formatted_address: data.result.formatted_address,
+            formatted_address: data.result.formatted_address || data.result.name || "",
             geometry: data.result.geometry,
-            address_components: data.result.address_components,
-            types: data.result.types,
+            address_components: data.result.address_components || [],
+            types: data.result.types || ["geocode"],
           };
           await this.setToCache(cacheKey, result, 604800);
 
@@ -480,8 +489,12 @@ class LocationService {
    * TTL: 7 days (604800 seconds)
    */
   async geocode(query: GeocodeQuery): Promise<GeocodeResult[]> {
+    const isOsm = this.isOsmProvider();
+    const providerStr = isOsm ? "osm" : "google";
+    this.trackUsage("geocode", providerStr);
+
     const lang = query.language || "fr";
-    const providerPrefix = this.isOsmProvider() ? "osm" : "gcp";
+    const providerPrefix = isOsm ? "osm" : "gcp";
     let cacheKey = "";
 
     if (query.lat !== undefined && query.lng !== undefined) {
@@ -680,6 +693,33 @@ class LocationService {
 
   async clearAllSavedLocations() {
     return await locationCacheModel.deleteMany({});
+  }
+
+  /**
+   * Track API usage counts for metrics/dashboard.
+   */
+  async trackUsage(apiType: string, provider: string, source: string = "backend"): Promise<void> {
+    try {
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      
+      // Lazily drop old index to allow new compound index to function without MongoServerError
+      await locationApiUsageModel.collection.dropIndex("date_1_apiType_1_provider_1").catch(() => {});
+      
+      await locationApiUsageModel.findOneAndUpdate(
+        { date: today, apiType, provider, source },
+        { $inc: { count: 1 } },
+        { upsert: true, new: true }
+      );
+    } catch (e) {
+      console.error("[LocationService] Database API tracking error:", e);
+    }
+  }
+
+  /**
+   * Get location API usage stats for dashboard.
+   */
+  async getUsageStats() {
+    return await locationApiUsageModel.find().sort({ date: -1, apiType: 1 }).lean();
   }
 }
 

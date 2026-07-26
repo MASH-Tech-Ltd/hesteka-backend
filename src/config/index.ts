@@ -43,7 +43,7 @@ const config = {
   },
 
   /* ================= Location / Geocoding Provider ================= */
-  locationProvider: process.env.LOCATION_PROVIDER || "osm", // "osm" (OpenStreetMap Nominatim - Free) or "google" (Google Places - Paid)
+  locationProvider: "osm", // "osm" (OpenStreetMap Nominatim - Free) - Forced to OSM
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY || "",
 
   //password reset token

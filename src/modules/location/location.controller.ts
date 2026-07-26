@@ -74,3 +74,21 @@ export const clearSavedLocationsController = asyncHandler(async (req: Request, r
   await locationService.clearAllSavedLocations();
   ApiResponse.sendSuccess(res, 200, "All saved locations cleared successfully");
 });
+
+export const trackLocationUsageController = asyncHandler(async (req: Request, res: Response) => {
+  const type = (req.body?.type || req.query?.type) as string;
+  const provider = (req.body?.provider || req.query?.provider) as string;
+  const source = (req.body?.source || req.query?.source) as string || "unknown";
+  
+  if (!type) {
+    return ApiResponse.sendError(res, 400, "Tracking type is required");
+  }
+  
+  await locationService.trackUsage(type, provider || "client", source);
+  ApiResponse.sendSuccess(res, 200, "Usage tracked successfully");
+});
+
+export const getLocationStatsController = asyncHandler(async (req: Request, res: Response) => {
+  const stats = await locationService.getUsageStats();
+  ApiResponse.sendSuccess(res, 200, "Location stats fetched successfully", stats);
+});
