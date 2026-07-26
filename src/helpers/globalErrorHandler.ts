@@ -125,13 +125,16 @@ export const globalErrorHandler = (
   ) {
     const clientIp = getClientIp(req);
     const userAgent = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "";
+    const requestedFrom = securityService.detectRequestedFrom(req.originalUrl || req.url, userAgent, req.headers);
     securityService.logSecurityIncident(
       clientIp,
       req.originalUrl || req.url,
       req.method,
       `False token attempt: ${err.message}`,
       userAgent,
-      null
+      null,
+      false,
+      requestedFrom
     );
     (req as any).incidentLogged = true;
   }

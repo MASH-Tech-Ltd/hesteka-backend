@@ -42,6 +42,10 @@ const config = {
     appleServiceId: process.env.APPLE_SERVICE_ID, // Service ID for Android/Web (if different from Bundle ID)
   },
 
+  /* ================= Location / Geocoding Provider ================= */
+  locationProvider: process.env.LOCATION_PROVIDER || "osm", // "osm" (OpenStreetMap Nominatim - Free) or "google" (Google Places - Paid)
+  googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY || "",
+
   //password reset token
   passwordResetTokenSecret: process.env.PASSWORD_RESET_TOKEN_SECRET as string,
   passwordResetTokenExpire: process.env.PASSWORD_RESET_TOKEN_EXPIRE ?? "10m",

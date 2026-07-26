@@ -84,13 +84,17 @@ export const authGuard = async (
   } catch (error: any) {
     if (req.originalUrl?.startsWith("/api/v1/admin") || req.originalUrl?.startsWith("/api/v1/security")) {
       const clientIp = getClientIp(req);
+      const userAgentStr = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "";
+      const requestedFrom = securityService.detectRequestedFrom(req.originalUrl || req.url, userAgentStr, req.headers);
       securityService.logSecurityIncident(
         clientIp,
         req.originalUrl || req.url,
         req.method,
         `Unauthorized Admin/Security endpoint access attempt: ${error?.message || "Authentication failed"}`,
-        typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "",
-        null
+        userAgentStr,
+        null,
+        false,
+        requestedFrom
       );
       (req as any).incidentLogged = true;
     }

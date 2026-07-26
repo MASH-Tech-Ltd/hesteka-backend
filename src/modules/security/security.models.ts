@@ -58,6 +58,10 @@ const securityLogSchema = new Schema<ISecurityLog>(
       ref: "User",
       default: null,
     },
+    requestedFrom: {
+      type: String,
+      default: "",
+    },
     resetStrike: {
       type: Boolean,
       default: false,

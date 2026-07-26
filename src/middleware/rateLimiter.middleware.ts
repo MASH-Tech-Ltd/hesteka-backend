@@ -31,6 +31,7 @@ const logRateLimitIncident = (req: any, reason: string) => {
 
     // Skip auto-blocking for Admin dashboard requests or Admin users
     const skipAutoBlock = isAdminDashboardRequest(req) || req.user?.role === "admin";
+    const requestedFrom = securityService.detectRequestedFrom(req.originalUrl || req.url, userAgent, req.headers);
 
     securityService.logSecurityIncident(
         clientIp,
@@ -39,7 +40,8 @@ const logRateLimitIncident = (req: any, reason: string) => {
         reason,
         userAgent,
         userId,
-        skipAutoBlock
+        skipAutoBlock,
+        requestedFrom
     );
 };
 
@@ -180,4 +182,10 @@ export const paymentLimiter = rateLimiter(
     15,
     15,
     "Too many payment requests from this IP. Please try again after 15 minutes."
+);
+
+export const locationLimiter = rateLimiter(
+    15,
+    60,
+    "Too many location search requests from this IP. Please try again after 15 minutes."
 );

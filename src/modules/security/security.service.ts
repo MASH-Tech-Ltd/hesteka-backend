@@ -169,6 +169,7 @@ export class SecurityService {
         method: "POST",
         reason: `User account blocked by Admin. Reason: ${reason}`,
         userId: user._id,
+        requestedFrom: "web/admin",
       });
     }
 
@@ -183,6 +184,105 @@ export class SecurityService {
     };
   }
 
+  detectRequestedFrom(endpoint = "", userAgent = "", reqHeaders: any = null): string {
+    if (reqHeaders) {
+      const explicit = reqHeaders["x-requested-from"] || reqHeaders["x-app-client"] || reqHeaders["x-client-type"];
+      if (explicit && typeof explicit === "string") {
+        return explicit.trim().toLowerCase();
+      }
+      if (reqHeaders["x-admin-dashboard"] === "true" || reqHeaders["x-admin-dashboard"] === "admin") {
+        return "web/admin";
+      }
+      if (reqHeaders["x-partner-dashboard"] === "true" || reqHeaders["x-partner-dashboard"] === "partner") {
+        return "web/partner";
+      }
+      const origin = reqHeaders.origin || "";
+      const referer = reqHeaders.referer || "";
+      if (origin.includes("admin.hesteka.com") || referer.includes("admin.hesteka.com")) {
+        return "web/admin";
+      }
+      if (origin.includes("partner.hesteka.com") || referer.includes("partner.hesteka.com")) {
+        return "web/partner";
+      }
+      if (origin.includes("charity.hesteka.com") || referer.includes("charity.hesteka.com")) {
+        return "web/charity";
+      }
+    }
+
+    if (userAgent && typeof userAgent === "string") {
+      const lowerUA = userAgent.toLowerCase();
+      
+      // CLI / API Tools / Scripts
+      if (lowerUA.includes("curl")) {
+        return "curl";
+      }
+      if (lowerUA.includes("postman") || lowerUA.includes("postmanruntime")) {
+        return "postman";
+      }
+      if (lowerUA.includes("insomnia")) {
+        return "insomnia";
+      }
+      if (
+        lowerUA.includes("wget") ||
+        lowerUA.includes("httpie") ||
+        lowerUA.includes("python-requests") ||
+        lowerUA.includes("python-urllib") ||
+        lowerUA.includes("go-http-client") ||
+        lowerUA.includes("node-fetch") ||
+        lowerUA.includes("axios")
+      ) {
+        return "script / tool";
+      }
+
+      // Native App frameworks / clients
+      if (
+        lowerUA.includes("dart/") ||
+        lowerUA.includes("dart:io") ||
+        lowerUA.includes("flutter") ||
+        lowerUA.includes("dalvik") ||
+        lowerUA.includes("cfnetwork") ||
+        lowerUA.includes("okhttp") ||
+        lowerUA.includes("expo") ||
+        lowerUA.includes("react-native")
+      ) {
+        return "mobile app";
+      }
+    }
+
+    if (endpoint && typeof endpoint === "string") {
+      const lowerEp = endpoint.toLowerCase();
+      if (
+        lowerEp.includes("/admin/") ||
+        lowerEp.includes("/admin-auth/") ||
+        lowerEp.includes("/security/") ||
+        lowerEp.includes("/blocked-ips") ||
+        lowerEp.includes("/blocked-users") ||
+        lowerEp.includes("/toggle-block-user")
+      ) {
+        return "web/admin";
+      }
+      if (
+        lowerEp.includes("/partner/") ||
+        lowerEp.includes("/partner-auth/") ||
+        lowerEp.includes("/missions/partner/")
+      ) {
+        return "web/partner";
+      }
+    }
+
+    if (userAgent && typeof userAgent === "string") {
+      const lowerUA = userAgent.toLowerCase();
+      if (lowerUA.includes("android") || lowerUA.includes("iphone") || lowerUA.includes("ipad") || lowerUA.includes("mobile")) {
+        return "mobile app";
+      }
+      if (lowerUA.includes("mozilla") || lowerUA.includes("chrome") || lowerUA.includes("safari") || lowerUA.includes("firefox") || lowerUA.includes("edge")) {
+        return "web/user";
+      }
+    }
+
+    return "unknown";
+  }
+
   async logSecurityIncident(
     ip: string,
     endpoint: string,
@@ -191,8 +291,10 @@ export class SecurityService {
     userAgent = "",
     userId: any = null,
     skipAutoBlock = false,
+    requestedFrom = "",
   ) {
     try {
+      const detectedSource = requestedFrom || this.detectRequestedFrom(endpoint, userAgent, null);
       await securityLogModel.create({
         ip,
         endpoint,
@@ -200,6 +302,7 @@ export class SecurityService {
         userAgent,
         reason,
         userId,
+        requestedFrom: detectedSource,
       });
 
       // Automatic Protection: Auto-block external IPs on repeated unusual activity or rate limit abuse
@@ -233,7 +336,11 @@ export class SecurityService {
               lowerReason.includes("brute force") ||
               lowerReason.includes("bot attack") ||
               lowerReason.includes("malicious") ||
-              lowerReason.includes("active protection")
+              lowerReason.includes("active protection") ||
+              lowerReason.includes("api tool") ||
+              lowerReason.includes("script detected") ||
+              lowerReason.includes("postman") ||
+              lowerReason.includes("curl")
             );
 
           let incidentCount = 0;
@@ -285,6 +392,7 @@ export class SecurityService {
               userAgent,
               reason: `🚨 ACTIVE PROTECTION: IP automatically blocked.${accountBlockedMessage} ${blockReason}`,
               userId,
+              requestedFrom: requestedFrom || "system",
             });
           }
         }
@@ -302,6 +410,7 @@ export class SecurityService {
         { ip: { $regex: search, $options: "i" } },
         { endpoint: { $regex: search, $options: "i" } },
         { reason: { $regex: search, $options: "i" } },
+        { requestedFrom: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -316,8 +425,13 @@ export class SecurityService {
       securityLogModel.countDocuments(query),
     ]);
 
+    const formattedData = data.map((log: any) => ({
+      ...log,
+      requestedFrom: log.requestedFrom || this.detectRequestedFrom(log.endpoint, log.userAgent, null),
+    }));
+
     return {
-      data,
+      data: formattedData,
       pagination: {
         total,
         page,

@@ -31,6 +31,7 @@ import { supportMessageRoute } from "../modules/supportMessages/supportMessage.r
 import { friendRoute } from "../modules/friends/friend.routes";
 import { supportLinkRoute } from "../modules/supportLink/supportLink.route";
 import securityRoute from "../modules/security/security.routes";
+import { locationRoute } from "../modules/location/location.route";
 
 router.use("/user", userRoute);
 router.use("/auth", authRoute);
@@ -64,5 +65,6 @@ router.use("/support-messages", supportMessageRoute);
 router.use("/friends", friendRoute);
 router.use("/support-link", supportLinkRoute);
 router.use("/security", securityRoute);
+router.use("/location", locationRoute);
 
 export default router;

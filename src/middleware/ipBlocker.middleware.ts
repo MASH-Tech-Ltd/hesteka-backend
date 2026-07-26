@@ -48,14 +48,17 @@ export const ipBlockerMiddleware = async (
           }
         } catch (e) {}
 
+        const userAgentStr = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "";
+        const requestedFrom = securityService.detectRequestedFrom(req.originalUrl || req.url, userAgentStr, req.headers);
         await securityService.logSecurityIncident(
           clientIp,
           req.originalUrl || req.url,
           req.method,
           "Access denied. Attempt from blocked IP rejected.",
-          typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "",
+          userAgentStr,
           userId,
-          true
+          true,
+          requestedFrom
         );
       }
 
@@ -65,21 +68,36 @@ export const ipBlockerMiddleware = async (
       );
     }
 
-    // Active Protection: Detect unusual IP probing / bot attack signatures
+    // Active Protection: Detect unusual IP probing / bot attack signatures or unauthorized script/tool attempts
     const urlPath = req.originalUrl || req.url || "";
     const isProbingAttack = suspiciousProbingPatterns.some((pattern) => pattern.test(urlPath));
-    if (isProbingAttack) {
+    const userAgentStr = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "";
+    const requestedFrom = securityService.detectRequestedFrom(urlPath, userAgentStr, req.headers);
+    const isScriptOrTool =
+      requestedFrom === "curl" ||
+      requestedFrom === "postman" ||
+      requestedFrom === "insomnia" ||
+      requestedFrom === "script / tool";
+
+    if (isProbingAttack || isScriptOrTool) {
+      const reasonMsg = isProbingAttack
+        ? `🚨 ACTIVE PROTECTION: Malicious Probing / Bot Attack detected (${urlPath})`
+        : `🚨 ACTIVE PROTECTION: Unauthorized API Tool / Script detected (${userAgentStr || requestedFrom})`;
       await securityService.logSecurityIncident(
         clientIp,
         urlPath,
         req.method,
-        `🚨 ACTIVE PROTECTION: Malicious Probing / Bot Attack detected (${urlPath})`,
-        typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "",
-        null
+        reasonMsg,
+        userAgentStr,
+        null,
+        false,
+        requestedFrom
       );
       throw new CustomError(
         403,
-        "Access denied. Unusual activity and vulnerability probing detected from your IP address.",
+        isProbingAttack
+          ? "Access denied. Unusual activity and vulnerability probing detected from your IP address."
+          : "Access denied. Automated scripts and API testing tools (Postman, cURL, scripts) are blocked from accessing this server.",
       );
     }
 
