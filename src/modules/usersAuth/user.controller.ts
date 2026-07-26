@@ -15,9 +15,13 @@ export const getalluser = asyncHandler(async (req, res) => {
 //: get all user locations for map
 export const getAllLocations = asyncHandler(async (req, res) => {
   const users = await userService.getAllLocations();
-  ApiResponse.sendSuccess(res, 200, "User locations fetched successfully", users);
+  ApiResponse.sendSuccess(
+    res,
+    200,
+    "User locations fetched successfully",
+    users,
+  );
 });
-
 
 //: get unique locations
 export const getUniqueLocations = asyncHandler(async (req, res) => {
@@ -42,7 +46,12 @@ export const getmyprofile = asyncHandler(async (req, res) => {
 //: get partner stats
 export const getPartnerStats = asyncHandler(async (req, res) => {
   const stats = await userService.getPartnerStats(req);
-  ApiResponse.sendSuccess(res, 200, "Partner stats fetched successfully", stats);
+  ApiResponse.sendSuccess(
+    res,
+    200,
+    "Partner stats fetched successfully",
+    stats,
+  );
 });
 
 //: update user also profile image
@@ -145,17 +154,20 @@ export const updateLanguage = asyncHandler(
 );
 
 //: get language
-export const getLanguage = asyncHandler(
-  async (req: Request, res: Response) => {
-    const language = await userService.getLanguage(req);
-    ApiResponse.sendSuccess(res, 200, "Language fetched successfully", { language });
-  },
-);
+export const getLanguage = asyncHandler(async (req: Request, res: Response) => {
+  const language = await userService.getLanguage(req);
+  ApiResponse.sendSuccess(res, 200, "Language fetched successfully", {
+    language,
+  });
+});
 
 //: update fcm token
 export const updateFcmToken = asyncHandler(
   async (req: Request, res: Response) => {
-    console.log("[User Controller] Update FCM Token - Received Payload:", req.body);
+    console.log(
+      "[User Controller] Update FCM Token - Received Payload:",
+      req.body,
+    );
     await userService.updateFcmToken(req);
     ApiResponse.sendSuccess(res, 200, "FCM Token registered successfully");
   },

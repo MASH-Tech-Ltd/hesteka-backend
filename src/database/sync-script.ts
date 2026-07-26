@@ -37,3 +37,6 @@ const runManualSync = async () => {
 };
 
 runManualSync();
+
+// npx ts-node --transpile-only src/database/sync-script.ts
+
