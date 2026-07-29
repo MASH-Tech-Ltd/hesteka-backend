@@ -194,7 +194,7 @@ export const reportService = {
           NotificationType.NEW_REPORT,
           lat,
           lng,
-          15,
+          undefined,
           { reportId: newReport._id.toString() },
         )
         .catch((err) => console.error("Notification Error:", err));
@@ -206,7 +206,7 @@ export const reportService = {
           NotificationType.NEW_REPORT,
           undefined,
           undefined,
-          15,
+          undefined,
           { reportId: newReport._id.toString() },
         )
         .catch((err) => console.error("Notification Error:", err));

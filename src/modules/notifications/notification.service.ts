@@ -375,10 +375,17 @@ export const notificationService = {
     return result.deletedCount > 0;
   },
 
-  async notifyUsersNearby(title: string, body: string, type: NotificationType, lat?: number, lng?: number, radiusKm: number = 15, data?: Record<string, any>) {
+  async notifyUsersNearby(title: string, body: string, type: NotificationType, lat?: number, lng?: number, radiusKm?: number, data?: Record<string, any>) {
     try {
       const settings = await settingsModel.findOne();
-      const actualRadius = settings?.alertRadius || 5;
+      let actualRadius = radiusKm || 50;
+      
+      if (type === NotificationType.NEW_REPORT) {
+        actualRadius = settings?.reportRadius ?? 50;
+      } else if (type === NotificationType.NEW_MISSION) {
+        actualRadius = settings?.localMissionRadius ?? 50;
+      }
+
 
       let filter: any = { status: "active" };
 

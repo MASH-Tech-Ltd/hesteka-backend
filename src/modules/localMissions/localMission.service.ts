@@ -131,7 +131,7 @@ export const localMissionService = {
             NotificationType.NEW_MISSION,
             lat,
             lng,
-            20,
+            undefined,
             {
               missionId: mission._id.toString(),
               latitude: String(lat),

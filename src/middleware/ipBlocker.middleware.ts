@@ -97,7 +97,7 @@ export const ipBlockerMiddleware = async (
         403,
         isProbingAttack
           ? "Access denied. Unusual activity and vulnerability probing detected from your IP address."
-          : "Access denied. Automated scripts and API testing tools (Postman, cURL, scripts) are blocked from accessing this server.",
+          : "Access denied. Fuck You cause You are trying to get access.",
       );
     }
 
