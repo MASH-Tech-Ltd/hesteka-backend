@@ -27,6 +27,7 @@ const config = {
 
     refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET as string,
     refreshTokenExpires: process.env.REFRESH_TOKEN_EXPIRES ?? "5d",
+    oauthRefreshTokenExpires: process.env.OAUTH_REFRESH_TOKEN_EXPIRES ?? "90d",
   },
 
   mailer: {

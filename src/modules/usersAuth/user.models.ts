@@ -289,11 +289,16 @@ userSchema.methods.createAccessToken = function () {
 };
 
 userSchema.methods.createRefreshToken = function () {
+  const isOAuth = this.provider === 'google' || this.provider === 'apple';
+  const expiresIn = isOAuth 
+    ? config.jwt.oauthRefreshTokenExpires 
+    : config.jwt.refreshTokenExpires;
+
   return jwt.sign(
     { userId: this._id },
     config.jwt.refreshTokenSecret as string,
     {
-      expiresIn: config.jwt.refreshTokenExpires as any,
+      expiresIn: expiresIn as any,
     },
   );
 };
