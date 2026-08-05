@@ -10,6 +10,7 @@ const settingsSchema = new Schema(
       twitter: { type: String, default: "" },
     },
     maintenanceMode: { type: Boolean, default: false },
+    devMode: { type: Boolean, default: false },
     reportRadius: { type: Number, default: 50 },
     localMissionRadius: { type: Number, default: 50 },
   },

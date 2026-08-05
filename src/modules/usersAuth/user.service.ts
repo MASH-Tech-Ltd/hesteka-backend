@@ -106,6 +106,7 @@ export const userService = {
       region,
       department,
       partnerType,
+      provider: providerParam,
       sort,
       sortBy,
       page: pagebody,
@@ -167,6 +168,10 @@ export const userService = {
 
     if (partnerType && partnerType !== "all") {
       filter.partnerType = partnerType;
+    }
+
+    if (providerParam && providerParam !== "all") {
+      filter.provider = providerParam;
     }
 
     if (from || to) {
@@ -243,7 +248,7 @@ export const userService = {
         .skip(skip)
         .limit(limit)
         .select(
-          "-password -resetPassword -fcmTokens -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
+          "-password -resetPassword -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
         ),
       userModel.countDocuments(filter),
     ]);
