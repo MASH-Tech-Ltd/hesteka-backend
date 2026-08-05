@@ -107,6 +107,7 @@ export const userService = {
       department,
       partnerType,
       provider: providerParam,
+      fcm: fcmParam,
       sort,
       sortBy,
       page: pagebody,
@@ -172,6 +173,17 @@ export const userService = {
 
     if (providerParam && providerParam !== "all") {
       filter.provider = providerParam;
+    }
+
+    if (fcmParam && fcmParam !== "all") {
+      if (fcmParam === "yes") {
+        filter.fcmTokens = { $exists: true, $not: { $size: 0 } };
+      } else if (fcmParam === "no") {
+        filter.$or = [
+          { fcmTokens: { $exists: false } },
+          { fcmTokens: { $size: 0 } }
+        ];
+      }
     }
 
     if (from || to) {
