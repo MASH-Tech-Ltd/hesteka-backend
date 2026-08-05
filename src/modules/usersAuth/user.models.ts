@@ -281,18 +281,20 @@ userSchema.methods.createAccessToken = function () {
       expiresIn:
         config.env === "development"
           ? "1d"
-          : this.rememberMe
-            ? "3d"
-            : (config.jwt.accessTokenExpires as any),
+          : (config.jwt.accessTokenExpires as any),
     },
   );
 };
 
 userSchema.methods.createRefreshToken = function () {
   const isOAuth = this.provider === 'google' || this.provider === 'apple';
-  const expiresIn = isOAuth 
-    ? config.jwt.oauthRefreshTokenExpires 
-    : config.jwt.refreshTokenExpires;
+  let expiresIn = config.jwt.refreshTokenExpires;
+  
+  if (isOAuth) {
+    expiresIn = config.jwt.oauthRefreshTokenExpires;
+  } else if (this.rememberMe) {
+    expiresIn = "15d";
+  }
 
   return jwt.sign(
     { userId: this._id },

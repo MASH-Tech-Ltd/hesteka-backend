@@ -398,15 +398,15 @@ export const authService = {
     }
 
     const accessToken = user.createAccessToken();
-    const newRefreshToken = user.createRefreshToken();
+    // const newRefreshToken = user.createRefreshToken();
     
-    const currentTokens = Array.isArray(user.refreshToken)
-      ? user.refreshToken.filter((t) => t !== refreshToken)
-      : [];
-    user.refreshToken = [...currentTokens, newRefreshToken].slice(-3);
-    await user.save();
+    // const currentTokens = Array.isArray(user.refreshToken)
+    //   ? user.refreshToken.filter((t) => t !== refreshToken)
+    //   : [];
+    // user.refreshToken = [...currentTokens, newRefreshToken].slice(-3);
+    // await user.save();
 
-    return { accessToken, refreshToken: newRefreshToken, rememberMe: user.rememberMe };
+    return { accessToken, refreshToken, rememberMe: user.rememberMe, user };
   },
 
   //google login — Firebase Auth token verification

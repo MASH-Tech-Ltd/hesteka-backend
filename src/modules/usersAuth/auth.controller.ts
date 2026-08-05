@@ -8,12 +8,20 @@ import { trackUserIpAndLocation } from "../../helpers/getIpLocation";
 import { notificationService } from "../notifications/notification.service";
 import { NotificationType } from "../notifications/notification.interface";
 
-const ACCESS_TOKEN_MAX_AGE = {
-  DEFAULT: 1000 * 60 * 15,
-  REMEMBER_ME: 1000 * 60 * 60 * 24 * 3,
+const ACCESS_TOKEN_MAX_AGE = 1000 * 60 * 15;
+
+const REFRESH_TOKEN_MAX_AGE = {
+  DEFAULT: 1000 * 60 * 60 * 24 * 5, // 5 days
+  REMEMBER_ME: 1000 * 60 * 60 * 24 * 15, // 15 days
+  OAUTH: 1000 * 60 * 60 * 24 * 90, // 90 days
 } as const;
 
-const REFRESH_TOKEN_MAX_AGE = 1000 * 60 * 60 * 24 * 5;
+const refreshTokenMaxAge = (user: any): number => {
+  const isOAuth = user?.provider === 'google' || user?.provider === 'apple';
+  if (isOAuth) return REFRESH_TOKEN_MAX_AGE.OAUTH;
+  if (user?.rememberMe) return REFRESH_TOKEN_MAX_AGE.REMEMBER_ME;
+  return REFRESH_TOKEN_MAX_AGE.DEFAULT;
+};
 
 const cookieOptions = (maxAge?: number): CookieOptions => ({
   httpOnly: true,
@@ -21,9 +29,6 @@ const cookieOptions = (maxAge?: number): CookieOptions => ({
   secure: config.env !== "development",
   ...(maxAge ? { maxAge } : {}),
 });
-
-const accessTokenMaxAge = (rememberMe?: boolean): number =>
-  rememberMe ? ACCESS_TOKEN_MAX_AGE.REMEMBER_ME : ACCESS_TOKEN_MAX_AGE.DEFAULT;
 
 //: Register user
 export const registration = asyncHandler(async (req, res) => {
@@ -93,12 +98,12 @@ export const login = asyncHandler(async (req, res) => {
   res.cookie(
     "refreshToken",
     refreshToken,
-    cookieOptions(REFRESH_TOKEN_MAX_AGE),
+    cookieOptions(refreshTokenMaxAge(user)),
   );
   res.cookie(
     "accessToken",
     accessToken,
-    cookieOptions(accessTokenMaxAge(req?.body?.rememberMe)),
+    cookieOptions(ACCESS_TOKEN_MAX_AGE),
   );
 
   const responsePayload = {
@@ -174,24 +179,24 @@ export const generateAccessToken = asyncHandler(async (req, res) => {
 
   const {
     accessToken,
-    refreshToken: newRefreshToken,
-    rememberMe,
+    refreshToken: returnedRefreshToken,
+    user,
   } = await authService.generateAccessToken(refreshToken);
 
-  res.cookie(
-    "refreshToken",
-    newRefreshToken,
-    cookieOptions(REFRESH_TOKEN_MAX_AGE),
-  );
+  // res.cookie(
+  //   "refreshToken",
+  //   returnedRefreshToken,
+  //   cookieOptions(refreshTokenMaxAge(user)), // Now we pass the user object, which includes provider and rememberMe
+  // );
   res.cookie(
     "accessToken",
     accessToken,
-    cookieOptions(accessTokenMaxAge(rememberMe)),
+    cookieOptions(ACCESS_TOKEN_MAX_AGE),
   );
 
   ApiResponse.sendSuccess(res, 201, "New access token generated", {
     accessToken,
-    refreshToken: newRefreshToken,
+    refreshToken: returnedRefreshToken,
   });
 });
 
@@ -228,12 +233,12 @@ export const googleLogin = asyncHandler(async (req, res) => {
   res.cookie(
     "refreshToken",
     refreshToken,
-    cookieOptions(REFRESH_TOKEN_MAX_AGE),
+    cookieOptions(refreshTokenMaxAge(user)),
   );
   res.cookie(
     "accessToken",
     accessToken,
-    cookieOptions(accessTokenMaxAge(user.rememberMe)),
+    cookieOptions(ACCESS_TOKEN_MAX_AGE),
   );
 
   const responsePayload = {
@@ -289,12 +294,12 @@ export const appleLogin = asyncHandler(async (req, res) => {
   res.cookie(
     "refreshToken",
     refreshToken,
-    cookieOptions(REFRESH_TOKEN_MAX_AGE),
+    cookieOptions(refreshTokenMaxAge(user)),
   );
   res.cookie(
     "accessToken",
     accessToken,
-    cookieOptions(accessTokenMaxAge(user.rememberMe)),
+    cookieOptions(ACCESS_TOKEN_MAX_AGE),
   );
 
   const responsePayload = {
