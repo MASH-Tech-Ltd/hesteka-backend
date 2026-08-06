@@ -82,7 +82,7 @@ export const ipBlockerMiddleware = async (
     if (isProbingAttack || isScriptOrTool) {
       const reasonMsg = isProbingAttack
         ? `🚨 ACTIVE PROTECTION: Malicious Probing / Bot Attack detected (${urlPath})`
-        : `🚨 ACTIVE PROTECTION: Unauthorized API Tool / Script detected (${userAgentStr || requestedFrom})`;
+        : `🚨 ACTIVE PROTECTION: Disallowed API Tool / Script detected (${userAgentStr || requestedFrom})`;
       await securityService.logSecurityIncident(
         clientIp,
         urlPath,

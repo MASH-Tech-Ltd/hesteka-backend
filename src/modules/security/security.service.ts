@@ -275,7 +275,18 @@ export class SecurityService {
         lowerUA.includes("python-urllib") ||
         lowerUA.includes("go-http-client") ||
         lowerUA.includes("node-fetch") ||
-        lowerUA.includes("axios")
+        lowerUA.includes("axios") ||
+        lowerUA.includes("scrapy") ||
+        lowerUA.includes("spider") ||
+        lowerUA.includes("crawler") ||
+        lowerUA.includes("headless") ||
+        lowerUA.includes("puppeteer") ||
+        lowerUA.includes("phantomjs") ||
+        lowerUA.includes("guzzlehttp") ||
+        lowerUA.includes("apache-httpclient") ||
+        lowerUA.includes("ruby") ||
+        lowerUA.includes("libwww-perl") ||
+        lowerUA.includes("bot")
       ) {
         return "script / tool";
       }
