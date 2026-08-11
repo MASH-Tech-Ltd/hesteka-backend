@@ -88,8 +88,32 @@ app.use(
 
 // Security middlewares
 app.use(helmet());
-app.use(mongoSanitize());
-app.use(xss());
+// Fix for express-mongo-sanitize with Express 5
+app.use((req: Request, res: Response, next: NextFunction) => {
+  ['body', 'params', 'headers', 'query'].forEach((key) => {
+    if (req[key as keyof Request]) {
+      mongoSanitize.sanitize(req[key as keyof Request]);
+    }
+  });
+  next();
+});
+
+// Fix for xss-clean with Express 5
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const clean = require("xss-clean/lib/xss").clean;
+  if (req.body) req.body = clean(req.body);
+  if (req.params) {
+    const cleanParams = clean(req.params);
+    Object.keys(req.params).forEach(key => delete req.params[key]);
+    Object.assign(req.params, cleanParams);
+  }
+  if (req.query) {
+    const cleanQuery = clean(req.query);
+    Object.keys(req.query).forEach(key => delete (req.query as any)[key]);
+    Object.assign(req.query, cleanQuery);
+  }
+  next();
+});
 app.use(hpp());
 
 // Apply global IP blocker and rate limiters (global & admin) to all API endpoints
