@@ -1,4 +1,5 @@
-import admin from 'firebase-admin';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
 import config from '../config';
 
 export const initFirebase = () => {
@@ -8,9 +9,9 @@ export const initFirebase = () => {
   }
 
   try {
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
+    if (!getApps().length) {
+      initializeApp({
+        credential: cert({
           projectId: config.firebase.projectId,
           clientEmail: config.firebase.clientEmail,
           privateKey: config.firebase.privateKey,
@@ -24,7 +25,7 @@ export const initFirebase = () => {
 };
 
 export const sendPushNotification = async (tokens: string[], title: string, body: string, data?: any) => {
-  if (!admin.apps.length) return; // Silent abort if not initialized
+  if (!getApps().length) return; // Silent abort if not initialized
   if (!tokens || tokens.length === 0) return;
 
   // Deduplicate tokens to avoid sending the same notification twice
@@ -71,7 +72,7 @@ export const sendPushNotification = async (tokens: string[], title: string, body
       tokens: uniqueTokens,
     };
 
-    const response = await admin.messaging().sendEachForMulticast(payload);
+    const response = await getMessaging().sendEachForMulticast(payload);
 
     console.log(`[FCM] Sent to ${uniqueTokens.length} token(s). Success: ${response.successCount}, Failed: ${response.failureCount}`);
 

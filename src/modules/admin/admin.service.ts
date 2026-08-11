@@ -23,8 +23,10 @@ import CustomError from "../../helpers/CustomError";
 import { paymentModel } from "../payment/payment.models";
 import { localMissionModel } from "../localMissions/localMission.models";
 import { localMissionParticipationModel } from "../localMissions/localMissionParticipation.models";
+import { LocalMissionStatus } from "../localMissions/localMission.interface";
+import { PartnerAdType } from "../partnerAds/partnerAd.interface";
+import { RedemptionStatus } from "../rewards/reward.interface";
 import {
-  LocalMissionStatus,
   LocalMissionParticipationStatus,
 } from "../localMissions/localMission.interface";
 import { partnerAdModel } from "../partnerAds/partnerAd.models";
@@ -219,7 +221,7 @@ export const adminService = {
 
       // Missions
       localMissionModel.countDocuments(),
-      localMissionModel.countDocuments({ status: "active" }),
+      localMissionModel.countDocuments({ status: LocalMissionStatus.ACTIVE }),
 
       // Activity Feed Data
       reportModel
@@ -269,7 +271,7 @@ export const adminService = {
 
       // Support Messages
       SupportMessageModel.countDocuments({
-        status: { $in: [SupportMessageStatus.PENDING, "pending", "PENDING"] },
+        status: SupportMessageStatus.PENDING,
       }),
 
       // Config
@@ -530,7 +532,7 @@ export const adminService = {
       await Promise.all([
         userModel.countDocuments(),
         userModel.countDocuments({ status: UserStatus.ACTIVE }),
-        userModel.countDocuments({ status: { $in: ["blocked", "banned"] } }),
+        userModel.countDocuments({ status: { $in: [UserStatus.BLOCKED, UserStatus.BANNED] } }),
         userModel.countDocuments({ createdAt: { $gte: startOfMonth } }),
         userModel.countDocuments({
           role: UserRole.PARTNERS,
@@ -660,14 +662,14 @@ export const adminService = {
       await Promise.all([
         rewardItemModel.countDocuments(),
         redemptionModel.countDocuments(),
-        redemptionModel.countDocuments({ status: "pending" }),
+        redemptionModel.countDocuments({ status: RedemptionStatus.PENDING }),
       ]);
     return { totalItems, totalRedemptions, pendingRedemptions };
   },
 
   async getCollectionPointStats() {
     const total = await partnerAdModel.countDocuments({
-      type: "collection_point",
+      type: PartnerAdType.COLLECTION_POINT,
     });
     return { total };
   },
@@ -864,7 +866,7 @@ export const adminService = {
         const pendingRequestsCount =
           await localMissionParticipationModel.countDocuments({
             mission: mission._id,
-            status: "pending",
+            status: LocalMissionParticipationStatus.PENDING,
           });
         return { ...mission, participantsCount, pendingRequestsCount };
       }),

@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { notificationModel } from "./notification.models";
 import { userModel } from "../usersAuth/user.models";
+import { role, status } from "../usersAuth/user.interface";
 import { NotificationType } from "./notification.interface";
 import { sendPushNotification } from "../../utils/firebase";
 import { getIo } from "../../socket/server";
@@ -653,7 +654,7 @@ export const notificationService = {
 
   async notifyAdmins(title: string, body: string, type: NotificationType) {
     try {
-      const admins = await userModel.find({ role: "admin", status: "active" }).select("_id fcmTokens firstName lastName email language");
+      const admins = await userModel.find({ role: role.ADMIN, status: status.ACTIVE }).select("_id fcmTokens firstName lastName email language");
       if (!admins.length) return;
 
       const notificationsToSave = admins.map(admin => ({

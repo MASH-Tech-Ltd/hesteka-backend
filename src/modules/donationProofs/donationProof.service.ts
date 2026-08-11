@@ -1,4 +1,6 @@
 import { Request } from "express";
+import { Types } from "mongoose";
+import { PartnerAdType } from "../partnerAds/partnerAd.interface";
 import CustomError from "../../helpers/CustomError";
 import { uploadCloudinary } from "../../helpers/cloudinary";
 import { paginationHelper } from "../../utils/pagination";
@@ -162,7 +164,7 @@ export const donationProofService = {
     const { page, limit, skip } = paginationHelper(pagebody as string, limitbody as string);
 
     // 1. Find all collection points belonging to this partner
-    const partnerAds = await partnerAdModel.find({ partner: userId, type: "collection_point" }).lean();
+    const partnerAds = await partnerAdModel.find({ partner: userId, type: PartnerAdType.COLLECTION_POINT }).lean();
     const collectionPointIds = partnerAds.map(ad => ad._id);
 
     const filter: any = { collectionPoint: { $in: collectionPointIds } };
@@ -586,7 +588,7 @@ export const donationProofService = {
     if (!userId) throw new CustomError(401, "access denied or session expired ,please login again ");
 
 
-    const partnerAds = await partnerAdModel.find({ partner: userId, type: "collection_point" }).lean();
+    const partnerAds = await partnerAdModel.find({ partner: userId, type: PartnerAdType.COLLECTION_POINT }).lean();
     const collectionPointIds = partnerAds.map(ad => ad._id);
     const matchPartner = { collectionPoint: { $in: collectionPointIds } };
 

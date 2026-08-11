@@ -68,7 +68,7 @@ const normalizeLocation = (location: unknown) => {
   if (Number.isNaN(lat) || Number.isNaN(lng)) return undefined;
 
   return {
-    type: "Point",
+    type: "Point" as const,
     coordinates: [lng, lat] as [number, number],
   };
 };
@@ -86,8 +86,9 @@ export const localMissionService = {
 
     try {
       const location = normalizeLocation(data.location);
+      const { notifyAllFrance, ...missionData } = data;
       const mission = await localMissionModel.create({
-        ...data,
+        ...missionData,
         ...(location ? { location } : {}),
         partner: partner._id.toString(),
         ...(photo ? { photo } : {}),
@@ -315,7 +316,7 @@ export const localMissionService = {
         });
         const pendingRequestsCount = await localMissionParticipationModel.countDocuments({
           mission: mission._id,
-          status: "pending", // from LocalMissionParticipationStatus.PENDING
+          status: LocalMissionParticipationStatus.PENDING,
         });
         return { ...mission, participantsCount, pendingRequestsCount };
       })

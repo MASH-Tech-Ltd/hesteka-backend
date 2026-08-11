@@ -11,7 +11,7 @@ import { emailValidator } from "../../helpers/emailValidator";
 import { generateOTP } from "../../utils/otpGenerator";
 import { mailer } from "../../helpers/nodeMailer";
 import { verificationOtpEmailTemplate, forgotPasswordOtpEmailTemplate } from "../../tempaletes/auth.templates";
-import admin from "firebase-admin";
+import { getAuth, DecodedIdToken } from "firebase-admin/auth";
 import { pointTransactionModel } from "../points/point.models";
 import { PointTransactionType, PointTransactionSource } from "../points/point.interface";
 
@@ -411,9 +411,9 @@ export const authService = {
 
   //google login — Firebase Auth token verification
   async googleLogin(idToken: string, extraData?: any) {
-    let decoded: admin.auth.DecodedIdToken;
+    let decoded: DecodedIdToken;
     try {
-      decoded = await admin.auth().verifyIdToken(idToken);
+      decoded = await getAuth().verifyIdToken(idToken);
     } catch (error: any) {
       console.error("[Auth] Firebase Google token verification failed:", error.message);
       throw new CustomError(401, "Invalid Google token");
@@ -509,10 +509,10 @@ export const authService = {
 
   //apple login — Firebase Auth token verification
   async appleLogin(idToken: string, firstName?: string, lastName?: string, extraData?: any) {
-    let decoded: admin.auth.DecodedIdToken;
+    let decoded: DecodedIdToken;
 
     try {
-      decoded = await admin.auth().verifyIdToken(idToken);
+      decoded = await getAuth().verifyIdToken(idToken);
     } catch (error: any) {
       console.error("[Auth] Firebase Apple token verification failed:", error.message);
       throw new CustomError(401, "Invalid Apple token");

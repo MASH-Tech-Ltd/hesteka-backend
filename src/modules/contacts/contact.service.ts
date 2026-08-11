@@ -2,7 +2,7 @@ import { Request } from "express";
 import CustomError from "../../helpers/CustomError";
 import { deleteCloudinary, uploadCloudinary } from "../../helpers/cloudinary";
 import { paginationHelper } from "../../utils/pagination";
-import { ContactStatus, ContactType, CreateContactPayload, UpdateContactPayload } from "./contact.interface";
+import { ContactStatus, ContactType, CreateContactPayload, UpdateContactPayload, CreationMethod } from "./contact.interface";
 import { contactModel } from "./contact.models";
 import { userModel } from "../usersAuth/user.models";
 import { role } from "../usersAuth/user.interface";
@@ -76,7 +76,7 @@ export const contactService = {
     try {
       return await contactModel.create({
         ...rest,
-        creationMethod: "manual", // Explicitly set to manual
+        creationMethod: CreationMethod.MANUAL, // Explicitly set to manual
         ...(photo ? { photo } : {}),
         ...(location ? { location } : {}),
       });

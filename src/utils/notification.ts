@@ -1,4 +1,5 @@
 import { userModel } from "../modules/usersAuth/user.models";
+import { status } from "../modules/usersAuth/user.interface";
 // import { getIo } from "../socket/server";
 
 export enum NotificationType {
@@ -7,7 +8,7 @@ export enum NotificationType {
 
 export const notifyAllUsers = async (title: string, description: string, type: NotificationType = NotificationType.SYSTEM) => {
   try {
-    const users = await userModel.find({ status: "active" }).select("_id");
+    const users = await userModel.find({ status: status.ACTIVE }).select("_id");
     // Socket notifications are disabled for now.
     // const io = getIo();
 

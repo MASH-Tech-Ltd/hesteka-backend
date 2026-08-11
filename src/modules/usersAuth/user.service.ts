@@ -33,12 +33,14 @@ import { donationModel } from "../donation/donation.models";
 import { donationProofModel } from "../donationProofs/donationProof.models";
 import { myanimalModel } from "../myanimal/myanimal.models";
 import { SupportMessageModel } from "../supportMessages/supportMessage.models";
+import { LocalMissionStatus, LocalMissionParticipationStatus } from "../localMissions/localMission.interface";
+import { PartnerAdStatus } from "../partnerAds/partnerAd.interface";
 
 export const userService = {
   // get unique cities for targeting
   async getUniqueCities() {
     const cities = await userModel.distinct("city", {
-      status: "active",
+      status: status.ACTIVE,
       city: { $nin: [null, ""] },
     });
     return cities;
@@ -429,10 +431,10 @@ export const userService = {
       localMissionModel.countDocuments({ partner: partnerId }),
       localMissionModel.countDocuments({
         partner: partnerId,
-        status: "active",
+        status: LocalMissionStatus.ACTIVE,
       }),
       partnerAdModel.countDocuments({ partner: partnerId }),
-      partnerAdModel.countDocuments({ partner: partnerId, status: "active" }),
+      partnerAdModel.countDocuments({ partner: partnerId, status: PartnerAdStatus.ACTIVE }),
     ]);
 
     const missions = await localMissionModel
@@ -446,7 +448,7 @@ export const userService = {
       }),
       localMissionParticipationModel.countDocuments({
         mission: { $in: missionIds },
-        status: "completed",
+        status: LocalMissionParticipationStatus.COMPLETED,
       }),
     ]);
 
