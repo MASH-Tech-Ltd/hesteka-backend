@@ -12,6 +12,10 @@ import cors from "cors";
 import { notFound } from "./middleware/notFound";
 import { globalApiLimiter, adminApiLimiter } from "./middleware/rateLimiter.middleware";
 import { ipBlockerMiddleware } from "./middleware/ipBlocker.middleware";
+import helmet from "helmet";
+import mongoSanitize from "express-mongo-sanitize";
+import hpp from "hpp";
+const xss = require("xss-clean");
 
 const app = express();
 // Required for express-rate-limit when running behind a reverse proxy
@@ -81,6 +85,12 @@ app.use(
   "/stamps",
   express.static(path.join(process.cwd(), "public", "stamps")),
 );
+
+// Security middlewares
+app.use(helmet());
+app.use(mongoSanitize());
+app.use(xss());
+app.use(hpp());
 
 // Apply global IP blocker and rate limiters (global & admin) to all API endpoints
 app.use("/api/v1", ipBlockerMiddleware, globalApiLimiter, adminApiLimiter, routes);

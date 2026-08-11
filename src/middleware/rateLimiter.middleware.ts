@@ -216,3 +216,9 @@ export const locationLimiter = rateLimiter(
     60,
     "Too many location search requests from this IP. Please try again after 15 minutes."
 );
+
+export const chatLimiter = rateLimiter(
+    15,
+    150,
+    "Too many chat requests from this IP. Please try again after 15 minutes."
+);

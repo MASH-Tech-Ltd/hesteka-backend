@@ -6,21 +6,38 @@ import jwt from "jsonwebtoken";
 const blockedIpLogThrottle = new Map<string, number>();
 
 const suspiciousProbingPatterns = [
-  /^\/wp-/i,
-  /^\/phpmyadmin/i,
-  /^\/\.env/i,
-  /^\/\.git/i,
-  /^\/config\.json/i,
-  /^\/cgi-bin/i,
-  /^\/admin\.php/i,
-  /^\/setup\.php/i,
-  /^\/xmlrpc\.php/i,
-  /^\/actuator/i,
-  /^\/vendor\//i,
-  /^\/eval/i,
-  /^\/shell/i,
+  /\/wp-/i,
+  /\/phpmyadmin/i,
+  /\/\.env/i,
+  /\/\.git/i,
+  /\/config\.json/i,
+  /\/cgi-bin/i,
+  /\/admin\.php/i,
+  /\/setup\.php/i,
+  /\/xmlrpc\.php/i,
+  /\/actuator/i,
+  /\/vendor\//i,
+  /\/eval/i,
+  /\/shell/i,
   /\.sql$/i,
   /\.bak$/i,
+  /\/sonicos/i,
+  /\/v2\/cmdb/i,
+  /\/v1\/pods/i,
+  /\/\.aws/i,
+  /\/\.ssh/i,
+  /\/storage\/logs/i,       // Laravel logs
+  /\/remote\/login/i,       // Fortinet
+  /\/boaform/i,             // IoT routers
+  /\/\.DS_Store/i,          // MacOS directory info
+  /\/phpinfo/i,             // Exposed PHP info
+  /\/\.kube/i,              // Kubernetes config
+  /\/wp-content\/plugins/i, // WP Plugin exploits
+  /\/swagger-ui/i,          // Exposed API docs
+  /\/api-docs/i,            // Exposed API docs
+  /\/\.dockerenv/i,         // Docker environments
+  /\/passwd/i,              // Path traversal attempts
+  /\/shadow/i               // Path traversal attempts
 ];
 
 export const ipBlockerMiddleware = async (
