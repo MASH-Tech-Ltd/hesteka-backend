@@ -14,7 +14,7 @@ import { authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
 import { commentValidation } from "./comment.validation";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
-import { contentLimiter } from "../../middleware/rateLimiter.middleware";
+import { communityLimiter } from "../../middleware/rateLimiter.middleware";
 
 const router = Router();
 
@@ -27,7 +27,7 @@ router.use(authGuard);
 
 router.post(
   "/create-comment",
-  contentLimiter,
+  communityLimiter,
   upload.single("image"),
   validateRequest(commentValidation.createCommentSchema),
   createComment
@@ -46,7 +46,7 @@ router.post("/toggle-like/:commentId", toggleLike);
 // APIs for reply
 router.post(
   "/create-reply/:commentId",
-  contentLimiter,
+  communityLimiter,
   upload.single("image"),
   validateRequest(commentValidation.createReplySchema),
   createReply

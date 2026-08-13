@@ -3,14 +3,14 @@ import { chatController } from "./chat.controller";
 import { authGuard, allowRole } from "../../../middleware/auth.middleware";
 import { uploadMediaArray } from "../../../middleware/multer.midleware";
 import { COMMUNITY_CONFIG } from "../shared/community.config";
-import { contentLimiter } from "../../../middleware/rateLimiter.middleware";
+import { communityLimiter } from "../../../middleware/rateLimiter.middleware";
 
 export const chatRoute = express.Router();
 
 chatRoute.post(
   "/",
   authGuard,
-  contentLimiter,
+  communityLimiter,
   uploadMediaArray("media", COMMUNITY_CONFIG.CHAT_MEDIA_MAX_COUNT),
   chatController.createChat,
 );
@@ -23,7 +23,7 @@ chatRoute.get("/:id/comments", authGuard, chatController.getPostComments);
 chatRoute.post(
   "/:id/comments",
   authGuard,
-  contentLimiter,
+  communityLimiter,
   uploadMediaArray("media", COMMUNITY_CONFIG.CHAT_MEDIA_MAX_COUNT),
   chatController.createPostComment,
 );

@@ -222,3 +222,9 @@ export const chatLimiter = rateLimiter(
     150,
     "Too many chat requests from this IP. Please try again after 15 minutes."
 );
+
+export const communityLimiter = rateLimiter(
+    15,
+    1500,
+    "Too many community requests from this IP. Please try again after 15 minutes."
+);

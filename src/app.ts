@@ -15,6 +15,7 @@ import { ipBlockerMiddleware } from "./middleware/ipBlocker.middleware";
 import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
 import hpp from "hpp";
+import { securityService } from "./modules/security/security.service";
 const xss = require("xss-clean");
 
 const app = express();
@@ -92,6 +93,18 @@ app.use(helmet());
 app.use((req: Request, res: Response, next: NextFunction) => {
   ['body', 'params', 'headers', 'query'].forEach((key) => {
     if (req[key as keyof Request]) {
+      const hasAttack = mongoSanitize.has(req[key as keyof Request]);
+      if (hasAttack) {
+        const reasonMsg = `🚨 ACTIVE PROTECTION: Malicious NoSQL Injection attempt blocked in req.${key}`;
+        // console.warn(`[SECURITY ALERT] ${reasonMsg} from IP: ${req.ip}`);
+        securityService.logSecurityIncident(
+          req.ip || "unknown",
+          req.originalUrl || req.url || "",
+          req.method,
+          reasonMsg,
+          req.headers["user-agent"] || ""
+        ).catch(err => console.error("Failed to log security incident:", err));
+      }
       mongoSanitize.sanitize(req[key as keyof Request]);
     }
   });
@@ -101,14 +114,35 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Fix for xss-clean with Express 5
 app.use((req: Request, res: Response, next: NextFunction) => {
   const clean = require("xss-clean/lib/xss").clean;
-  if (req.body) req.body = clean(req.body);
+  
+  const handleXss = (original: any, cleaned: any, keyName: string) => {
+    if (JSON.stringify(original) !== JSON.stringify(cleaned)) {
+      const reasonMsg = `🚨 ACTIVE PROTECTION: Malicious XSS attempt blocked in req.${keyName}`;
+      // console.warn(`[SECURITY ALERT] ${reasonMsg} from IP: ${req.ip}`);
+      securityService.logSecurityIncident(
+        req.ip || "unknown",
+        req.originalUrl || req.url || "",
+        req.method,
+        reasonMsg,
+        req.headers["user-agent"] || ""
+      ).catch(err => console.error("Failed to log security incident:", err));
+    }
+  };
+
+  if (req.body) {
+    const cleanBody = clean(req.body);
+    handleXss(req.body, cleanBody, "body");
+    req.body = cleanBody;
+  }
   if (req.params) {
     const cleanParams = clean(req.params);
+    handleXss(req.params, cleanParams, "params");
     Object.keys(req.params).forEach(key => delete req.params[key]);
     Object.assign(req.params, cleanParams);
   }
   if (req.query) {
     const cleanQuery = clean(req.query);
+    handleXss(req.query, cleanQuery, "query");
     Object.keys(req.query).forEach(key => delete (req.query as any)[key]);
     Object.assign(req.query, cleanQuery);
   }
