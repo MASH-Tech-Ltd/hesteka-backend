@@ -3,6 +3,9 @@ import {
   getalluser,
   getUniqueLocations,
   getmyprofile,
+  getMyReferrals,
+  getInviteLink,
+  resolveReferral,
   getPartnerStats,
   getSingleUser,
   updateStatus,
@@ -45,6 +48,12 @@ router.get("/get-unique-locations", authGuard, allowRole("admin"), getUniqueLoca
 router.get("/get-single-user/:userId", authGuard, getSingleUser);
 
 router.get("/get-my-profile", authGuard, getmyprofile);
+
+router.get("/my-referrals", authGuard, getMyReferrals);
+
+router.get("/invite-link", authGuard, getInviteLink);
+
+router.post("/resolve-referral", resolveReferral);
 
 router.get("/get-partner-stats", authGuard, allowRole("partners"), getPartnerStats);
 

@@ -16,6 +16,7 @@ import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
 import hpp from "hpp";
 import { securityService } from "./modules/security/security.service";
+import { deviceReferralModel } from "./modules/usersAuth/deviceReferral.models";
 const xss = require("xss-clean");
 
 const app = express();
@@ -177,14 +178,14 @@ app.get('/.well-known/apple-app-site-association', (req: Request, res: Response)
       "details": [
         {
           "appID": `${config.appLinks.appleTeamId}.${config.appLinks.androidPackageName}`, // Team ID + Bundle ID
-          "paths": [ "/report/*" ] // Links to this path will open in the app
+          "paths": [ "/report/*", "/invite/*" ] // Links to this path will open in the app
         }
       ]
     }
   });
 });
 
-// 3. Browser Fallback Route (if the app is not installed on the phone)
+// 3. Browser Fallback Routes (if the app is not installed on the phone)
 app.get('/report/:id', (req: Request, res: Response) => {
   const userAgent = req.headers['user-agent'] || '';
   
@@ -195,6 +196,37 @@ app.get('/report/:id', (req: Request, res: Response) => {
   
   // Redirect to Play Store for Android or other devices
   res.redirect(`https://play.google.com/store/apps/details?id=${config.appLinks.androidPackageName}`);
+});
+
+app.get('/invite/:code', async (req: Request, res: Response) => {
+  const userAgent = req.headers['user-agent'] || '';
+  const ip = req.ip || (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 'unknown';
+  const referralCode = req.params.code?.toUpperCase() || '';
+  
+  if (referralCode) {
+    try {
+      await deviceReferralModel.create({
+        ip,
+        userAgent,
+        referralCode,
+      });
+    } catch (error) {
+      console.error("[Invite] Failed to log device referral:", error);
+    }
+  }
+
+  // iOS: Direct Redirect to App Store (attribution handled via IP/User-Agent fingerprint)
+  if (/iPhone|iPad|iPod/i.test(userAgent)) {
+    return res.redirect(`https://apps.apple.com/app/id${config.appLinks.appleAppStoreId}`);
+  }
+  
+  // Android: Play Store with Referrer Parameter
+  if (/Android/i.test(userAgent)) {
+    return res.redirect(`https://play.google.com/store/apps/details?id=${config.appLinks.androidPackageName}&referrer=ref%3D${referralCode}`);
+  }
+
+  // Web Fallback: Redirect to main web site (e.g., share domain)
+  return res.redirect(`https://share.hesteka.com/?invite=${referralCode}`);
 });
 
 app.get("/", serverRunningTemplate);

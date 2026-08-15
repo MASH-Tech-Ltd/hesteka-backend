@@ -182,8 +182,17 @@ const userSchema = new Schema<IUser>(
       type: [{ type: Schema.Types.ObjectId, ref: "User" }],
       default: [],
     },
+    referralCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     badge: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Badge",
       required: false,
     },

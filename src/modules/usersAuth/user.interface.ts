@@ -84,6 +84,8 @@ export interface IUser extends Document {
     country?: string;
     city?: string;
   };
+  referralCode: string;
+  referredBy?: Types.ObjectId;
   badge?: Types.ObjectId;
   stripeCustomerId?: string;
   blockedUsers: Types.ObjectId[]; // users blocked by this user
@@ -139,4 +141,5 @@ export interface UpdateUserPayload {
   language?: string;
   badge?: string;
   isTrusted?: boolean;
+  referralCode?: string;
 }

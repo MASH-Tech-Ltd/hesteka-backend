@@ -14,6 +14,8 @@ import { verificationOtpEmailTemplate, forgotPasswordOtpEmailTemplate } from "..
 import { getAuth, DecodedIdToken } from "firebase-admin/auth";
 import { pointTransactionModel } from "../points/point.models";
 import { PointTransactionType, PointTransactionSource } from "../points/point.interface";
+import { pointService } from "../points/point.service";
+import { deviceReferralModel } from "./deviceReferral.models";
 
 async function awardWelcomePoints(userId: string) {
   try {
@@ -49,9 +51,33 @@ type RegisterPartnerPayload = Partial<IUser> & {
   locationAddress?: string;
 };
 
+async function generateReferralCode(firstName: string): Promise<string> {
+  const base = firstName.replace(/\s+/g, "").toUpperCase();
+  let code = "";
+  let isUnique = false;
+  while (!isUnique) {
+    code = base + Math.floor(1000 + Math.random() * 9000);
+    const existing = await userModel.findOne({ referralCode: code });
+    if (!existing) {
+      isUnique = true;
+    }
+  }
+  return code;
+}
+
+async function matchDeviceReferral(ip?: string, userAgent?: string): Promise<string | null> {
+  if (!ip && !userAgent) return null;
+  const match = await deviceReferralModel.findOne({
+    ...(ip ? { ip } : {}),
+    ...(userAgent ? { userAgent } : {}),
+  }).sort({ createdAt: -1 });
+
+  return match ? match.referralCode : null;
+}
+
 export const authService = {
   //register
-  async registerUser(payload: Partial<IUser>) {
+  async registerUser(payload: Partial<IUser>, ip?: string, userAgent?: string) {
     if (payload.role === "admin")
       throw new CustomError(400, "Admin is reserved, you can't create admin");
     if (payload.email) {
@@ -60,19 +86,47 @@ export const authService = {
 
     const adminEmails = config.adminEmails;
     const role = adminEmails.includes(payload.email!) ? "admin" : "user";
-    // const otp = generateOTP();
-    // console.log(`\n\n[DEV OTP] Registration OTP for ${payload.email}: ${otp}\n\n`);
+    
+    // Generate referral code for the new user
+    let generatedReferralCode = "";
+    if (payload.firstName) {
+      generatedReferralCode = await generateReferralCode(payload.firstName);
+    }
+
+    // Resolve referredBy
+    let referredById = null;
+    let actualReferralCode = payload.referralCode;
+    
+    if (!actualReferralCode) {
+      const matchedCode = await matchDeviceReferral(ip, userAgent);
+      if (matchedCode) {
+        actualReferralCode = matchedCode;
+      }
+    }
+
+    if (actualReferralCode) {
+      const referrer = await userModel.findOne({ referralCode: actualReferralCode });
+      if (referrer) {
+        referredById = referrer._id;
+      }
+    }
+
     const user = await userModel.create({
       ...payload,
       role: role,
       provider: authProvider.LOCAL,
       isVerified: true, // Direct register bypasses OTP
-      // verificationOtp: otp,
-      // verificationOtpExpire: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      referralCode: generatedReferralCode,
+      ...(referredById ? { referredBy: referredById } : {}),
     });
 
     if (user.role === "user") {
       await awardWelcomePoints(user._id.toString());
+      if (referredById) {
+        // Award points to both referrer and referee
+        await pointService.awardPointsForReferral(user._id.toString());
+        await pointService.awardPointsForReferral(referredById.toString());
+      }
     }
 
     // try {
@@ -93,6 +147,8 @@ export const authService = {
     payload: RegisterPartnerPayload,
     logo?: Express.Multer.File,
     partnerImage?: Express.Multer.File,
+    ip?: string,
+    userAgent?: string,
   ): Promise<IUser> {
     const cleanupFiles = () => {
       if (logo?.path && fs.existsSync(logo.path)) {
@@ -177,6 +233,28 @@ export const authService = {
             }
           : undefined;
 
+      let generatedReferralCode = "";
+      if (partnerData.firstName) {
+        generatedReferralCode = await generateReferralCode(partnerData.firstName);
+      }
+
+      let referredById = null;
+      let actualReferralCode = partnerData.referralCode;
+      
+      if (!actualReferralCode) {
+        const matchedCode = await matchDeviceReferral(ip, userAgent);
+        if (matchedCode) {
+          actualReferralCode = matchedCode;
+        }
+      }
+
+      if (actualReferralCode) {
+        const referrer = await userModel.findOne({ referralCode: actualReferralCode });
+        if (referrer) {
+          referredById = referrer._id;
+        }
+      }
+
       const user = (await userModel.create({
         ...partnerData,
         email,
@@ -189,9 +267,16 @@ export const authService = {
         role: role.PARTNERS,
         status: status.PENDING,
         provider: authProvider.LOCAL,
+        referralCode: generatedReferralCode,
+        ...(referredById ? { referredBy: referredById } : {}),
       })) as IUser;
 
       cleanupFiles();
+
+      if (referredById) {
+        await pointService.awardPointsForReferral(user._id.toString());
+        await pointService.awardPointsForReferral(referredById.toString());
+      }
 
       notificationService.notifyAdmins(
         "Nouvelle inscription partenaire",
@@ -438,6 +523,20 @@ export const authService = {
     let user = await userModel.findOne({ email: decoded.email });
 
     if (!user) {
+      let generatedReferralCode = "";
+      if (firstName) {
+        generatedReferralCode = await generateReferralCode(firstName);
+      }
+
+      let referredById = null;
+      const matchedCode = await matchDeviceReferral(extraData?.ip, extraData?.userAgent);
+      if (matchedCode) {
+        const referrer = await userModel.findOne({ referralCode: matchedCode });
+        if (referrer) {
+          referredById = referrer._id;
+        }
+      }
+
       // Create new user
       user = await userModel.create({
         firstName,
@@ -445,6 +544,8 @@ export const authService = {
         email: decoded.email,
         isVerified: true,
         provider: authProvider.GOOGLE,
+        referralCode: generatedReferralCode,
+        ...(referredById ? { referredBy: referredById } : {}),
         ...(picture ? { profileImage: { public_id: "", secure_url: picture } } : {}),
         ...(location ? { location } : {}),
         ...(extraData?.city ? { city: extraData.city } : {}),
@@ -455,6 +556,10 @@ export const authService = {
 
       if (user.role === "user" || !user.role) {
         await awardWelcomePoints(user._id.toString());
+        if (referredById) {
+          await pointService.awardPointsForReferral(user._id.toString());
+          await pointService.awardPointsForReferral(referredById.toString());
+        }
       }
     } else {
       let needsSave = false;
@@ -532,12 +637,28 @@ export const authService = {
     let user = await userModel.findOne({ email });
 
     if (!user) {
+      let generatedReferralCode = "";
+      if (firstName) {
+        generatedReferralCode = await generateReferralCode(firstName);
+      }
+
+      let referredById = null;
+      const matchedCode = await matchDeviceReferral(extraData?.ip, extraData?.userAgent);
+      if (matchedCode) {
+        const referrer = await userModel.findOne({ referralCode: matchedCode });
+        if (referrer) {
+          referredById = referrer._id;
+        }
+      }
+
       user = await userModel.create({
         firstName: firstName || "Apple",
         lastName: lastName || "User",
         email,
         isVerified: true,
         provider: authProvider.APPLE,
+        referralCode: generatedReferralCode,
+        ...(referredById ? { referredBy: referredById } : {}),
         ...(location ? { location } : {}),
         ...(extraData?.city ? { city: extraData.city } : {}),
         ...(extraData?.postalCode ? { postalCode: extraData.postalCode } : {}),
@@ -547,6 +668,10 @@ export const authService = {
 
       if (user.role === "user" || !user.role) {
         await awardWelcomePoints(user._id.toString());
+        if (referredById) {
+          await pointService.awardPointsForReferral(user._id.toString());
+          await pointService.awardPointsForReferral(referredById.toString());
+        }
       }
     } else {
       let needsSave = false;

@@ -26,6 +26,7 @@ import { localMissionModel } from "../localMissions/localMission.models";
 import { localMissionParticipationModel } from "../localMissions/localMissionParticipation.models";
 import { partnerAdModel } from "../partnerAds/partnerAd.models";
 import { pointTransactionModel } from "../points/point.models";
+import { PointTransactionSource } from "../points/point.interface";
 import { redemptionModel } from "../rewards/reward.models";
 import { notificationModel } from "../notifications/notification.models";
 import { paymentModel } from "../payment/payment.models";
@@ -416,6 +417,74 @@ export const userService = {
     }
 
     return userObj;
+  },
+
+  // get my referrals
+  async getMyReferrals(req: any) {
+    const userId = req.user?._id;
+    if (!userId) throw new CustomError(401, "Unauthorized");
+
+    // Get all users referred by this user
+    const referredUsers = await userModel
+      .find({ referredBy: userId })
+      .select("firstName lastName createdAt profileImage email")
+      .sort({ createdAt: -1 });
+
+    // Aggregate points earned from referrals
+    const pointsData = await pointTransactionModel.aggregate([
+      { 
+        $match: { 
+          user: new mongoose.Types.ObjectId(userId.toString()),
+          source: PointTransactionSource.REFERRAL 
+        } 
+      },
+      {
+        $group: {
+          _id: null,
+          totalPoints: { $sum: "$points" }
+        }
+      }
+    ]);
+
+    const totalPointsEarned = pointsData.length > 0 ? pointsData[0].totalPoints : 0;
+
+    return {
+      referrals: referredUsers,
+      totalPointsEarned,
+      referralsCount: referredUsers.length
+    };
+  },
+
+  // get invite link
+  async getInviteLink(req: any) {
+    const userId = req.user?._id;
+    if (!userId) throw new CustomError(401, "Unauthorized");
+
+    const user = await userModel.findById(userId).select("referralCode");
+    if (!user) throw new CustomError(404, "User not found");
+
+    const inviteLink = `https://share.hesteka.com/invite/${user.referralCode}`;
+    
+    return {
+      inviteLink,
+      referralCode: user.referralCode
+    };
+  },
+
+  // resolve referral for mobile app
+  async resolveReferral(ip: string, userAgent: string) {
+    if (!ip && !userAgent) return { referralCode: null };
+    
+    const { deviceReferralModel } = require('./deviceReferral.models');
+    
+    const match = await deviceReferralModel.findOne({
+      ...(ip ? { ip } : {}),
+      ...(userAgent ? { userAgent } : {}),
+    }).sort({ createdAt: -1 });
+
+    return {
+      referralCode: match ? match.referralCode : null
+    };
   },
 
   //get partner stats

@@ -28,6 +28,7 @@ export const registerUserSchema = z
     region: z.string().optional(),
     department: z.string().optional(),
     country: z.string().optional(),
+    referralCode: z.string().optional(),
   })
   .strict();
 

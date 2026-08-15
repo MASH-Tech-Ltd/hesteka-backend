@@ -13,6 +13,7 @@ export enum PointTransactionSource {
   ONLINE_DONATION = "online_donation",
   ANIMAL_REPORT = "animal_report",
   ADMIN_CUSTOM = "admin_custom",
+  REFERRAL = "referral",
 }
 
 export interface IPointTransaction extends Document {

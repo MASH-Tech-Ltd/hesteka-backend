@@ -10,6 +10,7 @@ export interface IPointConfig extends Document {
   promotionStartTime?: Date | null;
   promotionEndTime?: Date | null;
   isPointsOnDonationsActive: boolean;
+  pointsPerReferral: number;
   isValidityDurationActive: boolean;
   isMonthlyCeilingActive: boolean;
   createdAt: Date;
@@ -26,6 +27,7 @@ export interface UpdatePointConfigPayload {
   promotionStartTime?: Date | null;
   promotionEndTime?: Date | null;
   isPointsOnDonationsActive?: boolean;
+  pointsPerReferral?: number;
   isValidityDurationActive?: boolean;
   isMonthlyCeilingActive?: boolean;
 }

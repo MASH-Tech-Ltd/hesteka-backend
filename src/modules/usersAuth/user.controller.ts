@@ -43,6 +43,28 @@ export const getmyprofile = asyncHandler(async (req, res) => {
   ApiResponse.sendSuccess(res, 200, "Profile data fetched successfully", user);
 });
 
+export const getMyReferrals = asyncHandler(async (req, res) => {
+  const data = await userService.getMyReferrals(req);
+  ApiResponse.sendSuccess(res, 200, "Referrals fetched successfully", data);
+});
+
+export const getInviteLink = asyncHandler(async (req, res) => {
+  const data = await userService.getInviteLink(req);
+  ApiResponse.sendSuccess(res, 200, "Invite link generated successfully", data);
+});
+
+export const resolveReferral = asyncHandler(async (req, res) => {
+  const ip = req.ip || (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 'unknown';
+  const userAgent = req.headers['user-agent'] || '';
+  const data = await userService.resolveReferral(ip, userAgent);
+  
+  if (data?.referralCode) {
+    ApiResponse.sendSuccess(res, 200, "Referral resolved successfully", data);
+  } else {
+    ApiResponse.sendSuccess(res, 404, "No active referral found", data);
+  }
+});
+
 //: get partner stats
 export const getPartnerStats = asyncHandler(async (req, res) => {
   const stats = await userService.getPartnerStats(req);

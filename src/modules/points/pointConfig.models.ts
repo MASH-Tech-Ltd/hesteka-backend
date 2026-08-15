@@ -39,6 +39,10 @@ const pointConfigSchema = new Schema<IPointConfig>(
       type: Boolean,
       default: true,
     },
+    pointsPerReferral: {
+      type: Number,
+      default: 100,
+    },
     isValidityDurationActive: {
       type: Boolean,
       default: true,

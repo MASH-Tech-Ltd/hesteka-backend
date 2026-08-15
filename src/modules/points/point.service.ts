@@ -262,6 +262,44 @@ export const pointService = {
     }
   },
 
+  async awardPointsForReferral(userId: string) {
+    const config = await pointConfigModel.findOne();
+    const pointsToAward = config?.pointsPerReferral || 100;
+
+    if (!userId) return;
+
+    try {
+      const user = await userModel.findByIdAndUpdate(
+        userId,
+        { $inc: { pointsBalance: pointsToAward } },
+        { returnDocument: "after" },
+      );
+
+      if (user) {
+        await pointTransactionModel.create({
+          user: userId,
+          type: PointTransactionType.EARN,
+          source: PointTransactionSource.REFERRAL,
+          points: pointsToAward,
+          note: "Points awarded for successful referral",
+        });
+        
+        try {
+          await notificationService.notifySingleUser(
+            userId,
+            "Referral Points Earned!",
+            `You just earned ${pointsToAward} points from a successful referral registration.`,
+            NotificationType.CUSTOM
+          );
+        } catch (e) {
+          console.error("Failed to notify user for referral points", e);
+        }
+      }
+    } catch (error) {
+      console.error("Error awarding points for referral:", error);
+    }
+  },
+
   async assignCustomPoints(req: Request) {
     const { userId, points, note } = req.body as AssignCustomPointsPayload;
 
