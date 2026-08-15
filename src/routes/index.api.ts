@@ -75,4 +75,8 @@ router.use("/badges", badgeRoute);
 router.use("/sponsors", sponsorRoutes);
 import { articleRoutes } from "../modules/articles/article.route";
 router.use("/articles", articleRoutes);
+
+import { appAnalyticsRoutes } from "../modules/appAnalytics/appAnalytics.route";
+router.use("/app-analytics", appAnalyticsRoutes);
+
 export default router;
