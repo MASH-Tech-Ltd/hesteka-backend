@@ -201,7 +201,7 @@ app.get('/report/:id', (req: Request, res: Response) => {
 app.get('/invite/:code', async (req: Request, res: Response) => {
   const userAgent = req.headers['user-agent'] || '';
   const ip = req.ip || (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 'unknown';
-  const referralCode = req.params.code?.toUpperCase() || '';
+  const referralCode = (req.params.code as string)?.toUpperCase() || '';
   
   if (referralCode) {
     try {
