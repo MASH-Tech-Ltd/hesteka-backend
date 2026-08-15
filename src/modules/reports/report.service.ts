@@ -223,7 +223,12 @@ export const reportService = {
 
     // Build filter object
     const filter: any = {};
-    if (req.user?.role !== "admin") {
+    
+    // The mobile app requests global stats using exactly `?limit=1` without other list params.
+    // We include deleted reports and all resolved statuses for the mobile app stats.
+    const isMobileAppStatsReq = limit === "1" && !req.query.page && !search && !req.query.sortBy;
+
+    if (req.user?.role !== "admin" && !isMobileAppStatsReq) {
       filter.isDeleted = { $ne: true };
     }
 
@@ -290,7 +295,13 @@ export const reportService = {
           `Invalid status. Must be one of: ${validStatuses.join(", ")}, or 'all'`,
         );
       }
-      filter.status = status;
+      
+      if (status === "found" && isMobileAppStatsReq) {
+        // Mobile app "Animals Found" stat should count all resolved reports
+        filter.status = { $in: ["found", "rescued", "recovered"] };
+      } else {
+        filter.status = status;
+      }
     }
 
     // Category (Species) filter
