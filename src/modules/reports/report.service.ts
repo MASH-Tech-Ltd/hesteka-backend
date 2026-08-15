@@ -119,6 +119,11 @@ export const reportService = {
     if (payload.isEmailVisible === "true") payload.isEmailVisible = true;
     if (payload.isEmailVisible === "false") payload.isEmailVisible = false;
 
+    // If an admin creates a report, skip point attribution by marking it already approved
+    if (req.user?.role === "admin") {
+      payload.isPointApproved = true;
+    }
+
     const newReport = await reportModel.create(payload);
 
     // Send Admin Alert Email
@@ -128,40 +133,8 @@ export const reportService = {
       template: reportAlertTemplate(newReport),
     }).catch(err => console.error("Failed to send admin report alert email", err));
 
-    // Award Points
-    try {
-      const config = await pointConfigModel.findOne();
-      const pointsToAward = config?.pointsPerReport || 10;
-
-      await userModel.findByIdAndUpdate(authorId, {
-        $inc: { pointsBalance: pointsToAward },
-      });
-
-      await pointTransactionModel.create({
-        user: authorId,
-        type: PointTransactionType.EARN,
-        source: PointTransactionSource.ANIMAL_REPORT,
-        points: pointsToAward,
-        note: `Récompense pour le signalement : ${newReport.title || newReport.animalName}`,
-      });
-
-      // Mark report as point-awarded
-      newReport.isPointApproved = true;
-      await newReport.save();
-
-      // Notify the user that their report was successful and they earned points
-      notificationService
-        .notifySingleUser(
-          authorId.toString(),
-          "Signalement publié !",
-          `Votre signalement "${newReport.title}" a été créé avec succès. Vous avez gagné ${pointsToAward} points !`,
-          NotificationType.POINTS_EARNED,
-          { reportId: newReport._id.toString() },
-        )
-        .catch((err) => console.error("Author Notification Error:", err));
-    } catch (pointError) {
-      console.error("Failed to award points for report:", pointError);
-    }
+    // Note: Points are no longer awarded instantly. 
+    // They are handled by report.cron.ts after 7 days, or manually approved by admin.
 
     // Fire & Forget Notification
     const friendTitle = "Nouveau signalement !";
