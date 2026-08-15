@@ -33,6 +33,8 @@ import { supportLinkRoute } from "../modules/supportLink/supportLink.route";
 import securityRoute from "../modules/security/security.routes";
 import { locationRoute } from "../modules/location/location.route";
 import { communityLimiter } from "../middleware/rateLimiter.middleware";
+import { badgeRoute } from "../modules/badges/badge.route";
+import { sponsorRoutes } from "../modules/sponsors/sponsor.route";
 
 router.use("/user", userRoute);
 router.use("/auth", authRoute);
@@ -68,7 +70,7 @@ router.use("/support-link", supportLinkRoute);
 router.use("/security", securityRoute);
 router.use("/location", locationRoute);
 
-import { badgeRoute } from "../modules/badges/badge.route";
-
+// Phase 3
 router.use("/badges", badgeRoute);
+router.use("/sponsors", sponsorRoutes);
 export default router;
