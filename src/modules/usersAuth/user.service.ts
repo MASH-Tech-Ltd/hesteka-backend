@@ -353,7 +353,7 @@ export const userService = {
     const userDoc = await userModel
       .findOne({ email: email })
       .select(
-        "-password -resetPassword -fcmTokens -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe",
+        "-password -resetPassword -fcmTokens -refreshToken -__v -updatedAt -emailVerifiedAt -emailVerifiedOtp -verificationOtp -verificationOtpExpire -isDeleted -deletedAt -rememberMe -lastLoginIp -registrationIp -lastLoginLocation -registrationLocation",
       );
     if (!userDoc) throw new CustomError(400, "User not found");
 
@@ -384,7 +384,6 @@ export const userService = {
       "profileImage",
       "status",
       "isVerified",
-      "fcmTokens",
       "language",
       "location",
       "blockedUsers",
@@ -396,6 +395,8 @@ export const userService = {
       "linkedin",
       "logo",
       "partnerImage",
+      "badge",
+      "isTrusted"
     ];
 
     nonNullableFields.forEach((field) => {
@@ -627,6 +628,10 @@ export const userService = {
       };
     } else if (locationAddress !== undefined) {
       updateData["location.address"] = locationAddress;
+    }
+
+    if (data.isTrusted !== undefined) {
+      updateData.isTrusted = data.isTrusted === "true" || data.isTrusted === true;
     }
 
     const existingUser = await userModel.findById(userId);

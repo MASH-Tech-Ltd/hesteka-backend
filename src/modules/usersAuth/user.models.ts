@@ -113,6 +113,10 @@ const userSchema = new Schema<IUser>(
       required: true,
       default: false,
     },
+    isTrusted: {
+      type: Boolean,
+      default: false,
+    },
     verificationOtp: {
       type: String,
       required: false,
@@ -177,6 +181,11 @@ const userSchema = new Schema<IUser>(
     blockedUsers: {
       type: [{ type: Schema.Types.ObjectId, ref: "User" }],
       default: [],
+    },
+    badge: {
+      type: Schema.Types.ObjectId,
+      ref: "Badge",
+      required: false,
     },
     stripeCustomerId: {
       type: String,

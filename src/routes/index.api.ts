@@ -68,4 +68,7 @@ router.use("/support-link", supportLinkRoute);
 router.use("/security", securityRoute);
 router.use("/location", locationRoute);
 
+import { badgeRoute } from "../modules/badges/badge.route";
+
+router.use("/badges", badgeRoute);
 export default router;

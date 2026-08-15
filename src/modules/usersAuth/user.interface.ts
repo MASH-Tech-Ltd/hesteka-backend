@@ -60,6 +60,7 @@ export interface IUser extends Document {
   website?: string;
   pointsBalance: number;
   isVerified: boolean;
+  isTrusted?: boolean;
   verificationOtp: string | null;
   verificationOtpExpire: Date | null;
   refreshToken: string[];
@@ -83,6 +84,7 @@ export interface IUser extends Document {
     country?: string;
     city?: string;
   };
+  badge?: Types.ObjectId;
   stripeCustomerId?: string;
   blockedUsers: Types.ObjectId[]; // users blocked by this user
   description?: string;
@@ -135,4 +137,6 @@ export interface UpdateUserPayload {
   twitter?: string;
   linkedin?: string;
   language?: string;
+  badge?: string;
+  isTrusted?: boolean;
 }
