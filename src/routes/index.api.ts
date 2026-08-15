@@ -73,4 +73,6 @@ router.use("/location", locationRoute);
 // Phase 3
 router.use("/badges", badgeRoute);
 router.use("/sponsors", sponsorRoutes);
+import { articleRoutes } from "../modules/articles/article.route";
+router.use("/articles", articleRoutes);
 export default router;

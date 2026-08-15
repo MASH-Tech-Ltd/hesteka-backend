@@ -8,9 +8,9 @@ export const createSponsorSchema = z.object({
   actionText: z.string().min(1, "Action text is required"),
   actionLink: z.string().url("Valid Action URL is required"),
   type: z.nativeEnum(SponsorType),
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
-  isActive: z.boolean().optional(),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date(),
+  isActive: z.union([z.boolean(), z.string().transform((val) => val === "true")]).optional(),
 }).strict();
 
 export const updateSponsorSchema = z.object({
@@ -20,7 +20,7 @@ export const updateSponsorSchema = z.object({
   actionText: z.string().optional(),
   actionLink: z.string().url("Valid Action URL is required").optional(),
   type: z.nativeEnum(SponsorType).optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  isActive: z.boolean().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+  isActive: z.union([z.boolean(), z.string().transform((val) => val === "true")]).optional(),
 }).strict();
