@@ -116,6 +116,7 @@ export const adminService = {
         .find({
           status: { $in: [ReportStatus.LOST, ReportStatus.SIGHTED] },
           "location.coordinates": { $ne: [0, 0] },
+          isDeleted: { $ne: true },
         })
         .sort({ createdAt: -1 })
         .select(
