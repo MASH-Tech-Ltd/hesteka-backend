@@ -16,6 +16,7 @@ export enum NotificationType {
   FRIEND_ACCEPT = "friend_accept",
   NEW_COMMENT = "new_comment",
   NEW_REPLY = "new_reply",
+  REWARD_ELIGIBLE = "reward_eligible",
 }
 
 export interface INotification extends Document {

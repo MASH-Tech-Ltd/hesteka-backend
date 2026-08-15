@@ -14,6 +14,7 @@ import { AssignCustomPointsPayload, AssignCustomPointsToAllPayload } from "./poi
 import { notificationService } from "../notifications/notification.service";
 import { notificationModel } from "../notifications/notification.models";
 import { NotificationType } from "../notifications/notification.interface";
+import { rewardService } from "../rewards/reward.service";
 
 export const pointService = {
   async getMyPoints(req: Request) {
@@ -241,6 +242,19 @@ export const pointService = {
         throw new CustomError(404, "User not found");
       }
 
+      // Notify about points earned
+      await notificationService.notifySingleUser(
+        userId,
+        "Points reçus !",
+        isPromotionActive 
+          ? `Vous avez reçu ${pointsToAward} points pour votre don (X2).`
+          : `Vous avez reçu ${pointsToAward} points pour votre don.`,
+        NotificationType.POINTS_EARNED
+      );
+
+      // Check for reward eligibility
+      rewardService.checkAndNotifyRewardEligibility(userId, user.pointsBalance + pointsToAward).catch(err => console.error(err));
+
       // Create transaction record
       await pointTransactionModel.create({
         user: userId,
@@ -284,16 +298,22 @@ export const pointService = {
           note: "Points awarded for successful referral",
         });
         
+        // Notify user about points
         try {
           await notificationService.notifySingleUser(
             userId,
             "Referral Points Earned!",
             `You just earned ${pointsToAward} points from a successful referral registration.`,
-            NotificationType.CUSTOM
+            NotificationType.POINTS_EARNED
           );
         } catch (e) {
           console.error("Failed to notify user for referral points", e);
         }
+
+        // Check for reward eligibility
+        rewardService.checkAndNotifyRewardEligibility(userId, (user.pointsBalance || 0) + pointsToAward).catch(err => console.error(err));
+
+        return { awarded: true, points: pointsToAward, newBalance: (user.pointsBalance || 0) + pointsToAward };
       }
     } catch (error) {
       console.error("Error awarding points for referral:", error);
@@ -327,12 +347,15 @@ export const pointService = {
       : `Vous avez reçu ${points} points de la part de l'administrateur.`;
 
     // Notify user
-    notificationService.notifySingleUser(
+    await notificationService.notifySingleUser(
       userId,
       "Points reçus !",
       notificationBody,
       NotificationType.POINTS_EARNED
-    ).catch((err) => console.error("Notification Error:", err));
+    );
+
+    // Check for reward eligibility
+    rewardService.checkAndNotifyRewardEligibility(userId, updatedUser?.pointsBalance || 0).catch(err => console.error(err));
 
     return {
       balance: updatedUser?.pointsBalance || 0,
@@ -420,6 +443,18 @@ export const pointService = {
       isRead: false,
     }));
     await notificationModel.insertMany(notificationsToInsert);
+
+    // Check reward eligibility for all in background
+    setTimeout(async () => {
+      try {
+        const users = await userModel.find({ _id: { $in: userIds } }).select('_id pointsBalance');
+        for (const u of users) {
+          await rewardService.checkAndNotifyRewardEligibility(u._id.toString(), u.pointsBalance || 0);
+        }
+      } catch (err) {
+        console.error("Error in assignCustomPointsToAll background check:", err);
+      }
+    }, 100);
 
     return {
       usersUpdated: userIds.length,

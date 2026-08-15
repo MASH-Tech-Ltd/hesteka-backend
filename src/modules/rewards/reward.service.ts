@@ -20,6 +20,7 @@ import { redemptionModel, rewardItemModel } from "./reward.models";
 import { rewardValidation } from "./reward.validation";
 import { notificationService } from "../notifications/notification.service";
 import { NotificationType } from "../notifications/notification.interface";
+import { notificationModel } from "../notifications/notification.models";
 
 const deleteCloudinaryQuietly = async (publicId?: string): Promise<void> => {
   if (!publicId) return;
@@ -483,6 +484,48 @@ export const rewardService = {
       return updatedRedemption;
     } finally {
       await session.endSession();
+    }
+  },
+
+  async checkAndNotifyRewardEligibility(userId: string, currentBalance: number) {
+    try {
+      // 1. Find all active rewards user can afford
+      const eligibleRewards = await rewardItemModel.find({
+        isActive: true,
+        points: { $lte: currentBalance },
+        stock: { $gt: 0 },
+      });
+
+      if (!eligibleRewards.length) return;
+
+      // 2. Find which ones we already notified about
+      const pastNotifications = await notificationModel.find({
+        user: userId,
+        type: NotificationType.REWARD_ELIGIBLE,
+      }).lean();
+
+      const notifiedRewardIds = new Set(
+        pastNotifications.map((n) => n.data?.rewardId?.toString()).filter(Boolean)
+      );
+
+      // 3. Notify for new ones
+      for (const reward of eligibleRewards) {
+        if (!notifiedRewardIds.has(reward._id.toString())) {
+          const title = "Récompense débloquée !";
+          const body = `Félicitations ! Vous avez suffisamment de points pour obtenir : ${reward.title}.`;
+          
+          await notificationService.notifySingleUser(
+            userId,
+            title,
+            body,
+            NotificationType.REWARD_ELIGIBLE,
+            { rewardId: reward._id.toString() },
+            true
+          );
+        }
+      }
+    } catch (error) {
+      console.error("[RewardService] checkAndNotifyRewardEligibility Error:", error);
     }
   },
 };
