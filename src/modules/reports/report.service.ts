@@ -250,6 +250,9 @@ export const reportService = {
 
     // Build filter object
     const filter: any = {};
+    if (req.user?.role !== "admin") {
+      filter.isDeleted = { $ne: true };
+    }
 
     // Radius / geospatial filter
     const hasGeo = lat !== undefined && lng !== undefined;
@@ -467,7 +470,7 @@ export const reportService = {
     const perPage = Number(limit);
 
     // Build filter object
-    const filter: any = { author: authorId };
+    const filter: any = { author: authorId, isDeleted: { $ne: true } };
 
     // Radius / geospatial filter
     const hasGeo = lat !== undefined && lng !== undefined;
@@ -687,6 +690,10 @@ export const reportService = {
       throw new CustomError(404, "Report not found");
     }
 
+    if (report.isDeleted && req.user?.role !== "admin") {
+      throw new CustomError(404, "Report not found");
+    }
+
     // Manually filter out child comments (fallback)
     if (report.comments && Array.isArray(report.comments)) {
       report.comments = report.comments.filter(
@@ -851,6 +858,22 @@ export const reportService = {
         );
       }
 
+      // Soft delete logic: if not an admin, or if admin is soft-deleting an active report
+      if (!report.isDeleted || userRole !== "admin") {
+        report.isDeleted = true;
+        await report.save({ session });
+        await session.commitTransaction();
+
+        try {
+          const io = getIo();
+          io.emit("report_deleted", { reportId });
+        } catch (err) {}
+
+        return true;
+      }
+
+      // Hard delete logic (Admin only, deleting an already soft-deleted report)
+
       // 1. Delete associated comments (Cascade)
       publicIdsToDelete.push(
         ...(await commentService.deleteAllCommentsByReport(reportId, session)),
@@ -986,7 +1009,10 @@ export const reportService = {
   async getMapReports() {
     const reports = await reportModel
       .find(
-        { "location.coordinates": { $exists: true, $ne: [] } },
+        { 
+          "location.coordinates": { $exists: true, $ne: [] },
+          isDeleted: { $ne: true } 
+        },
         {
           _id: 1,
           animalName: 1,

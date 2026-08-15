@@ -67,6 +67,7 @@ export interface IReport extends Document {
   location: ILocation;
   comments: (Types.ObjectId | string)[];
   isPointApproved: boolean;
+  isDeleted?: boolean; // Soft delete flag
 }
 
 export interface CreateReportPayload {

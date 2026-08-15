@@ -34,6 +34,7 @@ export const authGuard = async (
     const decoded = jwt.verify(
       accessToken,
       config.jwt.accessTokenSecret,
+      { algorithms: ["HS256"] }
     ) as TokenPayload;
 
     if (!decoded || !decoded.userId) {
@@ -156,6 +157,7 @@ export const authGuardOptional = async (
     const decoded = jwt.verify(
       accessToken,
       config.jwt.accessTokenSecret,
+      { algorithms: ["HS256"] }
     ) as TokenPayload;
 
     if (!decoded || !decoded.userId) {
