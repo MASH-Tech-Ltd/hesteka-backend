@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import { ISponsor, SponsorType } from "./sponsor.interface";
+import { ISponsor, SponsorType, SponsorStatus } from "./sponsor.interface";
 
 const sponsorSchema = new Schema<ISponsor>(
   {
@@ -40,9 +40,22 @@ const sponsorSchema = new Schema<ISponsor>(
       type: Date,
       required: true,
     },
-    isActive: {
+    status: {
+      type: String,
+      enum: Object.values(SponsorStatus),
+      default: SponsorStatus.ACTIVE,
+    },
+    targetAllUsers: {
       type: Boolean,
       default: true,
+    },
+    regions: {
+      type: [String],
+      default: [],
+    },
+    departments: {
+      type: [String],
+      default: [],
     },
     impressions: {
       type: Number,

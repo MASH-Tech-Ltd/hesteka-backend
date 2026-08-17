@@ -400,23 +400,23 @@ export const userService = {
       "isTrusted"
     ];
 
+    const safeUserObj: any = {
+      createdAt: userObj.createdAt
+    };
+
     nonNullableFields.forEach((field) => {
-      if (userObj[field] === undefined || userObj[field] === null) {
-        userObj[field] = "";
-      }
+      safeUserObj[field] = userObj[field] === undefined || userObj[field] === null ? "" : userObj[field];
     });
 
     allowedFields.forEach((field) => {
-      if (userObj[field] === undefined) {
-        userObj[field] = null;
-      }
+      safeUserObj[field] = userObj[field] === undefined ? null : userObj[field];
     });
 
-    if (!userObj.language) {
-      userObj.language = "fr";
+    if (!safeUserObj.language) {
+      safeUserObj.language = "fr";
     }
 
-    return userObj;
+    return safeUserObj;
   },
 
   // get my referrals

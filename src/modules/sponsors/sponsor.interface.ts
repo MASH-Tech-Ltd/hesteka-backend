@@ -5,6 +5,12 @@ export enum SponsorType {
   FEATURED = "featured",
 }
 
+export enum SponsorStatus {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  EXPIRED = "expired",
+}
+
 export interface ISponsor extends Document {
   partner: Types.ObjectId | string;
   title: string;
@@ -18,7 +24,10 @@ export interface ISponsor extends Document {
   type: SponsorType;
   startDate: Date;
   endDate: Date;
-  isActive: boolean;
+  status: SponsorStatus;
+  targetAllUsers: boolean;
+  regions: string[];
+  departments: string[];
   impressions: number;
   clicks: number;
   createdAt: Date;
@@ -34,9 +43,12 @@ export interface CreateSponsorPayload {
   type: SponsorType;
   startDate: Date | string;
   endDate: Date | string;
-  isActive?: boolean;
+  status?: SponsorStatus;
+  targetAllUsers?: boolean;
+  regions?: string[];
+  departments?: string[];
 }
 
 export interface UpdateSponsorPayload extends Partial<CreateSponsorPayload> {
-  isActive?: boolean;
+  status?: SponsorStatus;
 }

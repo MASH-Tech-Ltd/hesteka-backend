@@ -1,5 +1,18 @@
 import { z } from "zod";
-import { SponsorType } from "./sponsor.interface";
+import { SponsorType, SponsorStatus } from "./sponsor.interface";
+
+const parseArray = (val: any) => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (e) {
+      return val.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  return [];
+};
 
 export const createSponsorSchema = z.object({
   partner: z.string().min(1, "Partner is required"),
@@ -10,7 +23,10 @@ export const createSponsorSchema = z.object({
   type: z.nativeEnum(SponsorType),
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
-  isActive: z.union([z.boolean(), z.string().transform((val) => val === "true")]).optional(),
+  status: z.nativeEnum(SponsorStatus).optional(),
+  targetAllUsers: z.union([z.boolean(), z.string().transform((val) => val === "true")]).optional(),
+  regions: z.any().transform(parseArray).optional(),
+  departments: z.any().transform(parseArray).optional(),
 }).strict();
 
 export const updateSponsorSchema = z.object({
@@ -22,5 +38,8 @@ export const updateSponsorSchema = z.object({
   type: z.nativeEnum(SponsorType).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
-  isActive: z.union([z.boolean(), z.string().transform((val) => val === "true")]).optional(),
+  status: z.nativeEnum(SponsorStatus).optional(),
+  targetAllUsers: z.union([z.boolean(), z.string().transform((val) => val === "true")]).optional(),
+  regions: z.any().transform(parseArray).optional(),
+  departments: z.any().transform(parseArray).optional(),
 }).strict();

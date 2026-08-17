@@ -13,15 +13,14 @@ import {
   createSponsorSchema,
   updateSponsorSchema,
 } from "./sponsor.validation";
-import { allowRole, authGuard } from "../../middleware/auth.middleware";
+import { allowRole, authGuard, authGuardOptional } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
 
-
 const router = Router();
 
-// Public Routes (for Mobile App)
-router.get("/random", getRandomSponsor);
+// Public Routes (for Mobile App) - uses optional auth to read user region/department if logged in
+router.get("/random", authGuardOptional, getRandomSponsor);
 router.post("/:id/track", trackSponsor);
 
 // Admin Routes

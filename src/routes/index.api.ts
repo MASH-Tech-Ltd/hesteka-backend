@@ -79,4 +79,7 @@ router.use("/articles", articleRoutes);
 import { appAnalyticsRoutes } from "../modules/appAnalytics/appAnalytics.route";
 router.use("/app-analytics", appAnalyticsRoutes);
 
+import { appModalRoute } from "../modules/appmodal/appmodal.routes";
+router.use("/appmodal", appModalRoute);
+
 export default router;

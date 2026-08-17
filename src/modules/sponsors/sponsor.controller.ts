@@ -10,8 +10,8 @@ export const createSponsor = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const getAllSponsors = asyncHandler(async (req: Request, res: Response) => {
-  const sponsors = await sponsorService.getAllSponsors();
-  ApiResponse.sendSuccess(res, 200, "Sponsors fetched successfully", sponsors);
+  const result = await sponsorService.getAllSponsors(req.query);
+  ApiResponse.sendSuccess(res, 200, "Sponsors fetched successfully", result.data, result.meta);
 });
 
 export const searchPartners = asyncHandler(async (req: Request, res: Response) => {
@@ -37,7 +37,15 @@ export const deleteSponsor = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const getRandomSponsor = asyncHandler(async (req: Request, res: Response) => {
-  const sponsor = await sponsorService.getRandomSponsor();
+  // Read from logged-in user if available, otherwise fallback to query params
+  const user = (req as any).user;
+  const region = user?.region || req.query.region;
+  const department = user?.department || req.query.department;
+
+  const sponsor = await sponsorService.getRandomSponsor(
+    region as string | undefined,
+    department as string | undefined
+  );
   if (!sponsor) {
     return ApiResponse.sendSuccess(res, 200, "No active sponsors available", null);
   }

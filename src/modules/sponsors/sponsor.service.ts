@@ -1,9 +1,10 @@
 import { sponsorModel } from "./sponsor.models";
-import { CreateSponsorPayload, UpdateSponsorPayload } from "./sponsor.interface";
+import { CreateSponsorPayload, UpdateSponsorPayload, SponsorStatus } from "./sponsor.interface";
 import { uploadCloudinary, deleteCloudinary } from "../../helpers/cloudinary";
 import CustomError from "../../helpers/CustomError";
 import { userModel } from "../usersAuth/user.models";
 import { role } from "../usersAuth/user.interface";
+import { paginationHelper } from "../../utils/pagination";
 
 const deleteCloudinaryQuietly = async (publicId?: string): Promise<void> => {
   if (!publicId) return;
@@ -32,14 +33,92 @@ export const sponsorService = {
       sponsorData.image = image;
     }
 
+    // Auto-expire logic on creation
+    if (sponsorData.endDate && new Date(sponsorData.endDate) < new Date()) {
+      sponsorData.status = SponsorStatus.EXPIRED;
+    }
+
     const sponsor = await sponsorModel.create(sponsorData);
     return sponsor;
   },
 
   // Get All Sponsors (Admin)
-  async getAllSponsors() {
-    const sponsors = await sponsorModel.find().populate("partner", "firstName lastName company email profileImage").sort({ createdAt: -1 });
-    return sponsors;
+  async getAllSponsors(query: any = {}) {
+    // 1. Process Query Params
+    const { page, limit, skip } = paginationHelper(query.page as string, query.limit as string);
+    
+    const search = query.search || "";
+    const status = query.status || "all";
+    const sortBy = query.sortBy || "date";
+    const sortOrder = query.sort === "ascending" ? 1 : -1;
+
+    // 2. Build Filter
+    const filter: any = {};
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+
+    // 3. Handle Search
+    if (search) {
+      const searchRegex = new RegExp(search, "i");
+      
+      // Find matching partners
+      const matchingPartners = await userModel.find({
+        role: role.PARTNERS,
+        $or: [
+          { firstName: searchRegex },
+          { lastName: searchRegex },
+          { email: searchRegex },
+          { company: searchRegex },
+        ]
+      }).select("_id");
+      
+      const partnerIds = matchingPartners.map(p => p._id);
+      
+      filter.$or = [
+        { title: searchRegex },
+        { partner: { $in: partnerIds } }
+      ];
+    }
+
+    // 4. Handle Sorting
+    let sortConfig: any = { createdAt: sortOrder };
+    if (sortBy === "title") {
+      sortConfig = { title: sortOrder };
+    } else if (sortBy === "impressions") {
+      sortConfig = { impressions: sortOrder };
+    } else if (sortBy === "clicks") {
+      sortConfig = { clicks: sortOrder };
+    } else if (sortBy === "date") {
+      sortConfig = { createdAt: sortOrder };
+    }
+
+    // 5. Execute Query
+    const total = await sponsorModel.countDocuments(filter);
+    const sponsors = await sponsorModel.find(filter)
+      .populate("partner", "firstName lastName company email profileImage")
+      .sort(sortConfig)
+      .skip(skip)
+      .limit(limit);
+    
+    // Auto-expire check when fetching
+    const now = new Date();
+    for (const sponsor of sponsors) {
+      if (sponsor.endDate < now && sponsor.status !== SponsorStatus.EXPIRED) {
+        sponsor.status = SponsorStatus.EXPIRED;
+        await sponsor.save();
+      }
+    }
+
+    return {
+      data: sponsors,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   },
 
   // Search Partners
@@ -82,6 +161,16 @@ export const sponsorService = {
     }
 
     Object.assign(sponsor, payload);
+
+    // Auto-expire check during update
+    if (sponsor.endDate < new Date()) {
+      sponsor.status = SponsorStatus.EXPIRED;
+    } else if (sponsor.status === SponsorStatus.EXPIRED && sponsor.endDate >= new Date()) {
+      // If admin extended the date but left status as EXPIRED, they probably meant to reactivate or at least INACTIVE
+      // We'll trust payload.status if provided, otherwise default to ACTIVE since it was EXPIRED before
+      sponsor.status = payload.status && payload.status !== SponsorStatus.EXPIRED ? payload.status : SponsorStatus.ACTIVE;
+    }
+
     await sponsor.save();
     return sponsor;
   },
@@ -99,25 +188,43 @@ export const sponsorService = {
   },
 
   // Random Sponsor (Public Mobile)
-  async getRandomSponsor() {
+  async getRandomSponsor(userRegion?: string, userDepartment?: string) {
     const now = new Date();
     
-    // Aggregate to find random active sponsor within dates
+    // Build matching criteria
+    const matchCriteria: any = {
+      status: SponsorStatus.ACTIVE,
+      startDate: { $lte: now },
+      endDate: { $gte: now },
+    };
+
+    // Region & Department Targeting
+    // If region or department is passed, we want ads that targetAllUsers OR target that region OR target that department.
+    // If the user is NOT logged in (no region and no department provided), we show ANY active ad without filtering.
+    if (userRegion || userDepartment) {
+      const orConditions: any[] = [{ targetAllUsers: true }];
+      if (userRegion) {
+        orConditions.push({ regions: { $in: [userRegion] } });
+      }
+      if (userDepartment) {
+        orConditions.push({ departments: { $in: [userDepartment] } });
+      }
+      matchCriteria.$or = orConditions;
+    }
+
+    // Aggregate to find random active sponsor within dates and targeting rules
     const sponsors = await sponsorModel.aggregate([
-      {
-        $match: {
-          isActive: true,
-          startDate: { $lte: now },
-          endDate: { $gte: now },
-        },
-      },
+      { $match: matchCriteria },
       { $sample: { size: 1 } },
     ]);
 
     if (!sponsors.length) return null;
 
-    // Populate partner details
-    const sponsor = await sponsorModel.findById(sponsors[0]._id).populate("partner", "firstName lastName company profileImage");
+    // Populate partner details and select only public fields (omit sensitive metrics & targeting info)
+    const sponsor = await sponsorModel.findById(sponsors[0]._id)
+      .select("title description actionText actionLink type image partner")
+      .populate("partner", "firstName lastName company profileImage");
+    
     return sponsor;
   },
 
