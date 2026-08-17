@@ -228,3 +228,9 @@ export const communityLimiter = rateLimiter(
     1500,
     "Too many community requests from this IP. Please try again after 15 minutes."
 );
+
+export const inviteLimiter = rateLimiter(
+    15,
+    15,
+    "Too many invite link requests from this IP. Please try again after 15 minutes."
+);

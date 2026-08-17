@@ -10,7 +10,7 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import cors from "cors";
 import { notFound } from "./middleware/notFound";
-import { globalApiLimiter, adminApiLimiter } from "./middleware/rateLimiter.middleware";
+import { globalApiLimiter, adminApiLimiter, rateLimiter } from "./middleware/rateLimiter.middleware";
 import { ipBlockerMiddleware } from "./middleware/ipBlocker.middleware";
 import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
@@ -21,8 +21,9 @@ import { intigrationRoute } from "./modules/intigration/intigration.route";
 const xss = require("xss-clean");
 
 const app = express();
-app.set("trust proxy", 1);
-// Required for express-rate-limit when running behind a reverse proxy
+// Trust all proxies (Cloudflare, Nginx, Docker, etc.) to ensure req.ip correctly resolves to the real client IP 
+// instead of the reverse proxy's IP. This prevents all users from sharing the same IP rate limit.
+app.set("trust proxy", true);
 const server = http.createServer(app);
 
 const allowedOrigins = [
@@ -151,7 +152,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 app.use(hpp());
 
-app.use("/api/intigration", intigrationRoute);
+app.use("/api/intigration", ipBlockerMiddleware, globalApiLimiter, intigrationRoute);
 
 // Apply global IP blocker and rate limiters (global & admin) to all API endpoints
 app.use("/api/v1", ipBlockerMiddleware, globalApiLimiter, adminApiLimiter, routes);
@@ -200,7 +201,7 @@ app.get('/report/:id', (req: Request, res: Response) => {
   res.redirect(`https://play.google.com/store/apps/details?id=${config.appLinks.androidPackageName}`);
 });
 
-app.get('/invite/:code', async (req: Request, res: Response) => {
+app.get('/invite/:code', rateLimiter(15, 15), async (req: Request, res: Response) => {
   const userAgent = req.headers['user-agent'] || '';
   const ip = req.ip || (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 'unknown';
   const referralCode = (req.params.code as string)?.toUpperCase() || '';
