@@ -21,7 +21,7 @@ export const getShopifyUsers = asyncHandler(async (req: Request, res: Response) 
 
   const settings = await settingsModel.findOne();
   if (!settings || !settings.shopifyApiKey) {
-    throw new CustomError(500, "Shopify API Key is not configured on the server");
+    throw new CustomError(500, "API Key is not configured");
   }
 
   try {
@@ -33,8 +33,38 @@ export const getShopifyUsers = asyncHandler(async (req: Request, res: Response) 
     throw new CustomError(401, "Invalid API Key");
   }
 
-  // Fetch users
-  const users = await intigrationService.getShopifyUsersEmails();
+  // Validate allowed domain if one is configured
+  if (settings.shopifyAllowedDomain) {
+    const requestOrigin = req.headers.origin || req.headers.referer || "";
+    
+    try {
+      // Use URL parsing to ensure exact origin matching (prevents bypasses like domain.com.evil.com)
+      const configuredUrl = new URL(settings.shopifyAllowedDomain.trim());
+      const incomingUrl = new URL(requestOrigin.trim());
 
-  ApiResponse.sendSuccess(res, 200, "Users fetched successfully", users);
+      // Enforce HTTPS on the incoming origin (unless running in local development mode for testing)
+      if (incomingUrl.protocol !== "https:" && process.env.NODE_ENV === "production") {
+        throw new CustomError(403, "Origin domain must be secured.");
+      }
+
+      if (configuredUrl.origin !== incomingUrl.origin) {
+        throw new CustomError(403, "Origin domain is not allowed.");
+      }
+    } catch (error: any) {
+      // If CustomError was thrown inside try, rethrow it
+      if (error instanceof CustomError) throw error;
+      // Otherwise, URL parsing failed meaning it's an invalid origin
+      throw new CustomError(403, "Origin domain is not allowed. Check your Shopify Integration settings.");
+    }
+  }
+
+  // Fetch users
+  const result = await intigrationService.getShopifyUsersEmails(req.query);
+
+  res.status(200).json({
+    status: "ok",
+    message: "Users fetched successfully",
+    data: result.data,
+    meta: result.meta
+  });
 });

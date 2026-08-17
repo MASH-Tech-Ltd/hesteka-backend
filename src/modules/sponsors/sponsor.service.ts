@@ -16,6 +16,69 @@ const deleteCloudinaryQuietly = async (publicId?: string): Promise<void> => {
 };
 
 export const sponsorService = {
+  // Get Sponsor Stats
+  async getSponsorStats() {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+    const [
+      total, active, expired, inactive, metrics,
+      cmTotal, pmTotal,
+      cmActive, pmActive,
+      cmExpired, pmExpired
+    ] = await Promise.all([
+      sponsorModel.countDocuments(),
+      sponsorModel.countDocuments({ status: SponsorStatus.ACTIVE }),
+      sponsorModel.countDocuments({ status: SponsorStatus.EXPIRED }),
+      sponsorModel.countDocuments({ status: SponsorStatus.INACTIVE }),
+      sponsorModel.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalImpressions: { $sum: "$impressions" },
+            totalClicks: { $sum: "$clicks" }
+          }
+        }
+      ]),
+      sponsorModel.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+      sponsorModel.countDocuments({ createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
+      sponsorModel.countDocuments({ status: SponsorStatus.ACTIVE, createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+      sponsorModel.countDocuments({ status: SponsorStatus.ACTIVE, createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
+      sponsorModel.countDocuments({ status: SponsorStatus.EXPIRED, createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+      sponsorModel.countDocuments({ status: SponsorStatus.EXPIRED, createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
+    ]);
+
+    const calcTrend = (cm: number, pm: number) => {
+      if (pm === 0) return cm > 0 ? 100 : 0;
+      return Math.round(((cm - pm) / pm) * 100);
+    };
+
+    const totalImpressions = metrics[0]?.totalImpressions || 0;
+    const totalClicks = metrics[0]?.totalClicks || 0;
+    const avgCtr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : 0;
+
+    return { 
+      total, 
+      active, 
+      expired, 
+      inactive, 
+      totalImpressions, 
+      totalClicks, 
+      avgCtr,
+      trends: {
+        total: calcTrend(cmTotal, pmTotal),
+        active: calcTrend(cmActive, pmActive),
+        expired: calcTrend(cmExpired, pmExpired),
+        impressions: 12, // Mocked as we don't have time-series impression data
+        avgCtr: 2 // Mocked
+      }
+    };
+  },
+
   // Create Sponsor
   async createSponsor(payload: CreateSponsorPayload, file?: Express.Multer.File) {
     let image: any = undefined;

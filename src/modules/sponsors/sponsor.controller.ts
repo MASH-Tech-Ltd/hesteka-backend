@@ -9,6 +9,11 @@ export const createSponsor = asyncHandler(async (req: Request, res: Response) =>
   ApiResponse.sendSuccess(res, 201, "Sponsor created successfully", sponsor);
 });
 
+export const getSponsorStats = asyncHandler(async (req: Request, res: Response) => {
+  const stats = await sponsorService.getSponsorStats();
+  ApiResponse.sendSuccess(res, 200, "Sponsor statistics fetched successfully", stats);
+});
+
 export const getAllSponsors = asyncHandler(async (req: Request, res: Response) => {
   const result = await sponsorService.getAllSponsors(req.query);
   ApiResponse.sendSuccess(res, 200, "Sponsors fetched successfully", result.data, result.meta);

@@ -8,6 +8,7 @@ import {
   getRandomSponsor,
   trackSponsor,
   searchPartners,
+  getSponsorStats,
 } from "./sponsor.controller";
 import {
   createSponsorSchema,
@@ -19,13 +20,15 @@ import { validateRequest } from "../../middleware/validateRequest.middleware";
 
 const router = Router();
 
-// Public Routes (for Mobile App) - uses optional auth to read user region/department if logged in
+// Public Routes (for Mobile App) 
 router.get("/random", authGuardOptional, getRandomSponsor);
 router.post("/:id/track", trackSponsor);
 
 // Admin Routes
-router.use(authGuard);
+router.use(authGuard);  
 router.use(allowRole("admin"));
+
+router.get("/stats", getSponsorStats);
 
 router.post(
   "/",

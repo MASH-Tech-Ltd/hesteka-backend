@@ -14,6 +14,7 @@ const settingsSchema = new Schema(
     reportRadius: { type: Number, default: 50 },
     localMissionRadius: { type: Number, default: 50 },
     shopifyApiKey: { type: String, default: "" },
+    shopifyAllowedDomain: { type: String, default: "" },
   },
   { timestamps: true }
 );
