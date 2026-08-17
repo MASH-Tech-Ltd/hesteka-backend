@@ -19,3 +19,13 @@ export const getCollections = asyncHandler(async (req: Request, res: Response) =
 
   ApiResponse.sendSuccess(res, 200, "Collections fetched successfully", collections);
 });
+
+export const getCustomers = asyncHandler(async (req: Request, res: Response) => {
+  const { limit, pageInfo } = req.query;
+  const data = await solidarityService.getCustomers({ 
+    limit: limit ? parseInt(limit as string) : undefined,
+    pageInfo: pageInfo as string | undefined
+  });
+
+  ApiResponse.sendSuccess(res, 200, "Customers fetched successfully", data);
+});

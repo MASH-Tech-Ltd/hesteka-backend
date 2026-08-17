@@ -6,6 +6,7 @@ import ApiResponse from "../../utils/apiResponse";
 import { settingsService } from "./settings.service";
 import { runBackup } from "../../database/backup.cron";
 import { BackupLogModel } from "../../database/backupLog.models";
+import { settingsModel } from "./settings.models";
 
 export const getSettings = asyncHandler(async (req: Request, res: Response) => {
   const result = await settingsService.getSettings();
@@ -71,4 +72,32 @@ export const downloadBackupFile = asyncHandler(async (req: Request, res: Respons
       console.error("[Backup Download] Error sending file:", err);
     }
   });
+});
+
+export const generateShopifyApiKey = asyncHandler(async (req: Request, res: Response) => {
+  const crypto = require("crypto");
+  const { encrypt, decrypt } = require("../../utils/encryption");
+
+  const newKey = crypto.randomBytes(32).toString("hex");
+  const encryptedKey = encrypt(newKey);
+  
+  await settingsModel.findOneAndUpdate({}, { shopifyApiKey: encryptedKey }, { upsert: true });
+
+  ApiResponse.sendSuccess(res, 200, "API Key generated successfully", { apiKey: newKey });
+});
+
+export const getShopifyApiKey = asyncHandler(async (req: Request, res: Response) => {
+  const { decrypt } = require("../../utils/encryption");
+  const settings = await settingsModel.findOne();
+  
+  if (!settings || !settings.shopifyApiKey) {
+    return ApiResponse.sendSuccess(res, 200, "No API Key configured", { apiKey: null });
+  }
+
+  try {
+    const decryptedKey = decrypt(settings.shopifyApiKey);
+    ApiResponse.sendSuccess(res, 200, "API Key retrieved successfully", { apiKey: decryptedKey });
+  } catch (err) {
+    ApiResponse.sendSuccess(res, 200, "Failed to decrypt API Key", { apiKey: null });
+  }
 });

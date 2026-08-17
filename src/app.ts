@@ -17,11 +17,12 @@ import mongoSanitize from "express-mongo-sanitize";
 import hpp from "hpp";
 import { securityService } from "./modules/security/security.service";
 import { deviceReferralModel } from "./modules/usersAuth/deviceReferral.models";
+import { intigrationRoute } from "./modules/intigration/intigration.route";
 const xss = require("xss-clean");
 
 const app = express();
-// Required for express-rate-limit when running behind a reverse proxy
 app.set("trust proxy", 1);
+// Required for express-rate-limit when running behind a reverse proxy
 const server = http.createServer(app);
 
 const allowedOrigins = [
@@ -71,7 +72,6 @@ app.use(cookieParser());
 app.use("/api/v1/webhook/stripe", express.raw({ type: "application/json" }));
 app.use("/api/v1/webhook/paypal", express.raw({ type: "application/json" }));
 
-// ✅ একটাই parser — দুটোই skip করে
 app.use((req: Request, res: Response, next: NextFunction) => {
   if (
     req.originalUrl.includes("/webhook/stripe") ||
@@ -150,6 +150,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 app.use(hpp());
+
+app.use("/api/intigration", intigrationRoute);
 
 // Apply global IP blocker and rate limiters (global & admin) to all API endpoints
 app.use("/api/v1", ipBlockerMiddleware, globalApiLimiter, adminApiLimiter, routes);

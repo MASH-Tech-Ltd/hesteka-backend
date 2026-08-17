@@ -13,6 +13,7 @@ const settingsSchema = new Schema(
     devMode: { type: Boolean, default: false },
     reportRadius: { type: Number, default: 50 },
     localMissionRadius: { type: Number, default: 50 },
+    shopifyApiKey: { type: String, default: "" },
   },
   { timestamps: true }
 );
