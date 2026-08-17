@@ -42,6 +42,7 @@ const articleSchema = new Schema<IArticle>(
         },
         title: { type: String },
         content: { type: String, required: true },
+        sourceUrl: { type: String },
       },
     ],
     isActive: {

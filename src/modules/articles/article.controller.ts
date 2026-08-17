@@ -10,8 +10,14 @@ export const createArticle = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const getAllArticles = asyncHandler(async (req: Request, res: Response) => {
-  const articles = await articleService.getAllArticles();
-  ApiResponse.sendSuccess(res, 200, "Articles fetched successfully", articles);
+  const result = await articleService.getAllArticles(req.query);
+  // Send the paginated result properly
+  res.status(200).json({
+    status: "ok",
+    message: "Articles fetched successfully",
+    data: result.data,
+    meta: result.meta
+  });
 });
 
 export const getActiveArticles = asyncHandler(async (req: Request, res: Response) => {

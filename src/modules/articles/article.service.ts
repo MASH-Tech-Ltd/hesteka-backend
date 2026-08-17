@@ -2,6 +2,7 @@ import { articleModel } from "./article.models";
 import { CreateArticlePayload, UpdateArticlePayload, IContentBlock } from "./article.interface";
 import { uploadCloudinary, deleteCloudinary } from "../../helpers/cloudinary";
 import CustomError from "../../helpers/CustomError";
+import { paginationHelper } from "../../utils/pagination";
 
 const deleteCloudinaryQuietly = async (publicId?: string): Promise<void> => {
   if (!publicId) return;
@@ -46,9 +47,60 @@ export const articleService = {
   },
 
   // Get All Articles (Admin)
-  async getAllArticles() {
-    const articles = await articleModel.find().sort({ createdAt: -1 });
-    return articles;
+  async getAllArticles(query: any = {}) {
+    // 1. Process Query Params
+    const { page, limit, skip } = paginationHelper(query.page as string, query.limit as string);
+    
+    const search = query.search || "";
+    const status = query.status || "all";
+    const sortBy = query.sortBy || "date";
+    const sortOrder = query.sort === "ascending" ? 1 : -1;
+
+    // 2. Build Filter
+    const filter: any = {};
+    if (status && status !== "all") {
+      filter.isActive = status === "active";
+    }
+
+    // 3. Handle Search
+    if (search) {
+      const searchRegex = new RegExp(search, "i");
+      filter.$or = [
+        { title: searchRegex },
+        { mainCategory: searchRegex },
+        { author: searchRegex },
+        { tag: searchRegex }
+      ];
+    }
+
+    // 4. Handle Sorting
+    let sortConfig: any = { createdAt: sortOrder };
+    if (sortBy === "title") {
+      sortConfig = { title: sortOrder };
+    } else if (sortBy === "date") {
+      sortConfig = { createdAt: sortOrder };
+    } else if (sortBy === "category") {
+      sortConfig = { mainCategory: sortOrder };
+    } else if (sortBy === "author") {
+      sortConfig = { author: sortOrder };
+    }
+
+    // 5. Execute Query
+    const total = await articleModel.countDocuments(filter);
+    const articles = await articleModel.find(filter)
+      .sort(sortConfig)
+      .skip(skip)
+      .limit(limit);
+
+    return {
+      data: articles,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   },
 
   // Get Active Articles (Mobile App)

@@ -10,6 +10,7 @@ export interface IContentBlock {
   type: BlockType;
   title?: string;
   content: string;
+  sourceUrl?: string;
 }
 
 export interface IArticle extends Document {
@@ -36,7 +37,7 @@ export interface CreateArticlePayload {
   author: string;
   readTime: number | string;
   isFeatured?: boolean;
-  contentBlocks: string | IContentBlock[]; // from FormData it might be a JSON string
+  contentBlocks: string | IContentBlock[];
   isActive?: boolean;
 }
 
