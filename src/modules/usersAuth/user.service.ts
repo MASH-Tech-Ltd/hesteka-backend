@@ -36,6 +36,7 @@ import { myanimalModel } from "../myanimal/myanimal.models";
 import { SupportMessageModel } from "../supportMessages/supportMessage.models";
 import { LocalMissionStatus, LocalMissionParticipationStatus } from "../localMissions/localMission.interface";
 import { PartnerAdStatus } from "../partnerAds/partnerAd.interface";
+import { BadgeModel } from "../badges/badge.model";
 
 export const userService = {
   // get unique cities for targeting
@@ -617,15 +618,24 @@ export const userService = {
     const partnerImageFile = files?.partnerImage?.[0];
 
     if (profileImageFile) {
-      if (existingUser.profileImage?.public_id) {
+      if (existingUser.profileImage?.public_id && !existingUser.badge) {
         await deleteCloudinary(existingUser.profileImage.public_id).catch(
           console.error,
         );
       }
       const profileImageResult = await uploadCloudinary(profileImageFile.path);
       updateData.profileImage = profileImageResult;
+      updateData.badge = null;
       if (fs.existsSync(profileImageFile.path))
         fs.unlinkSync(profileImageFile.path);
+    } else if (data.badge && Types.ObjectId.isValid(data.badge as string)) {
+      const badgeDoc = await BadgeModel.findById(data.badge);
+      if (badgeDoc && badgeDoc.icon?.secure_url) {
+        updateData.profileImage = badgeDoc.icon;
+        updateData.badge = badgeDoc._id;
+      }
+    } else if (data.badge === null || data.badge === "") {
+      updateData.badge = null;
     } else if (typeof data.profileImage === "string" && data.profileImage.trim().length > 0) {
       updateData.profileImage = {
         secure_url: data.profileImage.trim(),

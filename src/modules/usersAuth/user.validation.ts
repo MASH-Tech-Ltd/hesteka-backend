@@ -43,7 +43,7 @@ export const updateUserSchema = z
     image: z.any().optional(),
     profileImage: z.any().optional(),
     avatarUrl: z.string().optional(),
-    badge: z.string().optional(),
+    badge: z.string().nullable().optional(),
     website: z.string().url("Invalid website URL").optional().or(z.literal("")),
     facebook: z.string().url("Invalid Facebook URL").optional().or(z.literal("")),
     instagram: z.string().url("Invalid Instagram URL").optional().or(z.literal("")),
