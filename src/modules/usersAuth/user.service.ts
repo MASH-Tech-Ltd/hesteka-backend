@@ -626,6 +626,16 @@ export const userService = {
       updateData.profileImage = profileImageResult;
       if (fs.existsSync(profileImageFile.path))
         fs.unlinkSync(profileImageFile.path);
+    } else if (typeof data.profileImage === "string" && data.profileImage.trim().length > 0) {
+      updateData.profileImage = {
+        secure_url: data.profileImage.trim(),
+        public_id: undefined,
+      };
+    } else if (typeof (data as any).avatarUrl === "string" && (data as any).avatarUrl.trim().length > 0) {
+      updateData.profileImage = {
+        secure_url: (data as any).avatarUrl.trim(),
+        public_id: undefined,
+      };
     }
 
     if (logoFile) {

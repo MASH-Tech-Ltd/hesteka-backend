@@ -142,4 +142,6 @@ export interface UpdateUserPayload {
   badge?: string;
   isTrusted?: boolean;
   referralCode?: string;
+  profileImage?: any;
+  avatarUrl?: string;
 }

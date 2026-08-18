@@ -24,7 +24,7 @@ class LocationService {
       const cached = await locationCacheModel.findOne({ key }).lean();
       if (!cached) return null;
       if (new Date() > new Date(cached.expiresAt)) {
-        await locationCacheModel.deleteOne({ key }).catch(() => {});
+        await locationCacheModel.deleteOne({ key }).catch(() => { });
         return null;
       }
       return cached.data as T;
@@ -178,7 +178,7 @@ class LocationService {
                 address_components: this.buildOsmAddressComponents(item.address || {}),
                 types: [item.type || item.class || "geocode"],
               };
-              this.setToCache(detailsCacheKey, placeDetails, 604800).catch(() => {});
+              this.setToCache(detailsCacheKey, placeDetails, 604800).catch(() => { });
 
               return {
                 description: item.display_name,
@@ -234,7 +234,7 @@ class LocationService {
                 ].filter(Boolean) as any,
                 types: [props.osm_value || props.osm_key || "geocode"],
               };
-              this.setToCache(detailsCacheKey, placeDetails, 604800).catch(() => {});
+              this.setToCache(detailsCacheKey, placeDetails, 604800).catch(() => { });
 
               return {
                 description: displayName,
@@ -701,10 +701,10 @@ class LocationService {
   async trackUsage(apiType: string, provider: string, source: string = "backend"): Promise<void> {
     try {
       const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-      
+
       // Lazily drop old index to allow new compound index to function without MongoServerError
-      await locationApiUsageModel.collection.dropIndex("date_1_apiType_1_provider_1").catch(() => {});
-      
+      await locationApiUsageModel.collection.dropIndex("date_1_apiType_1_provider_1").catch(() => { });
+
       await locationApiUsageModel.findOneAndUpdate(
         { date: today, apiType, provider, source },
         { $inc: { count: 1 } },
