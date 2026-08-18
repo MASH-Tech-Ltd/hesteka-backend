@@ -112,7 +112,7 @@ const createStory = async (
       });
     });
 
-    await story.populate("user", "firstName lastName profileImage");
+    await story.populate("user", "firstName lastName profileImage isTrusted isVerified badge");
     return story;
   } catch (error) {
     // Rollback — delete uploaded media if DB save fails
@@ -150,7 +150,7 @@ const getLocalStories = async (query: GetStoriesQuery) => {
   const [stories, total] = await Promise.all([
     storyModel
       .find(filter)
-      .populate("user", "firstName lastName profileImage")
+      .populate("user", "firstName lastName profileImage isTrusted isVerified badge")
       .sort({ createdAt: -1 })
       .skip(pagination.skip)
       .limit(pagination.limit)
@@ -192,7 +192,7 @@ const getUserStories = async (userId: string) => {
       user: userId,
       expiresAt: { $gt: new Date() },
     })
-    .populate("user", "firstName lastName profileImage")
+    .populate("user", "firstName lastName profileImage isTrusted isVerified badge")
     .sort({ createdAt: -1 })
     .lean();
 
@@ -209,7 +209,7 @@ const getStoryById = async (storyId: string): Promise<IStory> => {
       _id: storyId,
       expiresAt: { $gt: new Date() },
     })
-    .populate("user", "firstName lastName profileImage");
+    .populate("user", "firstName lastName profileImage isTrusted isVerified badge");
 
   if (!story) {
     throw new CustomError(404, "Story not found or expired");

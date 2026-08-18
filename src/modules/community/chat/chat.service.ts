@@ -147,7 +147,7 @@ const createChat = async (
   // ─── Populate full data for broadcast ───────────────────────────
   const populatedChat = await chatModel
     .findById(chat._id)
-    .populate("user", "firstName lastName profileImage")
+    .populate("user", "firstName lastName profileImage isTrusted isVerified badge")
     .populate({
       path: "replyTo",
       select: "content user",
@@ -227,7 +227,7 @@ const getLocalChat = async (query: GetLocalChatQuery) => {
   const [messages, total] = await Promise.all([
     chatModel
       .find(filter)
-      .populate("user", "firstName lastName profileImage")
+      .populate("user", "firstName lastName profileImage isTrusted isVerified badge")
       .populate({
         path: "replyTo",
         select: "content user",
@@ -348,7 +348,7 @@ const getChatById = async (chatId: string): Promise<IChat> => {
 
   const chat = await chatModel
     .findById(chatId)
-    .populate("user", "firstName lastName profileImage")
+    .populate("user", "firstName lastName profileImage isTrusted isVerified badge")
     .populate({
       path: "replyTo",
       select: "content user",
@@ -501,7 +501,7 @@ const updateChat = async (
   // Populate full data for response/broadcast
   const populatedChat = await chatModel
     .findById(chat._id)
-    .populate("user", "firstName lastName profileImage")
+    .populate("user", "firstName lastName profileImage isTrusted isVerified badge")
     .populate({
       path: "replyTo",
       select: "content user",
