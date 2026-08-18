@@ -119,7 +119,7 @@ const startOrGetConversation = async (payload: StartConversationPayload) => {
 
   const existing = await conversationModel
     .findOne({ participants: { $all: [senderId, receiverObjectId] } })
-    .populate("participants", "firstName lastName profileImage")
+    .populate("participants", "firstName lastName profileImage isTrusted isVerified badge")
     .populate({
       path: "lastMessage",
       select: "content media createdAt sender",
@@ -138,14 +138,14 @@ const startOrGetConversation = async (payload: StartConversationPayload) => {
 
   return conversationModel
     .findById(conversation._id)
-    .populate("participants", "firstName lastName profileImage")
+    .populate("participants", "firstName lastName profileImage isTrusted isVerified badge")
     .lean();
 };
 
 const getConversations = async (userId: Types.ObjectId) => {
   const conversations = await conversationModel
     .find({ participants: userId })
-    .populate("participants", "firstName lastName profileImage")
+    .populate("participants", "firstName lastName profileImage isTrusted isVerified badge")
     .populate({
       path: "lastMessage",
       select: "content media createdAt sender status",
@@ -252,13 +252,13 @@ const sendMessage = async (
 
   const populatedMessage = await privateMessageModel
     .findById(message._id)
-    .populate("sender", "firstName lastName profileImage")
+    .populate("sender", "firstName lastName profileImage isTrusted isVerified badge")
     .populate({
       path: "replyTo",
       select: "content sender media",
       populate: {
         path: "sender",
-        select: "firstName lastName profileImage",
+        select: "firstName lastName profileImage isTrusted isVerified badge",
       },
     })
     .lean();
@@ -277,7 +277,7 @@ const sendMessage = async (
   // ─── Notification ────────────────────────────────────────────────
   const senderUser = await userModel
     .findById(sender)
-    .select("firstName lastName profileImage")
+    .select("firstName lastName profileImage isTrusted isVerified badge")
     .lean();
 
   const senderName = senderUser
@@ -319,13 +319,13 @@ const getMessages = async (query: GetMessagesQuery) => {
   const [messages, total] = await Promise.all([
     privateMessageModel
       .find({ conversation: conversationId })
-      .populate("sender", "firstName lastName profileImage")
+      .populate("sender", "firstName lastName profileImage isTrusted isVerified badge")
       .populate({
         path: "replyTo",
         select: "content sender media",
         populate: {
           path: "sender",
-          select: "firstName lastName profileImage",
+          select: "firstName lastName profileImage isTrusted isVerified badge",
         },
       })
       .sort({ createdAt: -1 })
