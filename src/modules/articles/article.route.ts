@@ -3,6 +3,7 @@ import {
   createArticle,
   getAllArticles,
   getActiveArticles,
+  getCategories,
   getArticleById,
   updateArticle,
   deleteArticle,
@@ -19,6 +20,7 @@ const router = Router();
 
 // Public Routes (for Mobile App)
 router.get("/active", getActiveArticles);
+router.get("/categories", getCategories);
 router.get("/:id", getArticleById);
 
 // Admin Routes

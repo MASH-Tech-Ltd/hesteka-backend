@@ -9,6 +9,11 @@ export const createArticle = asyncHandler(async (req: Request, res: Response) =>
   ApiResponse.sendSuccess(res, 201, "Article created successfully", article);
 });
 
+export const getCategories = asyncHandler(async (req: Request, res: Response) => {
+  const categories = await articleService.getUniqueCategories();
+  ApiResponse.sendSuccess(res, 200, "Categories fetched successfully", categories);
+});
+
 export const getAllArticles = asyncHandler(async (req: Request, res: Response) => {
   const result = await articleService.getAllArticles(req.query);
   // Send the paginated result properly

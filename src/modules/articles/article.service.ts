@@ -137,6 +137,12 @@ export const articleService = {
     return article;
   },
 
+  // Get Unique Active Categories
+  async getUniqueCategories() {
+    const categories = await articleModel.distinct("mainCategory", { isActive: true });
+    return categories;
+  },
+
   // Update Article
   async updateArticle(id: string, payload: UpdateArticlePayload, file?: Express.Multer.File) {
     const article = await articleModel.findById(id);
