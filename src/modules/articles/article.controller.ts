@@ -21,9 +21,13 @@ export const getAllArticles = asyncHandler(async (req: Request, res: Response) =
 });
 
 export const getActiveArticles = asyncHandler(async (req: Request, res: Response) => {
-  const { category } = req.query;
-  const articles = await articleService.getActiveArticles(category as string);
-  ApiResponse.sendSuccess(res, 200, "Articles fetched successfully", articles);
+  const result = await articleService.getActiveArticles(req.query);
+  res.status(200).json({
+    status: "ok",
+    message: "Articles fetched successfully",
+    data: result.data,
+    meta: result.meta
+  });
 });
 
 export const getArticleById = asyncHandler(async (req: Request, res: Response) => {

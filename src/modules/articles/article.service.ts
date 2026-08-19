@@ -104,13 +104,30 @@ export const articleService = {
   },
 
   // Get Active Articles (Mobile App)
-  async getActiveArticles(mainCategory?: string) {
-    const query: any = { isActive: true };
-    if (mainCategory && mainCategory !== "All") {
-      query.mainCategory = mainCategory;
+  async getActiveArticles(query: any = {}) {
+    const { page, limit, skip } = paginationHelper(query.page as string, query.limit as string);
+    const mainCategory = query.category;
+
+    const dbQuery: any = { isActive: true };
+    if (mainCategory && mainCategory !== "All" && mainCategory !== "ALL") {
+      dbQuery.mainCategory = mainCategory;
     }
-    const articles = await articleModel.find(query).sort({ createdAt: -1 });
-    return articles;
+    
+    const total = await articleModel.countDocuments(dbQuery);
+    const articles = await articleModel.find(dbQuery)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+      
+    return {
+      data: articles,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   },
 
   // Get Single Article
