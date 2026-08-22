@@ -239,7 +239,7 @@ export const friendService = {
       status: FriendStatus.ACCEPTED,
     }).populate(
       "requester recipient",
-      "firstName lastName email image profileImage",
+      "firstName lastName email image profileImage isTrusted isVerified badge",
     );
 
     const onlineIdsArray = getOnlineUserIds();
@@ -269,7 +269,7 @@ export const friendService = {
       status: FriendStatus.ACCEPTED,
     }).populate(
       "requester recipient",
-      "firstName lastName email image profileImage",
+      "firstName lastName email image profileImage isTrusted isVerified badge",
     );
 
     const onlineIdsArray = getOnlineUserIds();
@@ -297,7 +297,7 @@ export const friendService = {
     return await FriendModel.find({
       recipient: userId,
       status: FriendStatus.PENDING,
-    }).populate("requester", "firstName lastName email image profileImage");
+    }).populate("requester", "firstName lastName email image profileImage isTrusted isVerified badge");
   },
 
   async searchUsers(req: Request) {
@@ -314,7 +314,7 @@ export const friendService = {
           { email: searchRegex },
         ],
       })
-      .select("firstName lastName email image profileImage")
+      .select("firstName lastName email image profileImage isTrusted isVerified badge")
       .limit(20);
 
     const relations = await FriendModel.find({
