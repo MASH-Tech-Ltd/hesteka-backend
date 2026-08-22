@@ -37,6 +37,7 @@ import { SupportMessageModel } from "../supportMessages/supportMessage.models";
 import { LocalMissionStatus, LocalMissionParticipationStatus } from "../localMissions/localMission.interface";
 import { PartnerAdStatus } from "../partnerAds/partnerAd.interface";
 import { BadgeModel } from "../badges/badge.model";
+import { AppAnalytics } from "../appAnalytics/appAnalytics.models";
 
 export const userService = {
   // get unique cities for targeting
@@ -1058,6 +1059,14 @@ export const userService = {
 
     await userModel.deleteOne({ _id: user._id });
 
+    // Track analytics uninstall event
+    await AppAnalytics.create({
+      eventType: "uninstall",
+      deviceId: user._id.toString(),
+      userId: user._id.toString(),
+      metadata: { reason: "user_deleted_account", email: user.email },
+    } as any).catch(() => {});
+
     return true;
   },
 
@@ -1247,6 +1256,14 @@ export const userService = {
 
       await session.commitTransaction();
       session.endSession();
+
+      // Track analytics uninstall event
+      await AppAnalytics.create({
+        eventType: "uninstall",
+        deviceId: user._id.toString(),
+        userId: user._id.toString(),
+        metadata: { reason: "admin_deleted_user", email: user.email },
+      } as any).catch(() => {});
 
       // Cloudinary deletion can happen outside the transaction
       if (user.profileImage?.public_id) {
