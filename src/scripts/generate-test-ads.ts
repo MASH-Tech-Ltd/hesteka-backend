@@ -23,7 +23,7 @@ async function run() {
     console.log(`Found ${partners.length} partners. Generating 20 test ads...`);
 
     const ads = [];
-    for (let i = 1; i <= 20; i++) {
+    for (let i = 1; i <= 10; i++) {
       const partner = partners[Math.floor(Math.random() * partners.length)];
       if (!partner) continue;
       
@@ -51,9 +51,9 @@ async function run() {
 
       ads.push({
         partner: partner._id,
-        title: `Test Campaign ${i} - ${isTargetAll ? 'Global' : adRegions[0] || adDepartments[0]}`,
-        description: `This is a randomly generated test campaign ${i} designed for layout testing.`,
-        actionText: "Click Here",
+        title: `Campagne de Test ${i} - ${isTargetAll ? 'Globale' : adRegions[0] || adDepartments[0]}`,
+        description: `Ceci est une campagne de test ${i} générée aléatoirement, conçue pour tester la mise en page.`,
+        actionText: "Cliquez ici",
         actionLink: "https://example.com",
         type: Math.random() > 0.5 ? SponsorType.BANNER : SponsorType.FEATURED,
         startDate,
@@ -62,8 +62,8 @@ async function run() {
         targetAllUsers: isTargetAll,
         regions: adRegions,
         departments: adDepartments,
-        impressions: Math.floor(Math.random() * 1000),
-        clicks: Math.floor(Math.random() * 100),
+        impressions: 0,
+        clicks: 0,
       });
     }
 

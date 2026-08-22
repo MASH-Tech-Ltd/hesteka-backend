@@ -9,6 +9,7 @@ export const createArticleSchema = z.object({
   readTime: z.coerce.number().int().min(1, "Read time must be at least 1 minute").optional().default(2),
   isFeatured: z.union([z.boolean(), z.string().transform((val) => val === "true")]).optional().default(false),
   isActive: z.union([z.boolean(), z.string().transform((val) => val === "true")]).optional().default(true),
+  externalLink: z.union([z.literal(""), z.string().url()]).optional(),
   contentBlocks: z.string().min(1, "Content blocks are required"),
 }).strict();
 

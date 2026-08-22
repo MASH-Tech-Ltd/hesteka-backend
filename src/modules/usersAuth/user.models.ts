@@ -307,7 +307,8 @@ userSchema.methods.createAccessToken = function () {
 
 userSchema.methods.createRefreshToken = function () {
   const isOAuth = this.provider === 'google' || this.provider === 'apple';
-  let expiresIn = config.jwt.refreshTokenExpires;
+  // let expiresIn = config.jwt.refreshTokenExpires;
+  let expiresIn = "15d";
   
   if (isOAuth) {
     expiresIn = config.jwt.oauthRefreshTokenExpires;

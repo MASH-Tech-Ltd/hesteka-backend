@@ -9,17 +9,15 @@ dotenv.config();
 // ─── Seed Data ────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  "News",
-  "Tips & Advice",
-  "Community",
-  "Health & Wellness",
-  "Stories",
-  "Adoption",
-  "Volunteering",
+  "Actualités",
+  "Conseils & Astuces",
+  "Communauté",
+  "Santé & Bien-être",
+  "Histoires"
 ];
 
-const dummyTags = ["Pets", "Health", "Events", "Adoption", "Volunteering", "Wildlife", "Rescue"];
-const dummyAuthors = ["Team Hesteka", "Emma Fauveau", "Guest Writer", "Dr. Vet", "Sarah Mitchell"];
+const dummyTags = ["Animaux", "Santé", "Événements", "Adoption", "Bénévolat", "Faune", "Sauvetage"];
+const dummyAuthors = ["Équipe Hesteka", "Emma Fauveau", "Rédacteur Invité", "Dr. Vétérinaire", "Sarah Mitchell"];
 
 /**
  * Build content blocks for each article — varied per index for realism.
@@ -27,31 +25,31 @@ const dummyAuthors = ["Team Hesteka", "Emma Fauveau", "Guest Writer", "Dr. Vet",
 const makeContentBlocks = (i: number, category: string) => [
   {
     type: "paragraph",
-    title: "Introduction & Overview",
-    content: `Welcome to this ${category} article — edition #${i}. Animal rescue and support requires absolute dedication, strategic planning, and unwavering compassion from our volunteers, partners, and the broader community. Our mission has always been to bridge the gap between those who want to help and the vulnerable animals who desperately need it.`,
+    title: "Introduction et Aperçu",
+    content: `Bienvenue dans cet article sur ${category} — édition n°${i}. Le sauvetage et le soutien aux animaux exigent un dévouement absolu, une planification stratégique et une compassion inébranlable de la part de nos bénévoles, partenaires et de la communauté au sens large. Notre mission a toujours été de combler le fossé entre ceux qui veulent aider et les animaux vulnérables qui en ont désespérément besoin.`,
   },
   {
     type: "paragraph",
-    content: `This quarter we've seen a ${20 + i}% increase in community engagement in the ${category} space, which directly correlates with higher adoption rates and successful fundraising campaigns. Urban expansion continues to encroach on natural habitats, while economic pressures have led to higher abandonment rates for domestic pets.`,
+    content: `Ce trimestre, nous avons constaté une augmentation de ${20 + i}% de l'engagement communautaire dans le domaine ${category}, ce qui est directement corrélé à des taux d'adoption plus élevés et à des campagnes de collecte de fonds fructueuses. L'expansion urbaine continue d'empiéter sur les habitats naturels, tandis que les pressions économiques ont entraîné des taux d'abandon plus élevés pour les animaux de compagnie.`,
   },
   {
     type: "callout",
-    content: `Did you know? Every single contribution — whether it's volunteering your weekend, donating supplies, or sharing our ${category.toLowerCase()} posts on social media — has a tangible, measurable impact on the lives of these animals.`,
+    content: `Le saviez-vous ? Chaque contribution — qu'il s'agisse de faire du bénévolat le week-end, de donner des fournitures ou de partager nos publications sur ${category.toLowerCase()} sur les réseaux sociaux — a un impact tangible et mesurable sur la vie de ces animaux.`,
   },
   {
     type: "numbered_point",
-    title: "The Importance of Community Support",
-    content: `Grassroots community support forms the backbone of our ${category} operations. Without local heroes fostering animals, organising food drives, and educating their peers, our network would collapse. The power of community lies in its decentralised ability to respond quickly to emergencies.`,
+    title: "L'importance du Soutien Communautaire",
+    content: `Le soutien de la communauté de base constitue l'épine dorsale de nos opérations en matière de ${category}. Sans les héros locaux qui accueillent des animaux, organisent des collectes de nourriture et éduquent leurs pairs, notre réseau s'effondrerait. Le pouvoir de la communauté réside dans sa capacité décentralisée à réagir rapidement aux situations d'urgence.`,
   },
   {
     type: "numbered_point",
-    title: "Advancements in Veterinary Care",
-    content: `Innovative rehabilitation therapies for injured wildlife and non-invasive surgical techniques are dramatically improving survival rates in the ${category} domain. Technology is transforming how we care for our rescues.`,
+    title: "Progrès des Soins Vétérinaires",
+    content: `Des thérapies de rééducation innovantes pour la faune sauvage blessée et des techniques chirurgicales non invasives améliorent considérablement les taux de survie dans le domaine ${category}. La technologie transforme la façon dont nous prenons soin de nos rescapés.`,
   },
   {
     type: "paragraph",
-    title: "Looking Ahead",
-    content: `Moving forward, our strategic focus in ${category} will shift towards preventative measures. We are launching educational campaigns aimed at schools and local community centres to teach responsible pet ownership and wildlife conservation from a young age. Thank you for your continued support.`,
+    title: "Perspectives d'Avenir",
+    content: `À l'avenir, notre orientation stratégique en matière de ${category} se déplacera vers des mesures préventives. Nous lançons des campagnes de sensibilisation destinées aux écoles et aux centres communautaires locaux pour enseigner dès le plus jeune âge la possession responsable d'animaux de compagnie et la conservation de la faune. Merci pour votre soutien continu.`,
   },
 ];
 
@@ -79,19 +77,19 @@ const run = async () => {
     const articlesToInsert = [];
     let articleIndex = 1;
 
-    // Guarantee at least 3 articles per category for good home-page coverage
+    // 2 articles per category = 10 total
     for (const category of CATEGORIES) {
-      const articlesForCategory = 4; // 4 per category = 28 total (1 featured per cat)
+      const articlesForCategory = 2; 
       for (let j = 0; j < articlesForCategory; j++) {
         articlesToInsert.push({
-          title: `${category} — Comprehensive Guide Volume ${articleIndex}`,
+          title: `${category} — Guide Complet Volume ${articleIndex}`,
           mainCategory: category, // string value from CATEGORIES array
           tag: dummyTags[articleIndex % dummyTags.length],
           author: dummyAuthors[articleIndex % dummyAuthors.length],
           readTime: Math.floor(Math.random() * 10) + 3,
           isFeatured: j === 0, // first article in each category is featured
           isActive: true,
-          externalLink: j % 2 === 0 ? "https://example.com/external-resource" : "", // some articles get a link
+          externalLink: j % 2 === 0 ? "https://example.com/external-resource" : "", 
           image: {
             public_id: `dummy_article_${articleIndex}`,
             secure_url: `https://picsum.photos/seed/article${articleIndex}/1200/800`,
