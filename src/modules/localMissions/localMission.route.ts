@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authGuard, allowRole } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
+import { contentLimiter } from "../../middleware/rateLimiter.middleware";
 import {
   approveLocalMissionParticipant,
   createLocalMission,
@@ -19,20 +20,23 @@ import { localMissionValidation } from "./localMission.validation";
 
 const router = Router();
 
-router.get("/get-all-local-missions", getAllLocalMissions);
+router.get("/get-all-local-missions", contentLimiter, getAllLocalMissions);
 router.get(
   "/get-single-local-mission/:missionId",
+  contentLimiter,
   authGuard,
   getLocalMissionById,
 );
 router.post(
   "/join-local-mission/:missionId",
+  contentLimiter,
   authGuard,
   allowRole("user"),
   joinLocalMission,
 );
 router.post(
   "/leave-local-mission/:missionId",
+  contentLimiter,
   authGuard,
   allowRole("user"),
   leaveLocalMission,

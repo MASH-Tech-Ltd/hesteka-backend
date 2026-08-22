@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { authGuard, allowRole } from "../../middleware/auth.middleware";
 import { role } from "../usersAuth/user.interface";
+import { rateLimiter } from "../../middleware/rateLimiter.middleware";
 import { getSettings, updateSettings, syncDatabaseData, getBackupLogs, getBackupFiles, downloadBackupFile, generateShopifyApiKey, getShopifyApiKey } from "./settings.controller";
 
 const router = Router();
 
 // Public route to get settings (e.g. support email)
-router.get("/", getSettings);
+router.get("/", rateLimiter(15, 30, "Too many settings requests from this IP."), getSettings);
 
 // Admin only routes
 router.patch("/", authGuard, allowRole(role.ADMIN), updateSettings);

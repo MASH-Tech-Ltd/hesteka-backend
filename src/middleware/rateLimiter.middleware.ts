@@ -201,7 +201,7 @@ export const passwordLimiter = rateLimiter(
 
 export const contentLimiter = rateLimiter(
     15,
-    20,
+    50,
     "Too many submission attempts from this IP. Please try again after 15 minutes."
 );
 
@@ -234,3 +234,11 @@ export const inviteLimiter = rateLimiter(
     15,
     "Too many invite link requests from this IP. Please try again after 15 minutes."
 );
+
+// Article public read endpoints — generous but blocks scrapers/bots
+export const articleLimiter = rateLimiter(
+    15,
+    60,
+    "Too many article requests from this IP. Please try again after 15 minutes."
+);
+

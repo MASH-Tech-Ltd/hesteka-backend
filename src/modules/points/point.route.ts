@@ -1,15 +1,17 @@
 import { Router } from "express";
 import { authGuard, allowRole } from "../../middleware/auth.middleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
+import { rateLimiter } from "../../middleware/rateLimiter.middleware";
 import { pointController } from "./point.controller";
 import { pointValidation } from "./point.validation";
 
 const router = Router();
 
-router.get("/get-my-points", authGuard, allowRole("user"), pointController.getMyPoints);
+router.get("/get-my-points", rateLimiter(15, 60), authGuard, allowRole("user"), pointController.getMyPoints);
 
 router.post(
   "/redeem-points",
+  rateLimiter(15, 10, "Too many redemption attempts. Please try again after 15 minutes."),
   authGuard,
   allowRole("user"),
   validateRequest(pointValidation.redeemPointsSchema),

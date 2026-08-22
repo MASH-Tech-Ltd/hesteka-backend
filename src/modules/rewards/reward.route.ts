@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authGuard, allowRole } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
+import { contentLimiter } from "../../middleware/rateLimiter.middleware";
 import {
   createRewardItem,
   deleteRewardItem,
@@ -18,8 +19,8 @@ import { rewardValidation } from "./reward.validation";
 const router = Router();
 
 // Public/User Routes
-router.get("/get-all-rewards", getAllRewardItems);
-router.get("/get-single-reward/:rewardId", getRewardItemById);
+router.get("/get-all-rewards", contentLimiter, getAllRewardItems);
+router.get("/get-single-reward/:rewardId", contentLimiter, getRewardItemById);
 
 // Authenticated User Routes
 router.post("/redeem-reward/:rewardId", authGuard, allowRole("user"), redeemRewardItem);

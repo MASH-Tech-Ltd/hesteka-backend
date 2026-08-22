@@ -21,9 +21,10 @@ import { intigrationRoute } from "./modules/intigration/intigration.route";
 const xss = require("xss-clean");
 
 const app = express();
-// Trust all proxies (Cloudflare, Nginx, Docker, etc.) to ensure req.ip correctly resolves to the real client IP 
-// instead of the reverse proxy's IP. This prevents all users from sharing the same IP rate limit.
-app.set("trust proxy", true);
+// Trust exactly 1 proxy hop (Nginx / Cloudflare → app) so req.ip resolves to the real client IP.
+// Using `true` is intentionally blocked by express-rate-limit (ERR_ERL_PERMISSIVE_TRUST_PROXY)
+// because it allows IP spoofing. Use a number equal to the number of reverse-proxy hops instead.
+app.set("trust proxy", 1);
 const server = http.createServer(app);
 
 const allowedOrigins = [

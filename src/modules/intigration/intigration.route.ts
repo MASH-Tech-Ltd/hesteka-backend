@@ -1,6 +1,7 @@
 import { Router } from "express";
 import cors from "cors";
 import { getShopifyUsers } from "./intigration.controller";
+import { rateLimiter } from "../../middleware/rateLimiter.middleware";
 
 const router = Router();
 
@@ -11,6 +12,6 @@ const shopifyCors = cors({
   allowedHeaders: ["Content-Type", "x-api-key", "Authorization"]
 });
 
-router.get("/shopify/users", shopifyCors, getShopifyUsers);
+router.get("/shopify/users", shopifyCors, rateLimiter(15, 20, "Too many Shopify sync requests. Please try again after 15 minutes."), getShopifyUsers);
 
 export const intigrationRoute = router;

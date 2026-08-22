@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authGuard, allowRole } from "../../middleware/auth.middleware";
+import { rateLimiter } from "../../middleware/rateLimiter.middleware";
 import {
   getProjects,
   addProject,
@@ -12,7 +13,7 @@ import {
 const router = Router();
 
 // Public routes
-router.get("/stats", getCrowdfundingStats);
+router.get("/stats", rateLimiter(15, 60), getCrowdfundingStats);
 
 // Admin routes
 router.get("/donors", authGuard, allowRole("admin"), getCrowdfundingDonors);

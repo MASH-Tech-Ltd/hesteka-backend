@@ -20,6 +20,7 @@ export interface IArticle extends Document {
   author: string; // e.g., "Team Hesteka"
   readTime: number; // in minutes
   isFeatured: boolean;
+  externalLink?: string;
   image?: {
     public_id: string;
     secure_url: string;
@@ -37,6 +38,7 @@ export interface CreateArticlePayload {
   author: string;
   readTime: number | string;
   isFeatured?: boolean;
+  externalLink?: string;
   contentBlocks: string | IContentBlock[];
   isActive?: boolean;
 }

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authGuard, authGuardOptional, allowRole } from "../../middleware/auth.middleware";
 import { role } from "../usersAuth/user.interface";
+import { contentLimiter } from "../../middleware/rateLimiter.middleware";
 import {
   createFaq,
   getAllFaqs,
@@ -14,8 +15,8 @@ import { upload } from "../../middleware/multer.midleware";
 const router = Router();
 
 // Public route to get FAQs (optional auth to see all if admin)
-router.get("/", authGuardOptional, getAllFaqs);
-router.get("/:id", authGuardOptional, getFaqById);
+router.get("/", contentLimiter, authGuardOptional, getAllFaqs);
+router.get("/:id", contentLimiter, authGuardOptional, getFaqById);
 
 // Admin only routes
 router.use(authGuard, allowRole(role.ADMIN));

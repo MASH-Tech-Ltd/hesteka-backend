@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authGuard, allowRole } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
+import { contentLimiter } from "../../middleware/rateLimiter.middleware";
 import {
   createCollectionPoint,
   deletePartnerAd,
@@ -14,8 +15,8 @@ import { partnerAdValidation } from "./partnerAd.validation";
 
 const router = Router();
 
-router.get("/get-all-partner-ads", getAllPartnerAds);
-router.get("/get-single-partner-ad/:adId", getPartnerAdById);
+router.get("/get-all-partner-ads", contentLimiter, getAllPartnerAds);
+router.get("/get-single-partner-ad/:adId", contentLimiter, getPartnerAdById);
 
 router.use(authGuard, allowRole("partners", "admin"));
 

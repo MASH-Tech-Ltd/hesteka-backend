@@ -43,3 +43,28 @@ export const validateRequest = (schema: ZodSchema): RequestHandler => {
     }
   };
 };
+
+// ─── Query Param Validator ────────────────────────────────────────────────────
+// Validates + coerces req.query against a Zod schema.
+// Writes the parsed (coerced) values back to req.query so downstream
+// handlers always receive clean typed values (e.g. numbers instead of strings).
+export const validateQuery = (schema: ZodSchema): RequestHandler => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      const parsed = await schema.parseAsync(req.query ?? {});
+      // req.query is a read-only getter on IncomingMessage — cannot replace it.
+      // Object.assign mutates the existing object in-place instead.
+      Object.assign(req.query, parsed);
+      next();
+    } catch (err: any) {
+      if (err instanceof ZodError) {
+        const errors = err.issues.map((issue) => ({
+          field: issue.path[0] ?? "unknown",
+          message: issue.message,
+        }));
+        return next(new CustomError(400, "Query validation failed", errors));
+      }
+      next(err);
+    }
+  };
+};

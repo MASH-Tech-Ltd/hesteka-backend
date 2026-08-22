@@ -17,12 +17,13 @@ import {
 import { allowRole, authGuard, authGuardOptional } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
+import { rateLimiter } from "../../middleware/rateLimiter.middleware";
 
 const router = Router();
 
-// Public Routes (for Mobile App) 
-router.get("/random", authGuardOptional, getRandomSponsor);
-router.post("/:id/track", trackSponsor);
+// Public Routes (for Mobile App)
+router.get("/random", rateLimiter(15, 60), authGuardOptional, getRandomSponsor);
+router.post("/:id/track", rateLimiter(15, 30, "Too many tracking requests. Please wait 15 minutes."), trackSponsor);
 
 // Admin Routes
 router.use(authGuard);  

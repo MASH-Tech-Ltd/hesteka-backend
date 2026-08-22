@@ -29,6 +29,9 @@ const articleSchema = new Schema<IArticle>(
       type: Boolean,
       default: false,
     },
+    externalLink: {
+      type: String,
+    },
     image: {
       public_id: { type: String },
       secure_url: { type: String },
