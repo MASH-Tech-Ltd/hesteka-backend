@@ -20,8 +20,10 @@ async function run() {
       process.exit(1);
     }
 
-    console.log(`Found ${partners.length} partners. Generating 20 test ads...`);
+    console.log(`Found ${partners.length} partners. Clearing old ads and generating 20 test ads...`);
 
+    await sponsorModel.deleteMany({});
+    
     const ads = [];
     for (let i = 1; i <= 10; i++) {
       const partner = partners[Math.floor(Math.random() * partners.length)];
@@ -49,12 +51,22 @@ async function run() {
           status = SponsorStatus.EXPIRED;
       }
 
+      // Mock images
+      const mockImages = [
+        { public_id: "mock1", secure_url: "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg" },
+        { public_id: "mock2", secure_url: "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg" },
+        { public_id: "mock3", secure_url: "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg" },
+      ];
+      
+      const randomImage = mockImages[Math.floor(Math.random() * mockImages.length)];
+
       ads.push({
         partner: partner._id,
         title: `Campagne de Test ${i} - ${isTargetAll ? 'Globale' : adRegions[0] || adDepartments[0]}`,
         description: `Ceci est une campagne de test ${i} générée aléatoirement, conçue pour tester la mise en page.`,
         actionText: "Cliquez ici",
         actionLink: "https://example.com",
+        sponsorImage: randomImage,
         type: Math.random() > 0.5 ? SponsorType.BANNER : SponsorType.FEATURED,
         startDate,
         endDate,

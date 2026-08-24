@@ -33,7 +33,7 @@ router.get("/stats", getSponsorStats);
 
 router.post(
   "/",
-  upload.single("image"),
+  upload.single("sponsorImage"),
   validateRequest(createSponsorSchema),
   createSponsor
 );
@@ -42,7 +42,7 @@ router.get("/search-partners", searchPartners);
 router.get("/:id", getSponsorById);
 router.patch(
   "/:id",
-  upload.single("image"),
+  upload.single("sponsorImage"),
   validateRequest(updateSponsorSchema),
   updateSponsor
 );

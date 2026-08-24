@@ -47,14 +47,14 @@ export const getRandomSponsor = asyncHandler(async (req: Request, res: Response)
   const region = user?.region || req.query.region;
   const department = user?.department || req.query.department;
 
-  const sponsor = await sponsorService.getRandomSponsor(
+  const sponsors = await sponsorService.getRandomSponsor(
     region as string | undefined,
     department as string | undefined
   );
-  if (!sponsor) {
-    return ApiResponse.sendSuccess(res, 200, "No active sponsors available", null);
+  if (!sponsors || sponsors.length === 0) {
+    return ApiResponse.sendSuccess(res, 200, "No active sponsors available", []);
   }
-  ApiResponse.sendSuccess(res, 200, "Sponsor fetched successfully", sponsor);
+  ApiResponse.sendSuccess(res, 200, "Sponsors fetched successfully", sponsors);
 });
 
 export const trackSponsor = asyncHandler(async (req: Request, res: Response) => {

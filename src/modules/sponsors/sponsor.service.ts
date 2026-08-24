@@ -93,7 +93,7 @@ export const sponsorService = {
 
     const sponsorData: any = { ...payload };
     if (image) {
-      sponsorData.image = image;
+      sponsorData.sponsorImage = image;
     }
 
     // Auto-expire logic on creation
@@ -212,12 +212,12 @@ export const sponsorService = {
     if (!sponsor) throw new CustomError(404, "Sponsor not found");
 
     if (file) {
-      if (sponsor.image?.public_id) {
-        await deleteCloudinaryQuietly(sponsor.image.public_id);
+      if (sponsor.sponsorImage?.public_id) {
+        await deleteCloudinaryQuietly(sponsor.sponsorImage.public_id);
       }
       try {
         const image = await uploadCloudinary(file.path);
-        sponsor.image = image;
+        sponsor.sponsorImage = image;
       } catch (error) {
         throw new CustomError(500, "Error uploading image");
       }
@@ -243,8 +243,8 @@ export const sponsorService = {
     const sponsor = await sponsorModel.findById(id);
     if (!sponsor) throw new CustomError(404, "Sponsor not found");
 
-    if (sponsor.image?.public_id) {
-      await deleteCloudinaryQuietly(sponsor.image.public_id);
+    if (sponsor.sponsorImage?.public_id) {
+      await deleteCloudinaryQuietly(sponsor.sponsorImage.public_id);
     }
     await sponsor.deleteOne();
     return sponsor;
@@ -275,20 +275,22 @@ export const sponsorService = {
       matchCriteria.$or = orConditions;
     }
 
-    // Aggregate to find random active sponsor within dates and targeting rules
+    // Aggregate to find random active sponsors within dates and targeting rules
     const sponsors = await sponsorModel.aggregate([
       { $match: matchCriteria },
-      { $sample: { size: 1 } },
+      { $sample: { size: 3 } },
     ]);
 
-    if (!sponsors.length) return null;
+    if (!sponsors.length) return [];
+
+    const sponsorIds = sponsors.map(s => s._id);
 
     // Populate partner details and select only public fields (omit sensitive metrics & targeting info)
-    const sponsor = await sponsorModel.findById(sponsors[0]._id)
-      .select("title description actionText actionLink type image partner")
+    const populatedSponsors = await sponsorModel.find({ _id: { $in: sponsorIds } })
+      .select("title description actionText actionLink type sponsorImage partner")
       .populate("partner", "firstName lastName company profileImage");
     
-    return sponsor;
+    return populatedSponsors;
   },
 
   // Track Impression/Click (Public Mobile)

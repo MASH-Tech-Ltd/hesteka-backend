@@ -17,7 +17,7 @@ export interface ISponsor extends Document {
   description?: string;
   actionText: string;
   actionLink: string;
-  image?: {
+  sponsorImage?: {
     public_id: string;
     secure_url: string;
   };

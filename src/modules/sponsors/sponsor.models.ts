@@ -23,7 +23,7 @@ const sponsorSchema = new Schema<ISponsor>(
       type: String,
       required: true,
     },
-    image: {
+    sponsorImage: {
       public_id: { type: String },
       secure_url: { type: String },
     },
