@@ -49,8 +49,21 @@ export const ipBlockerMiddleware = async (
 ): Promise<void> => {
   try {
     const clientIp = getClientIp(req);
+    const urlPath = req.originalUrl || req.url || "";
+    
+    const userAgentStr =
+      typeof req.headers["user-agent"] === "string"
+        ? req.headers["user-agent"]
+        : "";
+        
+    const requestedFrom = securityService.detectRequestedFrom(
+      urlPath,
+      userAgentStr,
+      req.headers,
+    );
 
     const isBlocked = await securityService.isIpBlocked(clientIp);
+    
     if (isBlocked) {
       // Throttled logging (max 1 log per minute per blocked IP) so details remain visible in Security Logs
       const lastLogged = blockedIpLogThrottle.get(clientIp) || 0;
@@ -70,18 +83,9 @@ export const ipBlockerMiddleware = async (
           }
         } catch (e) {}
 
-        const userAgentStr =
-          typeof req.headers["user-agent"] === "string"
-            ? req.headers["user-agent"]
-            : "";
-        const requestedFrom = securityService.detectRequestedFrom(
-          req.originalUrl || req.url,
-          userAgentStr,
-          req.headers,
-        );
         await securityService.logSecurityIncident(
           clientIp,
-          req.originalUrl || req.url,
+          urlPath,
           req.method,
           "Access denied. Attempt from blocked IP rejected.",
           userAgentStr,
@@ -98,19 +102,10 @@ export const ipBlockerMiddleware = async (
     }
 
     // Active Protection: Detect unusual IP probing / bot attack signatures or unauthorized script/tool attempts
-    const urlPath = req.originalUrl || req.url || "";
     const isProbingAttack = suspiciousProbingPatterns.some((pattern) =>
       pattern.test(urlPath),
     );
-    const userAgentStr =
-      typeof req.headers["user-agent"] === "string"
-        ? req.headers["user-agent"]
-        : "";
-    const requestedFrom = securityService.detectRequestedFrom(
-      urlPath,
-      userAgentStr,
-      req.headers,
-    );
+    
     const isScriptOrTool =
       requestedFrom === "curl" ||
       requestedFrom === "postman" ||
@@ -128,7 +123,7 @@ export const ipBlockerMiddleware = async (
         reasonMsg,
         userAgentStr,
         null,
-        false,
+        true,
         requestedFrom,
       );
       throw new CustomError(
