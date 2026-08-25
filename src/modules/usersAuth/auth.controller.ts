@@ -2,6 +2,7 @@ import { CookieOptions, Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import ApiResponse from "../../utils/apiResponse";
 import config from "../../config";
+import { getClientIp } from "../../utils/ipUtils";
 import { authService } from "./auth.service";
 import CustomError from "../../helpers/CustomError";
 import { trackUserIpAndLocation } from "../../helpers/getIpLocation";
@@ -32,7 +33,7 @@ const cookieOptions = (maxAge?: number): CookieOptions => ({
 
 //: Register user
 export const registration = asyncHandler(async (req, res) => {
-  const ip = req.ip || (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 'unknown';
+  const ip = getClientIp(req);
   const userAgent = req.headers['user-agent'] || '';
   const user = await authService.registerUser(req.body, ip, userAgent);
   await trackUserIpAndLocation(req, user, true);
@@ -51,7 +52,7 @@ export const partnerRegistration = asyncHandler(async (req, res) => {
   const logo = files?.logo?.[0];
   const partnerImage = files?.partnerImage?.[0];
 
-  const ip = req.ip || (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 'unknown';
+  const ip = getClientIp(req);
   const userAgent = req.headers['user-agent'] || '';
   const user = await authService.registerPartner(req.body, logo, partnerImage, ip, userAgent);
   await trackUserIpAndLocation(req, user, true);
@@ -219,7 +220,7 @@ export const googleLogin = asyncHandler(async (req, res) => {
   if (!idToken) throw new CustomError(400, "Google idToken is required");
 
   // console.log("[Auth Controller] Google Login - Received FCM Token:", fcmToken);
-  const ip = req.ip || (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 'unknown';
+  const ip = getClientIp(req);
   const userAgent = req.headers['user-agent'] || '';
 
   const { user, accessToken, refreshToken } = await authService.googleLogin(
@@ -282,7 +283,7 @@ export const appleLogin = asyncHandler(async (req, res) => {
   if (!idToken) throw new CustomError(400, "Apple idToken is required");
 
   // console.log("[Auth Controller] Apple Login - Received FCM Token:", fcmToken);
-  const ip = req.ip || (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 'unknown';
+  const ip = getClientIp(req);
   const userAgent = req.headers['user-agent'] || '';
 
   const { user, accessToken, refreshToken } = await authService.appleLogin(

@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import ApiResponse from "../../utils/apiResponse";
 import { userService } from "./user.service";
+import { getClientIp } from "../../utils/ipUtils";
 import CustomError from "../../helpers/CustomError";
 import { Types } from "mongoose";
 
@@ -54,7 +55,7 @@ export const getInviteLink = asyncHandler(async (req, res) => {
 });
 
 export const resolveReferral = asyncHandler(async (req, res) => {
-  const ip = req.ip || (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 'unknown';
+  const ip = getClientIp(req);
   const userAgent = req.headers['user-agent'] || '';
   const data = await userService.resolveReferral(ip, userAgent);
   

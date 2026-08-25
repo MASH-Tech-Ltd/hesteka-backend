@@ -322,6 +322,11 @@ export class SecurityService {
       }
     }
 
+    if (userAgent && typeof userAgent === "string" && userAgent.trim() !== "") {
+      const truncatedUa = userAgent.substring(0, 30);
+      return `Unrecognized: ${truncatedUa}`;
+    }
+
     return "unknown";
   }
 

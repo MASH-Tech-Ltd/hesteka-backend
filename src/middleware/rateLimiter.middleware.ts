@@ -2,6 +2,7 @@ import rateLimit from "express-rate-limit";
 import config from "../config";
 import { securityService } from "../modules/security/security.service";
 import jwt from "jsonwebtoken";
+import { getClientIp } from "../utils/ipUtils";
 
 const parseWindowMinutes = (win?: string): number => {
     if (!win) return 15;
@@ -14,8 +15,7 @@ const defaultWindowMinutes = parseWindowMinutes(config?.rateLimit?.window);
 const defaultMaxRequests = config?.rateLimit?.max || 500;
 
 const logRateLimitIncident = (req: any, reason: string) => {
-    const ip = req.ip || req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown";
-    const clientIp = Array.isArray(ip) ? ip[0] : ip.toString().split(",")[0].trim();
+    const clientIp = getClientIp(req);
     let userId = req.user?._id || null;
     if (!userId) {
         try {
@@ -55,6 +55,7 @@ export const rateLimiter = (
         max: maxRequests,
         standardHeaders: true,
         legacyHeaders: false,
+        keyGenerator: (req) => getClientIp(req),
         skip: (req) => {
             // Never skip rate limiters on sensitive auth endpoints to prevent brute-forcing
             const url = req.originalUrl || req.url || "";
@@ -142,6 +143,7 @@ export const adminApiLimiter = rateLimit({
     max: 15000, // Generous limit for trusted dashboards (Admin, Partner, Payment)
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => getClientIp(req as any),
     skip: (req) => {
         return !isTrustedDashboardRequest(req);
     },
@@ -160,6 +162,7 @@ export const globalApiLimiter = rateLimit({
     max: defaultMaxRequests,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => getClientIp(req as any),
     skip: (req) => {
         if (req.originalUrl.includes("/webhook/")) return true;
         if (isTrustedDashboardRequest(req) || req.user?.role === "admin" || req.user?.role === "partner" || req.user?.role === "partners") return true;

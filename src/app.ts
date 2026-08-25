@@ -18,6 +18,7 @@ import hpp from "hpp";
 import { securityService } from "./modules/security/security.service";
 import { deviceReferralModel } from "./modules/usersAuth/deviceReferral.models";
 import { intigrationRoute } from "./modules/intigration/intigration.route";
+import { getClientIp } from "./utils/ipUtils";
 const xss = require("xss-clean");
 
 const app = express();
@@ -99,9 +100,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       const hasAttack = mongoSanitize.has(req[key as keyof Request]);
       if (hasAttack) {
         const reasonMsg = `🚨 ACTIVE PROTECTION: Malicious NoSQL Injection attempt blocked in req.${key}`;
-        // console.warn(`[SECURITY ALERT] ${reasonMsg} from IP: ${req.ip}`);
+        const clientIp = getClientIp(req);
+        // console.warn(`[SECURITY ALERT] ${reasonMsg} from IP: ${clientIp}`);
         securityService.logSecurityIncident(
-          req.ip || "unknown",
+          clientIp,
           req.originalUrl || req.url || "",
           req.method,
           reasonMsg,
@@ -121,9 +123,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   const handleXss = (original: any, cleaned: any, keyName: string) => {
     if (JSON.stringify(original) !== JSON.stringify(cleaned)) {
       const reasonMsg = `🚨 ACTIVE PROTECTION: Malicious XSS attempt blocked in req.${keyName}`;
-      // console.warn(`[SECURITY ALERT] ${reasonMsg} from IP: ${req.ip}`);
+      const clientIp = getClientIp(req);
+      // console.warn(`[SECURITY ALERT] ${reasonMsg} from IP: ${clientIp}`);
       securityService.logSecurityIncident(
-        req.ip || "unknown",
+        clientIp,
         req.originalUrl || req.url || "",
         req.method,
         reasonMsg,
@@ -204,7 +207,7 @@ app.get('/report/:id', (req: Request, res: Response) => {
 
 app.get('/invite/:code', rateLimiter(15, 15), async (req: Request, res: Response) => {
   const userAgent = req.headers['user-agent'] || '';
-  const ip = req.ip || (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 'unknown';
+  const ip = getClientIp(req);
   const referralCode = (req.params.code as string)?.toUpperCase() || '';
   
   if (referralCode) {

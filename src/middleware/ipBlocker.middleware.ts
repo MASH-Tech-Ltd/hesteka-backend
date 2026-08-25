@@ -26,19 +26,21 @@ const suspiciousProbingPatterns = [
   /\/v1\/pods/i,
   /\/\.aws/i,
   /\/\.ssh/i,
-  /\/storage\/logs/i,       // Laravel logs
-  /\/remote\/login/i,       // Fortinet
-  /\/boaform/i,             // IoT routers
-  /\/\.DS_Store/i,          // MacOS directory info
-  /\/phpinfo/i,             // Exposed PHP info
-  /\/\.kube/i,              // Kubernetes config
+  /\/storage\/logs/i, // Laravel logs
+  /\/remote\/login/i, // Fortinet
+  /\/boaform/i, // IoT routers
+  /\/\.DS_Store/i, // MacOS directory info
+  /\/phpinfo/i, // Exposed PHP info
+  /\/\.kube/i, // Kubernetes config
   /\/wp-content\/plugins/i, // WP Plugin exploits
-  /\/swagger-ui/i,          // Exposed API docs
-  /\/api-docs/i,            // Exposed API docs
-  /\/\.dockerenv/i,         // Docker environments
-  /\/passwd/i,              // Path traversal attempts
-  /\/shadow/i               // Path traversal attempts
+  /\/swagger-ui/i, // Exposed API docs
+  /\/api-docs/i, // Exposed API docs
+  /\/\.dockerenv/i, // Docker environments
+  /\/passwd/i, // Path traversal attempts
+  /\/shadow/i, // Path traversal attempts
 ];
+
+import { getClientIp } from "../utils/ipUtils";
 
 export const ipBlockerMiddleware = async (
   req: Request,
@@ -46,8 +48,7 @@ export const ipBlockerMiddleware = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const ip = req?.ip || req?.headers?.["x-real-ip"] || req?.headers?.["x-forwarded-for"] || req?.socket?.remoteAddress || "unknown";
-    const clientIp = (Array.isArray(ip) ? ip[0] : (typeof ip === "string" ? ip.split(",")[0] : ""))?.trim() || "unknown";
+    const clientIp = getClientIp(req);
 
     const isBlocked = await securityService.isIpBlocked(clientIp);
     if (isBlocked) {
@@ -58,15 +59,26 @@ export const ipBlockerMiddleware = async (
         let userId = null;
         try {
           const authHeader = req.headers?.authorization;
-          if (authHeader && typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+          if (
+            authHeader &&
+            typeof authHeader === "string" &&
+            authHeader.startsWith("Bearer ")
+          ) {
             const token = authHeader.split(" ")[1] || "";
             const decoded = jwt.decode(token) as any;
             if (decoded?.userId) userId = decoded.userId;
           }
         } catch (e) {}
 
-        const userAgentStr = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "";
-        const requestedFrom = securityService.detectRequestedFrom(req.originalUrl || req.url, userAgentStr, req.headers);
+        const userAgentStr =
+          typeof req.headers["user-agent"] === "string"
+            ? req.headers["user-agent"]
+            : "";
+        const requestedFrom = securityService.detectRequestedFrom(
+          req.originalUrl || req.url,
+          userAgentStr,
+          req.headers,
+        );
         await securityService.logSecurityIncident(
           clientIp,
           req.originalUrl || req.url,
@@ -75,7 +87,7 @@ export const ipBlockerMiddleware = async (
           userAgentStr,
           userId,
           true,
-          requestedFrom
+          requestedFrom,
         );
       }
 
@@ -87,9 +99,18 @@ export const ipBlockerMiddleware = async (
 
     // Active Protection: Detect unusual IP probing / bot attack signatures or unauthorized script/tool attempts
     const urlPath = req.originalUrl || req.url || "";
-    const isProbingAttack = suspiciousProbingPatterns.some((pattern) => pattern.test(urlPath));
-    const userAgentStr = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "";
-    const requestedFrom = securityService.detectRequestedFrom(urlPath, userAgentStr, req.headers);
+    const isProbingAttack = suspiciousProbingPatterns.some((pattern) =>
+      pattern.test(urlPath),
+    );
+    const userAgentStr =
+      typeof req.headers["user-agent"] === "string"
+        ? req.headers["user-agent"]
+        : "";
+    const requestedFrom = securityService.detectRequestedFrom(
+      urlPath,
+      userAgentStr,
+      req.headers,
+    );
     const isScriptOrTool =
       requestedFrom === "curl" ||
       requestedFrom === "postman" ||
@@ -108,7 +129,7 @@ export const ipBlockerMiddleware = async (
         userAgentStr,
         null,
         false,
-        requestedFrom
+        requestedFrom,
       );
       throw new CustomError(
         403,
@@ -123,4 +144,3 @@ export const ipBlockerMiddleware = async (
     next(error);
   }
 };
-
