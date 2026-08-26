@@ -56,9 +56,9 @@ export const getInviteLink = asyncHandler(async (req, res) => {
 
 export const resolveReferral = asyncHandler(async (req, res) => {
   const ip = getClientIp(req);
-  const userAgent = req.headers['user-agent'] || '';
+  const userAgent = req.headers["user-agent"] || "";
   const data = await userService.resolveReferral(ip, userAgent);
-  
+
   if (data?.referralCode) {
     ApiResponse.sendSuccess(res, 200, "Referral resolved successfully", data);
   } else {
@@ -209,7 +209,7 @@ export const deleteUserByAdmin = asyncHandler(
 
 //: block a user
 export const blockUser = asyncHandler(async (req: Request, res: Response) => {
-  const blockerId = req.user?._id;
+  const blockerId = (req as any).user?._id;
   if (!blockerId) throw new CustomError(401, "Unauthorized");
 
   const { userId } = req.params as { userId: string };
@@ -220,7 +220,7 @@ export const blockUser = asyncHandler(async (req: Request, res: Response) => {
 
 //: unblock a user
 export const unblockUser = asyncHandler(async (req: Request, res: Response) => {
-  const blockerId = req.user?._id;
+  const blockerId = (req as any).user?._id;
   if (!blockerId) throw new CustomError(401, "Unauthorized");
 
   const { userId } = req.params as { userId: string };
@@ -232,7 +232,7 @@ export const unblockUser = asyncHandler(async (req: Request, res: Response) => {
 //: get blocked users list
 export const getBlockedUsers = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?._id;
+    const userId = (req as any).user?._id;
     if (!userId) throw new CustomError(401, "Unauthorized");
 
     const blockedUsers = await userService.getBlockedUsers(

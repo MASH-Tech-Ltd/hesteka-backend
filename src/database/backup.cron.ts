@@ -81,6 +81,78 @@ export const runBackup = async (triggerType: "manual" | "scheduled" = "scheduled
       
       const secondaryConn = await mongoose.createConnection(config.backupMongoUri).asPromise();
       
+      // --- ADVANCED HACK / ERASURE SAFEGUARD ---
+      // Check how much data the backup database currently has
+      let secondaryTotalRecords = 0;
+      try {
+        if (!secondaryConn.db) {
+          throw new Error("Secondary connection db is undefined");
+        }
+        const collections = await secondaryConn.db.collections();
+        for (const collection of collections) {
+          secondaryTotalRecords += await collection.countDocuments();
+        }
+      } catch (countErr) {
+        console.warn("[Backup] Could not count secondary DB records for safeguard check.", countErr);
+      }
+
+      // If the primary database has suddenly lost more than 50% of its data compared to the backup,
+      // we assume a catastrophic event (hacker/accidental mass deletion) and ABORT the sync to preserve the backup.
+      if (secondaryTotalRecords > 100 && totalRecords < secondaryTotalRecords * 0.5) {
+        const errorMsg = `[Backup] MASSIVE DATA LOSS DETECTED: Primary DB has ${totalRecords} records, but Backup DB has ${secondaryTotalRecords}. Sync aborted to protect backup database!`;
+        console.error(chalk.bgRed.white(errorMsg));
+        
+        await secondaryConn.close();
+        
+        await BackupLogModel.create({
+          status: "failed",
+          backupFile: backupFilePath,
+          recordsDetail,
+          triggerType,
+          message: errorMsg,
+          timestamp: new Date()
+        });
+
+        return { success: false, message: errorMsg, timestamp, backupFile: backupFilePath };
+      }
+      // ------------------------------------------
+      
+      // --- RANSOMWARE / CORRUPTION CANARY SAFEGUARD ---
+      // Attackers encrypting the database usually scramble string fields or replace the document structure.
+      // We sample up to 50 users to ensure their 'email' field looks like a normal email.
+      if (backupData['User'] && backupData['User'].length > 0) {
+        const users = backupData['User'];
+        const sampleSize = Math.min(users.length, 50);
+        let validEmails = 0;
+        
+        for (let i = 0; i < sampleSize; i++) {
+          const u = users[i];
+          if (u && typeof u.email === 'string' && u.email.includes('@')) {
+            validEmails++;
+          }
+        }
+        
+        // If we sampled users but couldn't find a single valid email, data is likely encrypted/corrupted.
+        if (validEmails === 0 && sampleSize > 0) {
+          const errorMsg = `[Backup] RANSOMWARE DETECTED: Sampled ${sampleSize} users but found 0 valid emails. Data appears encrypted/corrupted. Sync aborted!`;
+          console.error(chalk.bgRed.white(errorMsg));
+          
+          await secondaryConn.close();
+          
+          await BackupLogModel.create({
+            status: "failed",
+            backupFile: backupFilePath,
+            recordsDetail,
+            triggerType,
+            message: errorMsg,
+            timestamp: new Date()
+          });
+
+          return { success: false, message: errorMsg, timestamp, backupFile: backupFilePath };
+        }
+      }
+      // ------------------------------------------------
+
       for (const [modelName, data] of Object.entries(backupData)) {
         try {
           // Get schema of primary model
@@ -95,9 +167,9 @@ export const runBackup = async (triggerType: "manual" | "scheduled" = "scheduled
           const secondaryModel = secondaryConn.model(modelName, schema);
           
           // Clear existing collection and bulk insert the fresh backup data
-          await secondaryModel.deleteMany({});
+          await secondaryModel.collection.deleteMany({});
           if (data.length > 0) {
-            await secondaryModel.insertMany(data);
+            await secondaryModel.collection.insertMany(data);
           }
           
           console.log(chalk.green(`[Backup] Replicated ${data.length} records to secondary DB for ${modelName}`));
