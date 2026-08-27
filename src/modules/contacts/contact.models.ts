@@ -64,6 +64,10 @@ const contactSchema = new Schema<IContact>(
         type: [Number], // [longitude, latitude]
       },
     },
+    partnerType: {
+      type: String,
+      required: false,
+    },
     status: {
       type: String,
       enum: Object.values(ContactStatus),

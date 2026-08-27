@@ -37,6 +37,7 @@ export interface IContact extends Document {
     type: string;
     coordinates: number[];
   };
+  partnerType?: string;
   status: ContactStatus;
   creationMethod: CreationMethod;
 }
@@ -55,6 +56,7 @@ export interface CreateContactPayload {
   department?: string;
   latitude?: number;
   longitude?: number;
+  partnerType?: string;
   status?: ContactStatus;
   creationMethod?: CreationMethod;
 }
