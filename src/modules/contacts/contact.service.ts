@@ -390,6 +390,7 @@ export const contactService = {
         photo: (user.profileImage && user.profileImage.secure_url) ? user.profileImage : (user.logo && user.logo.secure_url) ? user.logo : null,
         location: user.location,
         status: user.status,
+        partnerType: user.partnerType || "",
         company: user.company,
         website: user.website,
         description: user.description,
@@ -400,6 +401,8 @@ export const contactService = {
         postalCode: user.postalCode,
         city: user.city,
         country: user.country,
+        region: user.region,
+        department: user.department,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
         creationMethod: "manual",
@@ -648,7 +651,39 @@ export const contactService = {
   },
 
   async getContactById(contactId: string) {
-    const contact = await contactModel.findById(contactId);
+    let contact: any = await contactModel.findById(contactId).lean();
+    if (!contact) {
+      const user: any = await userModel.findById(contactId).lean();
+      if (user && user.role === role.PARTNERS) {
+        contact = {
+          _id: user._id,
+          name: user.company && user.company.trim() !== "" ? user.company : `${user.firstName} ${user.lastName}`,
+          type: ContactType.PARTNER,
+          address: user.address,
+          phone: user.phone,
+          email: user.email,
+          photo: (user.profileImage && user.profileImage.secure_url) ? user.profileImage : (user.logo && user.logo.secure_url) ? user.logo : null,
+          location: user.location,
+          status: user.status,
+          partnerType: user.partnerType || "",
+          company: user.company,
+          website: user.website,
+          description: user.description,
+          facebook: user.facebook,
+          instagram: user.instagram,
+          twitter: user.twitter,
+          linkedin: user.linkedin,
+          postalCode: user.postalCode,
+          city: user.city,
+          country: user.country,
+          region: user.region,
+          department: user.department,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          creationMethod: "manual",
+        };
+      }
+    }
     if (!contact) throw new CustomError(404, "Contact not found");
     return contact;
   },
