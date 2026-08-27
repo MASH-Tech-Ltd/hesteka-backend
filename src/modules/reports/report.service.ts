@@ -1005,6 +1005,9 @@ export const reportService = {
           "location.coordinates": 1,
           status: 1,
           species: 1,
+          breed: 1,
+          gender: 1,
+          age: 1,
         }
       )
       .lean();
@@ -1017,6 +1020,9 @@ export const reportService = {
       coordinates: report.location?.coordinates,
       status: report.status,
       species: report.species,
+      breed: report.breed || "",
+      gender: report.gender || "",
+      age: report.age || "",
     }));
   },
 };
