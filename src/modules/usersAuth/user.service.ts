@@ -74,10 +74,15 @@ export const userService = {
 
     let allUsers: any[] = [...usersWithLocation];
 
+    // Filter out invalid ObjectIds (like "guest_...") to prevent Mongoose CastError
+    const validMissingOnlineIds = missingOnlineIds.filter((id) =>
+      /^[0-9a-fA-F]{24}$/.test(id)
+    );
+
     // Fetch missing online users and assign them a default coordinate (Paris, France) so they appear on the Live Map
-    if (missingOnlineIds.length > 0) {
+    if (validMissingOnlineIds.length > 0) {
       const missingUsers = await userModel
-        .find({ _id: { $in: missingOnlineIds }, role: { $nin: ["admin"] } })
+        .find({ _id: { $in: validMissingOnlineIds }, role: { $nin: ["admin"] } })
         .select("firstName lastName email role status profileImage partnerType")
         .lean();
 
