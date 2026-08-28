@@ -27,6 +27,7 @@ export const createSponsorSchema = z.object({
   targetAllUsers: z.union([z.boolean(), z.string().transform((val) => val === "true")]).optional(),
   regions: z.any().transform(parseArray).optional(),
   departments: z.any().transform(parseArray).optional(),
+  sponsorImage: z.any().optional(),
 }).strict();
 
 export const updateSponsorSchema = z.object({
@@ -42,4 +43,5 @@ export const updateSponsorSchema = z.object({
   targetAllUsers: z.union([z.boolean(), z.string().transform((val) => val === "true")]).optional(),
   regions: z.any().transform(parseArray).optional(),
   departments: z.any().transform(parseArray).optional(),
+  sponsorImage: z.any().optional(),
 }).strict();

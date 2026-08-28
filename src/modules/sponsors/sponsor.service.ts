@@ -1,5 +1,9 @@
 import { sponsorModel } from "./sponsor.models";
-import { CreateSponsorPayload, UpdateSponsorPayload, SponsorStatus } from "./sponsor.interface";
+import {
+  CreateSponsorPayload,
+  UpdateSponsorPayload,
+  SponsorStatus,
+} from "./sponsor.interface";
 import { uploadCloudinary, deleteCloudinary } from "../../helpers/cloudinary";
 import CustomError from "../../helpers/CustomError";
 import { userModel } from "../usersAuth/user.models";
@@ -20,16 +24,39 @@ export const sponsorService = {
   async getSponsorStats() {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
+
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    const endOfLastMonth = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
 
     const [
-      total, active, expired, inactive, metrics,
-      cmTotal, pmTotal,
-      cmActive, pmActive,
-      cmExpired, pmExpired
+      total,
+      active,
+      expired,
+      inactive,
+      metrics,
+      cmTotal,
+      pmTotal,
+      cmActive,
+      pmActive,
+      cmExpired,
+      pmExpired,
     ] = await Promise.all([
       sponsorModel.countDocuments(),
       sponsorModel.countDocuments({ status: SponsorStatus.ACTIVE }),
@@ -40,16 +67,32 @@ export const sponsorService = {
           $group: {
             _id: null,
             totalImpressions: { $sum: "$impressions" },
-            totalClicks: { $sum: "$clicks" }
-          }
-        }
+            totalClicks: { $sum: "$clicks" },
+          },
+        },
       ]),
-      sponsorModel.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      sponsorModel.countDocuments({ createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
-      sponsorModel.countDocuments({ status: SponsorStatus.ACTIVE, createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      sponsorModel.countDocuments({ status: SponsorStatus.ACTIVE, createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
-      sponsorModel.countDocuments({ status: SponsorStatus.EXPIRED, createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
-      sponsorModel.countDocuments({ status: SponsorStatus.EXPIRED, createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
+      sponsorModel.countDocuments({
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+      }),
+      sponsorModel.countDocuments({
+        createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
+      }),
+      sponsorModel.countDocuments({
+        status: SponsorStatus.ACTIVE,
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+      }),
+      sponsorModel.countDocuments({
+        status: SponsorStatus.ACTIVE,
+        createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
+      }),
+      sponsorModel.countDocuments({
+        status: SponsorStatus.EXPIRED,
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+      }),
+      sponsorModel.countDocuments({
+        status: SponsorStatus.EXPIRED,
+        createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
+      }),
     ]);
 
     const calcTrend = (cm: number, pm: number) => {
@@ -59,28 +102,34 @@ export const sponsorService = {
 
     const totalImpressions = metrics[0]?.totalImpressions || 0;
     const totalClicks = metrics[0]?.totalClicks || 0;
-    const avgCtr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : 0;
+    const avgCtr =
+      totalImpressions > 0
+        ? ((totalClicks / totalImpressions) * 100).toFixed(2)
+        : 0;
 
-    return { 
-      total, 
-      active, 
-      expired, 
-      inactive, 
-      totalImpressions, 
-      totalClicks, 
+    return {
+      total,
+      active,
+      expired,
+      inactive,
+      totalImpressions,
+      totalClicks,
       avgCtr,
       trends: {
         total: calcTrend(cmTotal, pmTotal),
         active: calcTrend(cmActive, pmActive),
         expired: calcTrend(cmExpired, pmExpired),
         impressions: 12, // Mocked as we don't have time-series impression data
-        avgCtr: 2 // Mocked
-      }
+        avgCtr: 2, // Mocked
+      },
     };
   },
 
   // Create Sponsor
-  async createSponsor(payload: CreateSponsorPayload, file?: Express.Multer.File) {
+  async createSponsor(
+    payload: CreateSponsorPayload,
+    file?: Express.Multer.File,
+  ) {
     let image: any = undefined;
 
     if (file) {
@@ -108,8 +157,11 @@ export const sponsorService = {
   // Get All Sponsors (Admin)
   async getAllSponsors(query: any = {}) {
     // 1. Process Query Params
-    const { page, limit, skip } = paginationHelper(query.page as string, query.limit as string);
-    
+    const { page, limit, skip } = paginationHelper(
+      query.page as string,
+      query.limit as string,
+    );
+
     const search = query.search || "";
     const status = query.status || "all";
     const sortBy = query.sortBy || "date";
@@ -124,24 +176,23 @@ export const sponsorService = {
     // 3. Handle Search
     if (search) {
       const searchRegex = new RegExp(search, "i");
-      
+
       // Find matching partners
-      const matchingPartners = await userModel.find({
-        role: role.PARTNERS,
-        $or: [
-          { firstName: searchRegex },
-          { lastName: searchRegex },
-          { email: searchRegex },
-          { company: searchRegex },
-        ]
-      }).select("_id");
-      
-      const partnerIds = matchingPartners.map(p => p._id);
-      
-      filter.$or = [
-        { title: searchRegex },
-        { partner: { $in: partnerIds } }
-      ];
+      const matchingPartners = await userModel
+        .find({
+          role: role.PARTNERS,
+          $or: [
+            { firstName: searchRegex },
+            { lastName: searchRegex },
+            { email: searchRegex },
+            { company: searchRegex },
+          ],
+        })
+        .select("_id");
+
+      const partnerIds = matchingPartners.map((p) => p._id);
+
+      filter.$or = [{ title: searchRegex }, { partner: { $in: partnerIds } }];
     }
 
     // 4. Handle Sorting
@@ -158,12 +209,13 @@ export const sponsorService = {
 
     // 5. Execute Query
     const total = await sponsorModel.countDocuments(filter);
-    const sponsors = await sponsorModel.find(filter)
+    const sponsors = await sponsorModel
+      .find(filter)
       .populate("partner", "firstName lastName company email profileImage")
       .sort(sortConfig)
       .skip(skip)
       .limit(limit);
-    
+
     // Auto-expire check when fetching
     const now = new Date();
     for (const sponsor of sponsors) {
@@ -179,35 +231,44 @@ export const sponsorService = {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   },
 
   // Search Partners
   async searchPartners(query: string) {
     const searchRegex = new RegExp(query, "i");
-    const partners = await userModel.find({
-      role: role.PARTNERS,
-      $or: [
-        { firstName: searchRegex },
-        { lastName: searchRegex },
-        { email: searchRegex },
-        { company: searchRegex },
-      ],
-    }).select("firstName lastName company email profileImage").limit(20);
+    const partners = await userModel
+      .find({
+        role: role.PARTNERS,
+        $or: [
+          { firstName: searchRegex },
+          { lastName: searchRegex },
+          { email: searchRegex },
+          { company: searchRegex },
+        ],
+      })
+      .select("firstName lastName company email profileImage")
+      .limit(20);
     return partners;
   },
 
   // Get Single Sponsor
   async getSponsorById(id: string) {
-    const sponsor = await sponsorModel.findById(id).populate("partner", "firstName lastName company email profileImage");
+    const sponsor = await sponsorModel
+      .findById(id)
+      .populate("partner", "firstName lastName company email profileImage");
     if (!sponsor) throw new CustomError(404, "Sponsor not found");
     return sponsor;
   },
 
   // Update Sponsor
-  async updateSponsor(id: string, payload: UpdateSponsorPayload, file?: Express.Multer.File) {
+  async updateSponsor(
+    id: string,
+    payload: UpdateSponsorPayload,
+    file?: Express.Multer.File,
+  ) {
     const sponsor = await sponsorModel.findById(id);
     if (!sponsor) throw new CustomError(404, "Sponsor not found");
 
@@ -228,10 +289,16 @@ export const sponsorService = {
     // Auto-expire check during update
     if (sponsor.endDate < new Date()) {
       sponsor.status = SponsorStatus.EXPIRED;
-    } else if (sponsor.status === SponsorStatus.EXPIRED && sponsor.endDate >= new Date()) {
+    } else if (
+      sponsor.status === SponsorStatus.EXPIRED &&
+      sponsor.endDate >= new Date()
+    ) {
       // If admin extended the date but left status as EXPIRED, they probably meant to reactivate or at least INACTIVE
       // We'll trust payload.status if provided, otherwise default to ACTIVE since it was EXPIRED before
-      sponsor.status = payload.status && payload.status !== SponsorStatus.EXPIRED ? payload.status : SponsorStatus.ACTIVE;
+      sponsor.status =
+        payload.status && payload.status !== SponsorStatus.EXPIRED
+          ? payload.status
+          : SponsorStatus.ACTIVE;
     }
 
     await sponsor.save();
@@ -253,7 +320,7 @@ export const sponsorService = {
   // Random Sponsor (Public Mobile)
   async getRandomSponsor(userRegion?: string, userDepartment?: string) {
     const now = new Date();
-    
+
     // Build matching criteria
     const matchCriteria: any = {
       status: SponsorStatus.ACTIVE,
@@ -283,13 +350,16 @@ export const sponsorService = {
 
     if (!sponsors.length) return [];
 
-    const sponsorIds = sponsors.map(s => s._id);
+    const sponsorIds = sponsors.map((s) => s._id);
 
     // Populate partner details and select only public fields (omit sensitive metrics & targeting info)
-    const populatedSponsors = await sponsorModel.find({ _id: { $in: sponsorIds } })
-      .select("title description actionText actionLink type sponsorImage partner")
+    const populatedSponsors = await sponsorModel
+      .find({ _id: { $in: sponsorIds } })
+      .select(
+        "title description actionText actionLink type sponsorImage partner",
+      )
       .populate("partner", "firstName lastName company profileImage");
-    
+
     return populatedSponsors;
   },
 
