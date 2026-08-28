@@ -140,6 +140,10 @@ export const sponsorService = {
       }
     }
 
+    if (payload.sponsorImage && typeof payload.sponsorImage === "string") {
+      delete payload.sponsorImage;
+    }
+
     const sponsorData: any = { ...payload };
     if (image) {
       sponsorData.sponsorImage = image;
@@ -282,6 +286,9 @@ export const sponsorService = {
       } catch (error) {
         throw new CustomError(500, "Error uploading image");
       }
+    }
+    if (payload.sponsorImage && typeof payload.sponsorImage === "string") {
+      delete payload.sponsorImage;
     }
 
     Object.assign(sponsor, payload);

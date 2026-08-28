@@ -40,6 +40,7 @@ export interface CreateSponsorPayload {
   description?: string;
   actionText: string;
   actionLink: string;
+  sponsorImage?: any;
   type: SponsorType;
   startDate: Date | string;
   endDate: Date | string;
