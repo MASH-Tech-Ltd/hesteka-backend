@@ -29,6 +29,8 @@ export const registerUserSchema = z
     department: z.string().optional(),
     country: z.string().optional(),
     referralCode: z.string().optional(),
+    city: z.string().optional(),
+    postalCode: z.string().optional(),
   })
   .strict();
 
