@@ -501,6 +501,39 @@ export class SecurityService {
     }
     return true;
   }
+
+  async cleanupOldSecurityLogs(): Promise<void> {
+    const fifteenDaysAgo = new Date();
+    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+
+    let deletedCount = 0;
+    let hasMore = true;
+    const chunkSize = 1000;
+
+    while (hasMore) {
+      // Find IDs of old logs first to chunk them
+      const oldLogs = await securityLogModel.find({ createdAt: { $lt: fifteenDaysAgo } })
+        .select('_id')
+        .limit(chunkSize)
+        .lean();
+
+      if (oldLogs.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      const idsToDelete = oldLogs.map(log => log._id);
+      const result = await securityLogModel.deleteMany({ _id: { $in: idsToDelete } });
+      deletedCount += result.deletedCount || 0;
+      
+      // Small delay to prevent blocking the event loop
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    if (deletedCount > 0) {
+      console.log(`[Security] Cleaned up ${deletedCount} security logs older than 15 days.`);
+    }
+  }
 }
 
 export const securityService = new SecurityService();

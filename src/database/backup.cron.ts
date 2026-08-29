@@ -224,6 +224,12 @@ export const startBackupCron = () => {
   cron.schedule(schedule, async () => {
     try {
       await runBackup("scheduled");
+      try {
+        const { securityService } = await import("../modules/security/security.service");
+        await securityService.cleanupOldSecurityLogs();
+      } catch (secErr) {
+        console.error("[Backup] Security log cleanup failed:", secErr);
+      }
     } catch (e) {
       console.error("[Backup] Scheduled backup failed:", e);
     }
