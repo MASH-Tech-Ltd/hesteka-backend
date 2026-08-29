@@ -1,8 +1,9 @@
 import "dotenv/config";
 import mongoose from "mongoose";
-import fs from "fs";
-import path from "path";
-import zlib from "zlib";
+import * as fs from "fs";
+import * as path from "path";
+import * as zlib from "zlib";
+import * as readline from "readline";
 import chalk from "chalk";
 import { connectDatabase } from "./db";
 
@@ -10,7 +11,7 @@ import { connectDatabase } from "./db";
 import "../routes/index.api";
 
 const runRestore = async () => {
-  console.log(chalk.blue.bold("\n--- Database Restore Tool ---"));
+  console.log(chalk.blue.bold("\n--- Database Restore Tool (Streaming) ---"));
 
   const backupsDir = path.join(process.cwd(), "backups");
   
@@ -19,7 +20,8 @@ const runRestore = async () => {
     process.exit(0);
   }
 
-  const files = fs.readdirSync(backupsDir).filter(f => f.endsWith(".json.gz"));
+  // Support both old .json.gz and new .jsonl.gz files
+  const files = fs.readdirSync(backupsDir).filter(f => f.endsWith(".gz"));
 
   if (files.length === 0) {
     console.log(chalk.yellow("No backup files found in 'backups/' directory."));
@@ -35,7 +37,7 @@ const runRestore = async () => {
     console.log(chalk.bold("Available backups:"));
     files.sort().reverse().forEach(file => {
       const stats = fs.statSync(path.join(backupsDir, file));
-      console.log(chalk.gray(`- ${file} (${(stats.size / 1024).toFixed(2)} KB)`));
+      console.log(chalk.gray(`- ${file} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`));
     });
     process.exit(0);
   }
@@ -48,36 +50,114 @@ const runRestore = async () => {
   }
 
   try {
-    console.log(chalk.yellow(`Reading and uncompressing backup: ${targetFileArg}...`));
-    const compressed = fs.readFileSync(backupFilePath);
-    const jsonString = zlib.gunzipSync(compressed).toString("utf-8");
-    const backupData: Record<string, any[]> = JSON.parse(jsonString);
-
     // Connect to target database
     await connectDatabase();
-
     const models = mongoose.connection.models;
 
-    console.log(chalk.yellow("\nStarting restoration... (wiping existing collections and restoring)"));
+    console.log(chalk.yellow(`\nReading and streaming backup: ${targetFileArg}...`));
+    
+    // Check if it's the old JSON array format or new JSONL streaming format
+    if (targetFileArg.endsWith(".json.gz")) {
+      console.log(chalk.blue("Detected legacy .json.gz format. Loading into memory..."));
+      const compressed = fs.readFileSync(backupFilePath);
+      const jsonString = zlib.gunzipSync(compressed).toString("utf-8");
+      const backupData: Record<string, any[]> = JSON.parse(jsonString);
 
-    for (const [modelName, records] of Object.entries(backupData)) {
-      const model = models[modelName];
-      if (!model) {
-        console.warn(chalk.yellow(`[Restore] Skipping ${modelName}: model is not registered in this codebase.`));
-        continue;
+      // Safeguard
+      let totalLegacyRecords = 0;
+      for (const records of Object.values(backupData)) {
+        totalLegacyRecords += records.length;
+      }
+      if (totalLegacyRecords === 0) {
+        console.error(chalk.bgRed.white("\n[Restore] Safeguard Triggered: Backup file contains 0 total records."));
+        process.exit(1);
       }
 
-      console.log(chalk.blue(`[Restore] Restoring ${records.length} records for ${modelName}...`));
-      
-      // Wipe the existing collection
-      await model.deleteMany({});
-      
-      // Insert backup data
-      if (records.length > 0) {
-        await model.insertMany(records);
+      for (const [modelName, records] of Object.entries(backupData)) {
+        const model = models[modelName];
+        if (!model) continue;
+        console.log(chalk.blue(`[Restore] Restoring ${records.length} records for ${modelName}...`));
+        try {
+          await model.collection.deleteMany({});
+          if (records.length > 0) {
+            const chunkSize = 1000;
+            for (let i = 0; i < records.length; i += chunkSize) {
+              const chunk = records.slice(i, i + chunkSize);
+              await model.collection.insertMany(chunk);
+            }
+          }
+          console.log(chalk.green(`[Restore] Restored ${modelName} successfully!`));
+        } catch (err: any) {
+          console.error(chalk.red(`[Restore] ERROR restoring ${modelName}: ${err.message}`));
+        }
+      }
+    } 
+    else if (targetFileArg.endsWith(".jsonl.gz")) {
+      // New Streaming Format (Memory-safe)
+      const readStream = fs.createReadStream(backupFilePath);
+      const gunzip = zlib.createGunzip();
+      readStream.pipe(gunzip);
+
+      const rl = readline.createInterface({
+        input: gunzip,
+        crlfDelay: Infinity
+      });
+
+      const wipedCollections = new Set<string>();
+      const chunks: Record<string, any[]> = {};
+      const chunkSize = 1000;
+      let totalRecords = 0;
+      const recordCounts: Record<string, number> = {};
+
+      for await (const line of rl) {
+        if (!line.trim()) continue;
+        totalRecords++;
+        
+        try {
+          const parsed = JSON.parse(line);
+          const { collection: modelName, data } = parsed;
+          
+          if (!models[modelName]) {
+            if (!recordCounts[modelName]) {
+               console.warn(chalk.yellow(`[Restore] Skipping ${modelName}: model is not registered in this codebase.`));
+               recordCounts[modelName] = 1;
+            }
+            continue;
+          }
+          
+          if (!wipedCollections.has(modelName)) {
+            console.log(chalk.blue(`[Restore] Initializing and wiping collection ${modelName}...`));
+            await models[modelName].collection.deleteMany({});
+            wipedCollections.add(modelName);
+            chunks[modelName] = [];
+            recordCounts[modelName] = 0;
+          }
+          
+          chunks[modelName]!.push(data);
+          recordCounts[modelName]!++;
+          
+          if (chunks[modelName]!.length >= chunkSize) {
+            await models[modelName].collection.insertMany(chunks[modelName]!);
+            chunks[modelName] = [];
+          }
+          
+        } catch (err: any) {
+           console.error(chalk.red("Error parsing JSON line: "), err.message);
+        }
       }
       
-      console.log(chalk.green(`[Restore] Restored ${modelName} successfully!`));
+      if (totalRecords === 0) {
+        console.error(chalk.bgRed.white("\n[Restore] Safeguard Triggered: Backup file contains 0 total records. Aborting restore."));
+        process.exit(1);
+      }
+      
+      // Insert remaining chunks
+      for (const [modelName, chunk] of Object.entries(chunks)) {
+         if (chunk && chunk.length > 0 && models[modelName]) {
+            await models[modelName].collection.insertMany(chunk);
+         }
+        console.log(chalk.green(`[Restore] Restored ${recordCounts[modelName]} records for ${modelName} successfully!`));
+      }
     }
 
     console.log(chalk.green.bold("\nDatabase restore completed successfully!"));

@@ -15,171 +15,177 @@ export const runBackup = async (triggerType: "manual" | "scheduled" = "scheduled
   const recordsDetail: Record<string, number> = {};
 
   try {
-    // 1. Gather all models and retrieve data
+    // 1. Gather all models and count data efficiently (No RAM loading)
     const models = mongoose.connection.models;
-    const backupData: Record<string, any[]> = {};
+    let totalRecords = 0;
     
     for (const [modelName, model] of Object.entries(models)) {
       try {
-        const data = await model.find({}).lean();
-        backupData[modelName] = data;
-        recordsDetail[modelName] = data.length;
-        console.log(chalk.gray(`[Backup] Read ${data.length} records from ${modelName}`));
+        const count = await model.countDocuments();
+        recordsDetail[modelName] = count;
+        totalRecords += count;
+        console.log(chalk.gray(`[Backup] Counted ${count} records for ${modelName}`));
       } catch (err) {
-        console.error(chalk.red(`[Backup] Failed to read model ${modelName}:`), err);
+        console.error(chalk.red(`[Backup] Failed to count model ${modelName}:`), err);
       }
     }
     
-    // 2. Save locally as compressed JSON archive
+    // --- PRE-SAVE SAFEGUARDS ---
+    
+    // 1. Empty Database Check
+    if (totalRecords === 0) {
+      const errorMsg = "[Backup] Safeguard Triggered: Primary database is completely empty (0 records). Aborting to protect backups.";
+      console.error(chalk.bgRed.white(errorMsg));
+      await BackupLogModel.create({
+        status: "bypassed",
+        triggerType,
+        message: errorMsg,
+        timestamp: new Date()
+      });
+      return { success: false, message: errorMsg, timestamp, backupFile: "" };
+    }
+
+    // 2. Ransomware / Corruption Canary Safeguard
+    const UserModel = models['User'];
+    if (UserModel) {
+      const users = await UserModel.find({}).limit(50).lean();
+      const sampleSize = users.length;
+      let validEmails = 0;
+      
+      for (const u of users) {
+        if (u && typeof u.email === 'string' && u.email.includes('@')) {
+          validEmails++;
+        }
+      }
+      
+      if (validEmails === 0 && sampleSize > 0) {
+        const errorMsg = `[Backup] RANSOMWARE DETECTED: Sampled ${sampleSize} users but found 0 valid emails. Data appears encrypted/corrupted. Sync aborted!`;
+        console.error(chalk.bgRed.white(errorMsg));
+        await BackupLogModel.create({
+          status: "failed",
+          recordsDetail,
+          triggerType,
+          message: errorMsg,
+          timestamp: new Date()
+        });
+        return { success: false, message: errorMsg, timestamp, backupFile: "" };
+      }
+    }
+
+    // 3. Historical Data Loss Detection
+    try {
+      const lastBackup = await BackupLogModel.findOne({ status: "success" }).sort({ timestamp: -1 }).lean();
+      if (lastBackup && lastBackup.recordsDetail) {
+        const lastTotalRecords = Object.values(lastBackup.recordsDetail).reduce((sum: number, count: any) => sum + (Number(count) || 0), 0);
+        
+        if (lastTotalRecords > 100 && totalRecords < lastTotalRecords * 0.5) {
+          const errorMsg = `[Backup] MASSIVE DATA LOSS DETECTED: Primary DB has ${totalRecords} records, but last successful backup had ${lastTotalRecords}. Aborting to protect previous backups!`;
+          console.error(chalk.bgRed.white(errorMsg));
+          await BackupLogModel.create({
+            status: "failed",
+            recordsDetail,
+            triggerType,
+            message: errorMsg,
+            timestamp: new Date()
+          });
+          return { success: false, message: errorMsg, timestamp, backupFile: "" };
+        }
+      }
+    } catch (historyErr) {
+      console.warn("[Backup] Could not retrieve backup history for data loss check.", historyErr);
+    }
+    // ---------------------------
+
+    // 2. Save locally as compressed JSONL stream & Replicate in chunks
     const backupsDir = path.join(process.cwd(), "backups");
     if (!fs.existsSync(backupsDir)) {
       fs.mkdirSync(backupsDir, { recursive: true });
     }
     
     timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    backupFilePath = path.join(backupsDir, `backup-${timestamp}.json.gz`);
+    backupFilePath = path.join(backupsDir, `backup-${timestamp}.jsonl.gz`);
     
-    const jsonString = JSON.stringify(backupData, null, 2);
-    const compressed = zlib.gzipSync(Buffer.from(jsonString));
-    
-    fs.writeFileSync(backupFilePath, compressed);
-    console.log(chalk.green(`[Backup] Local backup saved: ${backupFilePath}`));
-    
-    // Clean up older backups (keep last 7 days)
-    const files = fs.readdirSync(backupsDir);
-    const backupFiles = files.filter(f => f.startsWith("backup-") && f.endsWith(".json.gz"));
-    if (backupFiles.length > 7) {
-      backupFiles.sort(); // Sorts chronologically by filename
-      while (backupFiles.length > 7) {
-        const fileToDelete = backupFiles.shift();
-        if (fileToDelete) {
-          fs.unlinkSync(path.join(backupsDir, fileToDelete));
-          console.log(chalk.yellow(`[Backup] Deleted old local backup: ${fileToDelete}`));
+    const writeStream = fs.createWriteStream(backupFilePath);
+    const gzip = zlib.createGzip();
+    gzip.pipe(writeStream);
+
+    let secondaryConn: mongoose.Connection | null = null;
+    if (config.backupMongoUri) {
+      console.log(chalk.blue(`[Backup] Connecting to secondary MongoDB cluster for replication...`));
+      secondaryConn = await mongoose.createConnection(config.backupMongoUri).asPromise();
+    }
+
+    for (const [modelName, model] of Object.entries(models)) {
+      try {
+        let secondaryModel: mongoose.Model<any> | null = null;
+        if (secondaryConn) {
+          const schema = model.schema;
+          secondaryModel = secondaryConn.model(modelName, schema);
+          await secondaryModel.collection.deleteMany({});
         }
+
+        const cursor = model.find({}).cursor();
+        let chunk: any[] = [];
+        
+        for await (const doc of cursor) {
+          // Write to file (jsonl format)
+          const line = JSON.stringify({ collection: modelName, data: doc });
+          gzip.write(line + "\n");
+          
+          // Add to chunk for secondary replication
+          if (secondaryModel) {
+            chunk.push(doc);
+            if (chunk.length >= 1000) {
+              await secondaryModel.collection.insertMany(chunk);
+              chunk = [];
+            }
+          }
+        }
+        
+        // Insert remaining records in chunk
+        if (secondaryModel && chunk.length > 0) {
+          await secondaryModel.collection.insertMany(chunk);
+        }
+        
+        if (secondaryModel) {
+           console.log(chalk.green(`[Backup] Replicated ${recordsDetail[modelName] || 0} records to secondary DB for ${modelName}`));
+        }
+      } catch (err: any) {
+        console.error(chalk.red(`[Backup] Stream/Replication failed for model ${modelName}:`), err.message);
       }
     }
     
-    // 3. Replicate to secondary MongoDB cluster if configured
-    if (config.backupMongoUri) {
-      const totalRecords = Object.values(backupData).reduce((sum, records) => sum + records.length, 0);
-      if (totalRecords === 0) {
-        console.warn(chalk.bgRed.white("[Backup] Safeguard Triggered: Primary database is completely empty (0 records). Skipping replication to keep secondary database intact."));
-        
-        await BackupLogModel.create({
-          status: "bypassed",
-          backupFile: backupFilePath,
-          recordsDetail,
-          triggerType,
-          message: "Safeguard Triggered: Primary database has 0 records. Secondary replication skipped.",
-          timestamp: new Date()
-        });
+    // Promisify stream end to ensure file is written completely
+    await new Promise((resolve, reject) => {
+      gzip.end();
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
 
-        return { success: false, message: "Safeguard triggered: primary database is empty. Secondary database preserved.", timestamp, backupFile: backupFilePath };
-      }
+    console.log(chalk.green(`[Backup] Local streaming backup saved: ${backupFilePath}`));
 
-      console.log(chalk.blue(`[Backup] Replicating to secondary MongoDB cluster...`));
-      
-      const secondaryConn = await mongoose.createConnection(config.backupMongoUri).asPromise();
-      
-      // --- ADVANCED HACK / ERASURE SAFEGUARD ---
-      // Check how much data the backup database currently has
-      let secondaryTotalRecords = 0;
-      try {
-        if (!secondaryConn.db) {
-          throw new Error("Secondary connection db is undefined");
-        }
-        const collections = await secondaryConn.db.collections();
-        for (const collection of collections) {
-          secondaryTotalRecords += await collection.countDocuments();
-        }
-      } catch (countErr) {
-        console.warn("[Backup] Could not count secondary DB records for safeguard check.", countErr);
-      }
-
-      // If the primary database has suddenly lost more than 50% of its data compared to the backup,
-      // we assume a catastrophic event (hacker/accidental mass deletion) and ABORT the sync to preserve the backup.
-      if (secondaryTotalRecords > 100 && totalRecords < secondaryTotalRecords * 0.5) {
-        const errorMsg = `[Backup] MASSIVE DATA LOSS DETECTED: Primary DB has ${totalRecords} records, but Backup DB has ${secondaryTotalRecords}. Sync aborted to protect backup database!`;
-        console.error(chalk.bgRed.white(errorMsg));
-        
-        await secondaryConn.close();
-        
-        await BackupLogModel.create({
-          status: "failed",
-          backupFile: backupFilePath,
-          recordsDetail,
-          triggerType,
-          message: errorMsg,
-          timestamp: new Date()
-        });
-
-        return { success: false, message: errorMsg, timestamp, backupFile: backupFilePath };
-      }
-      // ------------------------------------------
-      
-      // --- RANSOMWARE / CORRUPTION CANARY SAFEGUARD ---
-      // Attackers encrypting the database usually scramble string fields or replace the document structure.
-      // We sample up to 50 users to ensure their 'email' field looks like a normal email.
-      if (backupData['User'] && backupData['User'].length > 0) {
-        const users = backupData['User'];
-        const sampleSize = Math.min(users.length, 50);
-        let validEmails = 0;
-        
-        for (let i = 0; i < sampleSize; i++) {
-          const u = users[i];
-          if (u && typeof u.email === 'string' && u.email.includes('@')) {
-            validEmails++;
-          }
-        }
-        
-        // If we sampled users but couldn't find a single valid email, data is likely encrypted/corrupted.
-        if (validEmails === 0 && sampleSize > 0) {
-          const errorMsg = `[Backup] RANSOMWARE DETECTED: Sampled ${sampleSize} users but found 0 valid emails. Data appears encrypted/corrupted. Sync aborted!`;
-          console.error(chalk.bgRed.white(errorMsg));
-          
-          await secondaryConn.close();
-          
-          await BackupLogModel.create({
-            status: "failed",
-            backupFile: backupFilePath,
-            recordsDetail,
-            triggerType,
-            message: errorMsg,
-            timestamp: new Date()
-          });
-
-          return { success: false, message: errorMsg, timestamp, backupFile: backupFilePath };
-        }
-      }
-      // ------------------------------------------------
-
-      for (const [modelName, data] of Object.entries(backupData)) {
-        try {
-          // Get schema of primary model
-          const primaryModel = models[modelName];
-          if (!primaryModel) {
-            console.warn(chalk.yellow(`[Backup] Model ${modelName} not found in connection models, skipping replication.`));
-            continue;
-          }
-          const schema = primaryModel.schema;
-          
-          // Define model on the secondary connection
-          const secondaryModel = secondaryConn.model(modelName, schema);
-          
-          // Clear existing collection and bulk insert the fresh backup data
-          await secondaryModel.collection.deleteMany({});
-          if (data.length > 0) {
-            await secondaryModel.collection.insertMany(data);
-          }
-          
-          console.log(chalk.green(`[Backup] Replicated ${data.length} records to secondary DB for ${modelName}`));
-        } catch (err: any) {
-          console.error(chalk.red(`[Backup] Replication failed for model ${modelName}:`), err.message);
-        }
-      }
-      
+    if (secondaryConn) {
       await secondaryConn.close();
       console.log(chalk.green(`[Backup] Secondary DB replication completed successfully!`));
+    }
+    
+    // Clean up older backups (keep dailies for a week, weeklies for a month)
+    const files = fs.readdirSync(backupsDir);
+    const backupFiles = files.filter(f => f.startsWith("backup-") && (f.endsWith(".json.gz") || f.endsWith(".jsonl.gz")));
+    
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    for (const file of backupFiles) {
+      const filePath = path.join(backupsDir, file);
+      const stats = fs.statSync(filePath);
+      const fileDate = stats.mtime;
+
+      if (fileDate < oneWeekAgo) {
+        // Older than a week, delete
+        fs.unlinkSync(filePath);
+        console.log(chalk.yellow(`[Backup] Deleted old local backup (>1 week): ${file}`));
+      }
     }
     
     // Save success log
@@ -212,7 +218,7 @@ export const runBackup = async (triggerType: "manual" | "scheduled" = "scheduled
 };
 
 export const startBackupCron = () => {
-  // Schedule backup to run every day at 3:00 AM
+  // Schedule backup to run daily at 3:00 AM UTC
   const schedule = "0 3 * * *";
   
   cron.schedule(schedule, async () => {
@@ -225,5 +231,5 @@ export const startBackupCron = () => {
     timezone: "UTC"
   });
   
-  console.log(chalk.magenta("[Backup] Daily database backup cron scheduled (03:00 UTC)"));
+  console.log(chalk.magenta("[Backup] Database backup cron scheduled (Daily at 3:00 AM UTC)"));
 };
