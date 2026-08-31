@@ -20,8 +20,8 @@ const runRestore = async () => {
     process.exit(0);
   }
 
-  // Support both old .json.gz and new .jsonl.gz files
-  const files = fs.readdirSync(backupsDir).filter(f => f.endsWith(".gz"));
+  // Support standard .json.gz format
+  const files = fs.readdirSync(backupsDir).filter(f => f.endsWith(".json.gz"));
 
   if (files.length === 0) {
     console.log(chalk.yellow("No backup files found in 'backups/' directory."));
@@ -56,9 +56,8 @@ const runRestore = async () => {
 
     console.log(chalk.yellow(`\nReading and streaming backup: ${targetFileArg}...`));
     
-    // Check if it's the old JSON array format or new JSONL streaming format
     if (targetFileArg.endsWith(".json.gz")) {
-      console.log(chalk.blue("Detected legacy .json.gz format. Loading into memory..."));
+      console.log(chalk.blue("Detected standard .json.gz format. Loading into memory..."));
       const compressed = fs.readFileSync(backupFilePath);
       const jsonString = zlib.gunzipSync(compressed).toString("utf-8");
       const backupData: Record<string, any[]> = JSON.parse(jsonString);
@@ -91,73 +90,9 @@ const runRestore = async () => {
           console.error(chalk.red(`[Restore] ERROR restoring ${modelName}: ${err.message}`));
         }
       }
-    } 
-    else if (targetFileArg.endsWith(".jsonl.gz")) {
-      // New Streaming Format (Memory-safe)
-      const readStream = fs.createReadStream(backupFilePath);
-      const gunzip = zlib.createGunzip();
-      readStream.pipe(gunzip);
-
-      const rl = readline.createInterface({
-        input: gunzip,
-        crlfDelay: Infinity
-      });
-
-      const wipedCollections = new Set<string>();
-      const chunks: Record<string, any[]> = {};
-      const chunkSize = 1000;
-      let totalRecords = 0;
-      const recordCounts: Record<string, number> = {};
-
-      for await (const line of rl) {
-        if (!line.trim()) continue;
-        totalRecords++;
-        
-        try {
-          const parsed = JSON.parse(line);
-          const { collection: modelName, data } = parsed;
-          
-          if (!models[modelName]) {
-            if (!recordCounts[modelName]) {
-               console.warn(chalk.yellow(`[Restore] Skipping ${modelName}: model is not registered in this codebase.`));
-               recordCounts[modelName] = 1;
-            }
-            continue;
-          }
-          
-          if (!wipedCollections.has(modelName)) {
-            console.log(chalk.blue(`[Restore] Initializing and wiping collection ${modelName}...`));
-            await models[modelName].collection.deleteMany({});
-            wipedCollections.add(modelName);
-            chunks[modelName] = [];
-            recordCounts[modelName] = 0;
-          }
-          
-          chunks[modelName]!.push(data);
-          recordCounts[modelName]!++;
-          
-          if (chunks[modelName]!.length >= chunkSize) {
-            await models[modelName].collection.insertMany(chunks[modelName]!);
-            chunks[modelName] = [];
-          }
-          
-        } catch (err: any) {
-           console.error(chalk.red("Error parsing JSON line: "), err.message);
-        }
-      }
-      
-      if (totalRecords === 0) {
-        console.error(chalk.bgRed.white("\n[Restore] Safeguard Triggered: Backup file contains 0 total records. Aborting restore."));
-        process.exit(1);
-      }
-      
-      // Insert remaining chunks
-      for (const [modelName, chunk] of Object.entries(chunks)) {
-         if (chunk && chunk.length > 0 && models[modelName]) {
-            await models[modelName].collection.insertMany(chunk);
-         }
-        console.log(chalk.green(`[Restore] Restored ${recordCounts[modelName]} records for ${modelName} successfully!`));
-      }
+    } else {
+      console.error(chalk.red(`Error: Unsupported file format. Please provide a .json.gz file.`));
+      process.exit(1);
     }
 
     console.log(chalk.green.bold("\nDatabase restore completed successfully!"));

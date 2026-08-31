@@ -9,6 +9,7 @@ export const logEvent = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const getRetentionStats = asyncHandler(async (req: Request, res: Response) => {
-  const stats = await appAnalyticsService.getRetentionStats();
+  const { timeframe } = req.query;
+  const stats = await appAnalyticsService.getRetentionStats(timeframe as string);
   ApiResponse.sendSuccess(res, 200, "Retention stats fetched successfully", stats);
 });

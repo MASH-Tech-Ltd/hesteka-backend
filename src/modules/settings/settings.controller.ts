@@ -37,7 +37,7 @@ export const getBackupFiles = asyncHandler(async (req: Request, res: Response) =
   if (!fs.existsSync(backupsDir)) {
     return ApiResponse.sendSuccess(res, 200, "Backup files fetched successfully", []);
   }
-  const files = fs.readdirSync(backupsDir).filter(f => f.endsWith(".json.gz"));
+  const files = fs.readdirSync(backupsDir).filter(f => f.endsWith(".json.gz") || f.endsWith(".jsonl.gz"));
   const fileList = files.map(filename => {
     const filePath = path.join(backupsDir, filename);
     const stats = fs.statSync(filePath);
@@ -55,7 +55,7 @@ export const getBackupFiles = asyncHandler(async (req: Request, res: Response) =
 
 export const downloadBackupFile = asyncHandler(async (req: Request, res: Response) => {
   const { filename } = req.params;
-  if (!filename || typeof filename !== "string" || filename.includes("..") || !filename.endsWith(".json.gz")) {
+  if (!filename || typeof filename !== "string" || filename.includes("..") || !(filename.endsWith(".json.gz") || filename.endsWith(".jsonl.gz"))) {
     res.status(400).json({ status: "error", message: "Invalid backup filename" });
     return;
   }

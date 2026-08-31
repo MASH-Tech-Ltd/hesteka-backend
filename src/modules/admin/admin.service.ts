@@ -34,6 +34,7 @@ import { rewardItemModel, redemptionModel } from "../rewards/reward.models";
 import { getOnlineUsersCount } from "../../socket/server";
 import { SupportMessageModel } from "../supportMessages/supportMessage.models";
 import { SupportMessageStatus } from "../supportMessages/supportMessage.interface";
+import { AppAnalytics } from "../appAnalytics/appAnalytics.models";
 
 export const adminService = {
   async getStats() {
@@ -95,6 +96,9 @@ export const adminService = {
       pendingSupportMessages,
       config,
       crowdfundingStats,
+      totalDownloads,
+      downloadsThisMonth,
+      downloadsLastMonth,
     ] = await Promise.all([
       // Users
       userModel.countDocuments(),
@@ -280,6 +284,11 @@ export const adminService = {
       
       // Crowdfunding Stats
       crowdfundingService.getCrowdfundingStats(),
+
+      // Downloads Stats
+      AppAnalytics.countDocuments({ eventType: "install" }),
+      AppAnalytics.countDocuments({ eventType: "install", createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+      AppAnalytics.countDocuments({ eventType: "install", createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
     ]);
 
     const collectedThisMonth = donationsThisMonth[0]?.total || 0;
@@ -402,8 +411,8 @@ export const adminService = {
         inProgress: inProgressMissions,
       },
       downloads: {
-        total: totalUsers * 3, // Mock logic based on users
-        growth: 12,
+        total: totalDownloads,
+        growth: downloadsThisMonth - downloadsLastMonth,
       },
       crowdfunding: {
         totalCollected: crowdfundingStats.totalCollected,

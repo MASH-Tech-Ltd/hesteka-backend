@@ -13,7 +13,7 @@ export const appAnalyticsService = {
     return await AppAnalytics.create(data);
   },
 
-  getRetentionStats: async () => {
+  getRetentionStats: async (timeframe?: string) => {
     // Current month start
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -59,21 +59,59 @@ export const appAnalyticsService = {
       conversion = Math.round((totalConversions / totalDownloads) * 100);
     }
 
-    // Installs / Uninstalls per month (last 6 months for chart)
+    // OS Breakdown
+    const osData = await AppAnalytics.aggregate([
+      { $match: { eventType: "install" } },
+      { $group: { _id: "$os", count: { $sum: 1 } } }
+    ]);
+    const osBreakdown = { android: 0, ios: 0, web: 0, unknown: 0 };
+    osData.forEach(item => {
+      const os = item._id || "unknown";
+      if (osBreakdown[os as keyof typeof osBreakdown] !== undefined) {
+        osBreakdown[os as keyof typeof osBreakdown] += item.count;
+      } else {
+        osBreakdown["unknown"] += item.count;
+      }
+    });
+
+    // Metadata / Sensitive Samples
+    const metadataSamples = await AppAnalytics.find({ metadata: { $exists: true, $type: "object", $ne: {} } })
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    // Unique Devices (all time)
+    const uniqueDevicesList = await AppAnalytics.distinct("deviceId");
+    const uniqueDevices = uniqueDevicesList.length;
+
+    // Installs / Uninstalls Chart
+    let startDate;
+    let groupStage;
+    
+    if (timeframe === "weekly") {
+      startDate = new Date(new Date().setDate(new Date().getDate() - 7));
+      groupStage = { day: { $dayOfMonth: "$createdAt" }, month: { $month: "$createdAt" }, year: { $year: "$createdAt" }, type: "$eventType" };
+    } else if (timeframe === "yearly") {
+      startDate = new Date(new Date().setMonth(new Date().getMonth() - 12));
+      groupStage = { month: { $month: "$createdAt" }, year: { $year: "$createdAt" }, type: "$eventType" };
+    } else if (timeframe === "lifetime") {
+      startDate = new Date(0); // Beginning of time
+      groupStage = { year: { $year: "$createdAt" }, type: "$eventType" };
+    } else {
+      // Default to monthly
+      startDate = new Date(new Date().setDate(new Date().getDate() - 30));
+      groupStage = { day: { $dayOfMonth: "$createdAt" }, month: { $month: "$createdAt" }, year: { $year: "$createdAt" }, type: "$eventType" };
+    }
+
     const chartData = await AppAnalytics.aggregate([
       {
         $match: {
           eventType: { $in: ["install", "uninstall"] },
-          createdAt: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 5)) }
+          createdAt: { $gte: startDate }
         }
       },
       {
         $group: {
-          _id: {
-            month: { $month: "$createdAt" },
-            year: { $year: "$createdAt" },
-            type: "$eventType"
-          },
+          _id: groupStage,
           count: { $sum: 1 }
         }
       }
@@ -84,17 +122,46 @@ export const appAnalyticsService = {
     const formattedChartData: Record<string, any> = {};
     
     chartData.forEach(item => {
-      const monthIndex = item._id.month ? item._id.month - 1 : 0;
-      const monthLabel = monthNames[monthIndex] || "Unknown";
-      if (!formattedChartData[monthLabel]) {
-        formattedChartData[monthLabel] = { name: monthLabel, installs: 0, uninstalls: 0 };
-      }
-      if (item._id.type === "install") {
-        formattedChartData[monthLabel].installs = item.count;
+      let dateLabel = "Unknown";
+      let orderDate = 0;
+
+      if (timeframe === "lifetime") {
+        dateLabel = `${item._id.year}`;
+        orderDate = new Date(item._id.year || new Date().getFullYear(), 0, 1).getTime();
+      } else if (timeframe === "yearly") {
+        const monthIndex = item._id.month ? item._id.month - 1 : 0;
+        dateLabel = `${monthNames[monthIndex]} ${item._id.year}`;
+        orderDate = new Date(item._id.year || new Date().getFullYear(), monthIndex, 1).getTime();
       } else {
-        formattedChartData[monthLabel].uninstalls = item.count;
+        const monthIndex = item._id.month ? item._id.month - 1 : 0;
+        const monthLabel = monthNames[monthIndex] || "Unknown";
+        const day = item._id.day || 1;
+        dateLabel = `${monthLabel} ${day}`;
+        orderDate = new Date(item._id.year || new Date().getFullYear(), monthIndex, day).getTime();
+      }
+      
+      if (!formattedChartData[dateLabel]) {
+        formattedChartData[dateLabel] = { 
+          name: dateLabel, 
+          installs: 0, 
+          uninstalls: 0, 
+          orderDate
+        };
+      }
+      
+      if (item._id.type === "install") {
+        formattedChartData[dateLabel].installs = item.count;
+      } else {
+        formattedChartData[dateLabel].uninstalls = item.count;
       }
     });
+
+    const finalChartData = Object.values(formattedChartData)
+      .sort((a: any, b: any) => a.orderDate - b.orderDate)
+      .map((i: any) => {
+        delete i.orderDate;
+        return i;
+      });
 
     return {
       downloads: totalDownloads,
@@ -103,7 +170,10 @@ export const appAnalyticsService = {
       retention,
       avgDuration,
       conversion,
-      chartData: Object.values(formattedChartData)
+      uniqueDevices,
+      osBreakdown,
+      metadataSamples,
+      chartData: finalChartData
     };
   }
 };

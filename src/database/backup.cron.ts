@@ -96,18 +96,33 @@ export const runBackup = async (triggerType: "manual" | "scheduled" = "scheduled
     }
     // ---------------------------
 
-    // 2. Save locally as compressed JSONL stream & Replicate in chunks
+    // 2. Save locally as compressed JSON stream & Replicate in chunks
     const backupsDir = path.join(process.cwd(), "backups");
     if (!fs.existsSync(backupsDir)) {
       fs.mkdirSync(backupsDir, { recursive: true });
     }
     
+    // Auto-cleanup legacy JSONL formats
+    const existingFiles = fs.readdirSync(backupsDir);
+    for (const file of existingFiles) {
+      if (file.endsWith(".jsonl.gz")) {
+        try {
+          fs.unlinkSync(path.join(backupsDir, file));
+          console.log(chalk.yellow(`[Backup] Auto-deleted legacy format: ${file}`));
+        } catch(e) {}
+      }
+    }
+    
     timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    backupFilePath = path.join(backupsDir, `backup-${timestamp}.jsonl.gz`);
+    backupFilePath = path.join(backupsDir, `backup-${timestamp}.json.gz`);
     
     const writeStream = fs.createWriteStream(backupFilePath);
     const gzip = zlib.createGzip();
     gzip.pipe(writeStream);
+    
+    // Start JSON object
+    gzip.write("{\n");
+    let isFirstModel = true;
 
     let secondaryConn: mongoose.Connection | null = null;
     if (config.backupMongoUri) {
@@ -127,10 +142,17 @@ export const runBackup = async (triggerType: "manual" | "scheduled" = "scheduled
         const cursor = model.find({}).cursor();
         let chunk: any[] = [];
         
+        if (!isFirstModel) gzip.write(",\n");
+        isFirstModel = false;
+        
+        gzip.write(`"${modelName}": [\n`);
+        let isFirstDoc = true;
+        
         for await (const doc of cursor) {
-          // Write to file (jsonl format)
-          const line = JSON.stringify({ collection: modelName, data: doc });
-          gzip.write(line + "\n");
+          // Write to file (json format array)
+          if (!isFirstDoc) gzip.write(",\n");
+          isFirstDoc = false;
+          gzip.write(JSON.stringify(doc));
           
           // Add to chunk for secondary replication
           if (secondaryModel) {
@@ -141,6 +163,8 @@ export const runBackup = async (triggerType: "manual" | "scheduled" = "scheduled
             }
           }
         }
+        
+        gzip.write("\n]");
         
         // Insert remaining records in chunk
         if (secondaryModel && chunk.length > 0) {
@@ -154,6 +178,9 @@ export const runBackup = async (triggerType: "manual" | "scheduled" = "scheduled
         console.error(chalk.red(`[Backup] Stream/Replication failed for model ${modelName}:`), err.message);
       }
     }
+    
+    // End JSON object
+    gzip.write("\n}\n");
     
     // Promisify stream end to ensure file is written completely
     await new Promise((resolve, reject) => {
@@ -171,7 +198,7 @@ export const runBackup = async (triggerType: "manual" | "scheduled" = "scheduled
     
     // Clean up older backups (keep dailies for a week, weeklies for a month)
     const files = fs.readdirSync(backupsDir);
-    const backupFiles = files.filter(f => f.startsWith("backup-") && (f.endsWith(".json.gz") || f.endsWith(".jsonl.gz")));
+    const backupFiles = files.filter(f => f.startsWith("backup-") && f.endsWith(".json.gz"));
     
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
