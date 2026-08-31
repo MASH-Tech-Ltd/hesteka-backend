@@ -529,7 +529,7 @@ export const adminService = {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [total, active, suspended, newThisMonth, pendingPartners] =
+    const [total, active, suspended, newThisMonth, pendingPartners, bothSet, onlyRegionSet, onlyDepartmentSet, noneSet] =
       await Promise.all([
         userModel.countDocuments(),
         userModel.countDocuments({ status: UserStatus.ACTIVE }),
@@ -539,8 +539,33 @@ export const adminService = {
           role: UserRole.PARTNERS,
           status: UserStatus.PENDING,
         }),
+        userModel.countDocuments({ 
+          region: { $nin: [null, "", "N/A"] }, 
+          department: { $nin: [null, "", "N/A"] } 
+        }),
+        userModel.countDocuments({ 
+          region: { $nin: [null, "", "N/A"] }, 
+          $or: [{ department: { $in: [null, "", "N/A"] } }, { department: { $exists: false } }] 
+        }),
+        userModel.countDocuments({ 
+          department: { $nin: [null, "", "N/A"] }, 
+          $or: [{ region: { $in: [null, "", "N/A"] } }, { region: { $exists: false } }] 
+        }),
+        userModel.countDocuments({ 
+          $and: [
+            { $or: [{ region: { $in: [null, "", "N/A"] } }, { region: { $exists: false } }] },
+            { $or: [{ department: { $in: [null, "", "N/A"] } }, { department: { $exists: false } }] }
+          ]
+        }),
       ]);
-    return { total, active, suspended, newThisMonth, pendingPartners };
+    return { 
+      total, 
+      active, 
+      suspended, 
+      newThisMonth, 
+      pendingPartners,
+      devStats: { bothSet, onlyRegionSet, onlyDepartmentSet, noneSet }
+    };
   },
 
   async getReportStats() {

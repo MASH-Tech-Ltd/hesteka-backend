@@ -122,6 +122,7 @@ export const userService = {
       sortBy,
       page: pagebody,
       limit: limitbody,
+      locationStatus,
     } = req.query;
 
     const { page, limit, skip } = paginationHelper(pagebody, limitbody);
@@ -192,6 +193,24 @@ export const userService = {
         filter.$or = [
           { fcmTokens: { $exists: false } },
           { fcmTokens: { $size: 0 } }
+        ];
+      }
+    }
+
+    if (locationStatus && locationStatus !== "all") {
+      if (locationStatus === "both") {
+        filter.region = { $nin: [null, "", "N/A"] };
+        filter.department = { $nin: [null, "", "N/A"] };
+      } else if (locationStatus === "regionOnly") {
+        filter.region = { $nin: [null, "", "N/A"] };
+        filter.$or = [{ department: { $in: [null, "", "N/A"] } }, { department: { $exists: false } }];
+      } else if (locationStatus === "departmentOnly") {
+        filter.department = { $nin: [null, "", "N/A"] };
+        filter.$or = [{ region: { $in: [null, "", "N/A"] } }, { region: { $exists: false } }];
+      } else if (locationStatus === "none") {
+        filter.$and = [
+          { $or: [{ region: { $in: [null, "", "N/A"] } }, { region: { $exists: false } }] },
+          { $or: [{ department: { $in: [null, "", "N/A"] } }, { department: { $exists: false } }] }
         ];
       }
     }
