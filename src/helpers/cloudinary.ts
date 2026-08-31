@@ -117,6 +117,40 @@ export const uploadMediaCloudinary = async (
   }
 };
 
+// New - image upload with real resolution (no quality/width compression)
+export const uploadOriginalCloudinary = async (
+  filePath: string,
+): Promise<CloudinaryUploadResult> => {
+  try {
+    if (!filePath || !fs.existsSync(filePath as string)) {
+      throw new CustomError(400, "Image path missing");
+    }
+
+    const cloudinaryResponse = await cloudinary.uploader.upload(filePath, {
+      resource_type: "image",
+      folder: getCloudinaryFolder("image"),
+      // omitting quality, fetch_format, width, crop to keep real resolution
+    });
+
+    fs.unlinkSync(filePath);
+
+    return {
+      public_id: getPublicId(cloudinaryResponse.public_id),
+      secure_url: cloudinaryResponse.secure_url,
+      resource_type: cloudinaryResponse.resource_type,
+    };
+  } catch (error: any) {
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    throw new CustomError(
+      500,
+      `Failed to upload original image: ${error?.message ?? "Unknown error"}`,
+    );
+  }
+};
+
 // Updated — now accepts resource type (needed for video/raw deletion)
 export const deleteCloudinary = async (
   publicId: string,

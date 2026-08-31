@@ -1,7 +1,9 @@
+import mongoose from "mongoose";
 import { BadgeModel } from "./badge.model";
 import { IBadge } from "./badge.interface";
 import CustomError from "../../helpers/CustomError";
-import { uploadCloudinary, deleteCloudinary } from "../../helpers/cloudinary";
+import { uploadOriginalCloudinary, deleteCloudinary } from "../../helpers/cloudinary";
+import { userModel } from "../usersAuth/user.models";
 
 export const badgeService = {
   async createBadge(data: Partial<IBadge>, file?: Express.Multer.File): Promise<IBadge> {
@@ -16,7 +18,7 @@ export const badgeService = {
 
     let iconData;
     if (file) {
-      const uploadResult = await uploadCloudinary(file.path);
+      const uploadResult = await uploadOriginalCloudinary(file.path);
       if (uploadResult) {
         iconData = {
           secure_url: uploadResult.secure_url,
@@ -53,11 +55,10 @@ export const badgeService = {
     }
 
     let iconData;
+    let oldPublicId = badge.icon?.public_id;
+
     if (file) {
-      if (badge.icon?.public_id) {
-        await deleteCloudinary(badge.icon.public_id).catch(e => console.error("Cloudinary cleanup error:", e));
-      }
-      const uploadResult = await uploadCloudinary(file.path);
+      const uploadResult = await uploadOriginalCloudinary(file.path);
       if (uploadResult) {
         iconData = {
           secure_url: uploadResult.secure_url,
@@ -71,10 +72,44 @@ export const badgeService = {
       ...(iconData && { icon: iconData }),
     };
 
-    const updatedBadge = await BadgeModel.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    let updatedBadge;
+    try {
+      updatedBadge = await BadgeModel.findByIdAndUpdate(id, updateData, {
+        new: true,
+        runValidators: true,
+        session,
+      });
+
+      if (iconData) {
+        await userModel.updateMany(
+          { badge: id },
+          {
+            $set: {
+              profileImage: iconData
+            }
+          },
+          { session }
+        );
+      }
+
+      await session.commitTransaction();
+      session.endSession();
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      
+      if (iconData) {
+        await deleteCloudinary(iconData.public_id).catch(e => console.error("Cloudinary cleanup error on abort:", e));
+      }
+      throw error;
+    }
+
+    if (iconData && oldPublicId) {
+      await deleteCloudinary(oldPublicId).catch(e => console.error("Cloudinary cleanup error:", e));
+    }
     
     return updatedBadge!;
   },
