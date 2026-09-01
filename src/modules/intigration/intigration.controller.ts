@@ -27,10 +27,10 @@ export const getShopifyUsers = asyncHandler(async (req: Request, res: Response) 
   try {
     const decryptedKey = decrypt(settings.shopifyApiKey);
     if (providedKey !== decryptedKey) {
-      throw new CustomError(401, "Invalid API Key");
+      throw new CustomError(401, "Invalid API Key!! Contact with Admin.");
     }
   } catch (err) {
-    throw new CustomError(401, "Invalid API Key");
+    throw new CustomError(401, "Invalid API Key!! Contact with Admin.");
   }
 
   // Validate allowed domain if one is configured
