@@ -184,13 +184,16 @@ app.get('/.well-known/assetlinks.json', (req: Request, res: Response) => {
 
 // 2. iOS Universal Links Verification (apple-app-site-association)
 const aasaHandler = (req: Request, res: Response) => {
+  const teamId = config.appLinks.appleTeamId || "";
+  const bundleId = (config.appLinks as any).appleBundleId || "com.emmafve.hesteka";
+
   res.setHeader('Content-Type', 'application/json');
   res.status(200).json({
     "applinks": {
       "apps": [],
       "details": [
         {
-          "appID": `${config.appLinks.appleTeamId}.${config.appLinks.androidPackageName}`,
+          "appID": `${teamId}.${bundleId}`,
           "paths": [ "/report/*", "/reports/*", "/invite/*", "/referral/*" ]
         }
       ]

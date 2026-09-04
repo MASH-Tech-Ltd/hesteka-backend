@@ -119,6 +119,7 @@ const config = {
     androidPackageName: process.env.ANDROID_PACKAGE_NAME || "com.emmafve.app",
     androidSha256CertFingerprint: process.env.ANDROID_SHA256_CERT_FINGERPRINT as string,
     appleTeamId: process.env.APPLE_TEAM_ID as string,
+    appleBundleId: process.env.APPLE_BUNDLE_ID || process.env.APPLE_CLIENT_ID || "com.emmafve.hesteka",
     appleAppStoreId: process.env.APPLE_APP_STORE_ID as string,
   },
 };
