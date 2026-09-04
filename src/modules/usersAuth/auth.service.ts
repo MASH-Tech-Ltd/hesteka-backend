@@ -66,10 +66,12 @@ async function generateReferralCode(firstName: string): Promise<string> {
 }
 
 async function matchDeviceReferral(ip?: string, userAgent?: string): Promise<string | null> {
-  if (!ip && !userAgent) return null;
+  if (!ip) return null;
+  const timeWindow = new Date(Date.now() - 48 * 60 * 60 * 1000); // 48 hours window
+
   const match = await deviceReferralModel.findOne({
-    ...(ip ? { ip } : {}),
-    ...(userAgent ? { userAgent } : {}),
+    ip,
+    createdAt: { $gte: timeWindow },
   }).sort({ createdAt: -1 });
 
   return match ? match.referralCode : null;

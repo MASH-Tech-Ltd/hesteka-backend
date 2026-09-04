@@ -499,13 +499,14 @@ export const userService = {
 
   // resolve referral for mobile app
   async resolveReferral(ip: string, userAgent: string) {
-    if (!ip && !userAgent) return { referralCode: null };
+    if (!ip) return { referralCode: null };
     
     const { deviceReferralModel } = require('./deviceReferral.models');
+    const timeWindow = new Date(Date.now() - 48 * 60 * 60 * 1000);
     
     const match = await deviceReferralModel.findOne({
-      ...(ip ? { ip } : {}),
-      ...(userAgent ? { userAgent } : {}),
+      ip,
+      createdAt: { $gte: timeWindow },
     }).sort({ createdAt: -1 });
 
     return {

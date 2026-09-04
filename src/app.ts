@@ -19,6 +19,9 @@ import { securityService } from "./modules/security/security.service";
 import { deviceReferralModel } from "./modules/usersAuth/deviceReferral.models";
 import { intigrationRoute } from "./modules/intigration/intigration.route";
 import { getClientIp } from "./utils/ipUtils";
+import mongoose from "mongoose";
+import { reportModel } from "./modules/reports/report.models";
+import { reportShareTemplate, inviteShareTemplate } from "./tempaletes/share.template";
 const xss = require("xss-clean");
 
 const app = express();
@@ -161,55 +164,86 @@ app.use("/api/intigration", ipBlockerMiddleware, globalApiLimiter, intigrationRo
 // Apply global IP blocker and rate limiters (global & admin) to all API endpoints
 app.use("/api/v1", ipBlockerMiddleware, globalApiLimiter, adminApiLimiter, routes);
 
-// 1. Android App Links Verification
+// 1. Android App Links Verification (assetlinks.json)
 app.get('/.well-known/assetlinks.json', (req: Request, res: Response) => {
+  const rawFingerprints = config.appLinks.androidSha256CertFingerprint || "";
+  const fingerprints = rawFingerprints
+    .split(",")
+    .map((f: string) => f.trim())
+    .filter(Boolean);
+
+  res.setHeader('Content-Type', 'application/json');
   res.status(200).json([
     {
       "relation": ["delegate_permission/common.handle_all_urls"],
       "target": {
         "namespace": "android_app",
         "package_name": config.appLinks.androidPackageName,
-        "sha256_cert_fingerprints": [config.appLinks.androidSha256CertFingerprint]
+        "sha256_cert_fingerprints": fingerprints.length > 0 ? fingerprints : [rawFingerprints]
       }
     }
   ]);
 });
 
-// 2. iOS Universal Links Verification
-app.get('/.well-known/apple-app-site-association', (req: Request, res: Response) => {
-  // ⚠️ Note: The iOS file does not have a JSON extension, but the response type must be JSON.
+// 2. iOS Universal Links Verification (apple-app-site-association)
+const aasaHandler = (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'application/json');
   res.status(200).json({
     "applinks": {
       "apps": [],
       "details": [
         {
-          "appID": `${config.appLinks.appleTeamId}.${config.appLinks.androidPackageName}`, // Team ID + Bundle ID
-          "paths": [ "/report/*", "/invite/*" ] // Links to this path will open in the app
+          "appID": `${config.appLinks.appleTeamId}.${config.appLinks.androidPackageName}`,
+          "paths": [ "/report/*", "/reports/*", "/invite/*", "/referral/*" ]
         }
       ]
     }
   });
-});
+};
+app.get('/.well-known/apple-app-site-association', aasaHandler);
+app.get('/apple-app-site-association', aasaHandler);
 
-// 3. Browser Fallback Routes (if the app is not installed on the phone)
-app.get('/report/:id', (req: Request, res: Response) => {
-  const userAgent = req.headers['user-agent'] || '';
-  
-  // If the user clicks from an iPhone and the app is not installed, redirect to Apple Store
-  if (/iPhone|iPad|iPod/i.test(userAgent)) {
-    return res.redirect(`https://apps.apple.com/app/id${config.appLinks.appleAppStoreId}`);
+// 3. Smart Report Landing & Deep Link Fallback Routes
+const reportShareHandler = async (req: Request, res: Response) => {
+  const reportId = (req.params.id as string) || "";
+  let reportData: any = null;
+
+  if (reportId && mongoose.Types.ObjectId.isValid(reportId)) {
+    try {
+      reportData = await reportModel.findById(reportId).lean();
+    } catch (err) {
+      console.error("[Report Share] Failed to fetch report details:", err);
+    }
   }
-  
-  // Redirect to Play Store for Android or other devices
-  res.redirect(`https://play.google.com/store/apps/details?id=${config.appLinks.androidPackageName}`);
-});
 
-app.get('/invite/:code', rateLimiter(15, 15), async (req: Request, res: Response) => {
+  const appStoreUrl = `https://apps.apple.com/app/id${config.appLinks.appleAppStoreId}`;
+  const playStoreUrl = `https://play.google.com/store/apps/details?id=${config.appLinks.androidPackageName}`;
+  const customSchemeUrl = `hesteka://report/${reportId}`;
+
+  const html = reportShareTemplate({
+    id: reportId,
+    title: reportData?.title || reportData?.animalName || "Signalement d'animal",
+    animalName: reportData?.animalName || "Animal signalé",
+    species: reportData?.species,
+    description: reportData?.description || "Consultez ce signalement d'animal sur l'application Hesteka.",
+    imageUrl: reportData?.images?.[0] || reportData?.image || "",
+    appStoreUrl,
+    playStoreUrl,
+    customSchemeUrl,
+  });
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.status(200).send(html);
+};
+app.get('/report/:id', reportShareHandler);
+app.get('/reports/:id', reportShareHandler);
+
+// 4. Smart Referral / Invite Landing & Deep Link Fallback Routes
+const inviteShareHandler = async (req: Request, res: Response) => {
   const userAgent = req.headers['user-agent'] || '';
   const ip = getClientIp(req);
   const referralCode = (req.params.code as string)?.toUpperCase() || '';
-  
+
   if (referralCode) {
     try {
       await deviceReferralModel.create({
@@ -222,19 +256,22 @@ app.get('/invite/:code', rateLimiter(15, 15), async (req: Request, res: Response
     }
   }
 
-  // iOS: Direct Redirect to App Store (attribution handled via IP/User-Agent fingerprint)
-  if (/iPhone|iPad|iPod/i.test(userAgent)) {
-    return res.redirect(`https://apps.apple.com/app/id${config.appLinks.appleAppStoreId}`);
-  }
-  
-  // Android: Play Store with Referrer Parameter
-  if (/Android/i.test(userAgent)) {
-    return res.redirect(`https://play.google.com/store/apps/details?id=${config.appLinks.androidPackageName}&referrer=ref%3D${referralCode}`);
-  }
+  const appStoreUrl = `https://apps.apple.com/app/id${config.appLinks.appleAppStoreId}`;
+  const playStoreUrl = `https://play.google.com/store/apps/details?id=${config.appLinks.androidPackageName}&referrer=ref%3D${referralCode}`;
+  const customSchemeUrl = `hesteka://invite/${referralCode}`;
 
-  // Web Fallback: Redirect to main web site (e.g., share domain)
-  return res.redirect(`https://share.hesteka.com/?invite=${referralCode}`);
-});
+  const html = inviteShareTemplate({
+    referralCode,
+    appStoreUrl,
+    playStoreUrl,
+    customSchemeUrl,
+  });
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.status(200).send(html);
+};
+app.get('/invite/:code', rateLimiter(15, 15), inviteShareHandler);
+app.get('/referral/:code', rateLimiter(15, 15), inviteShareHandler);
 
 app.get("/", serverRunningTemplate);
 app.use(notFound);
