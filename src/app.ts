@@ -210,23 +210,62 @@ const reportShareHandler = async (req: Request, res: Response) => {
 
   if (reportId && mongoose.Types.ObjectId.isValid(reportId)) {
     try {
-      reportData = await reportModel.findById(reportId).lean();
+      reportData = await reportModel
+        .findById(reportId)
+        .populate("author", "firstName lastName profileImage")
+        .lean();
     } catch (err) {
       console.error("[Report Share] Failed to fetch report details:", err);
     }
+  }
+
+  // Extract correct image URL from images array or image field
+  let imageUrl = "";
+  if (reportData?.images && Array.isArray(reportData.images) && reportData.images.length > 0) {
+    const firstImg = reportData.images[0];
+    imageUrl = typeof firstImg === "string" ? firstImg : firstImg?.secure_url || firstImg?.url || "";
+  }
+  if (!imageUrl && reportData?.image) {
+    imageUrl = typeof reportData.image === "string" ? reportData.image : reportData.image?.secure_url || "";
   }
 
   const appStoreUrl = `https://apps.apple.com/app/id${config.appLinks.appleAppStoreId}`;
   const playStoreUrl = `https://play.google.com/store/apps/details?id=${config.appLinks.androidPackageName}`;
   const customSchemeUrl = `hesteka://report/${reportId}`;
 
+  const authorName = reportData?.author
+    ? `${reportData.author.firstName || ""} ${reportData.author.lastName || ""}`.trim()
+    : "Membre Hesteka";
+  const authorImage = reportData?.author?.profileImage?.secure_url || "";
+  const eventDate = reportData?.eventDate
+    ? new Date(reportData.eventDate).toLocaleDateString("fr-FR", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "";
+
+  const coords = reportData?.location?.coordinates || [];
+  const longitude = coords.length > 0 ? coords[0] : undefined;
+  const latitude = coords.length > 1 ? coords[1] : undefined;
+
   const html = reportShareTemplate({
     id: reportId,
-    title: reportData?.title || reportData?.animalName || "Signalement d'animal",
+    title: reportData?.title || (reportData?.animalName ? `Signalement: ${reportData.animalName}` : "Signalement d'animal"),
     animalName: reportData?.animalName || "Animal signalé",
     species: reportData?.species,
+    breed: reportData?.breed,
+    gender: reportData?.gender,
+    age: reportData?.age,
+    status: reportData?.status,
+    authorName,
+    authorImage,
+    eventDate,
+    address: reportData?.location?.address || reportData?.locationAddress || "",
+    latitude,
+    longitude,
     description: reportData?.description || "Consultez ce signalement d'animal sur l'application Hesteka.",
-    imageUrl: reportData?.images?.[0] || reportData?.image || "",
+    imageUrl,
     appStoreUrl,
     playStoreUrl,
     customSchemeUrl,
