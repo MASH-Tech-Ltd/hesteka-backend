@@ -221,17 +221,9 @@ const getStoreUrl = (ua: string, referralCode?: string): string => {
 
 // 3. Smart Report Landing & Deep Link Fallback Routes
 const reportShareHandler = async (req: Request, res: Response) => {
-  const userAgent = req.headers['user-agent'] || '';
   const reportId = (req.params.id as string) || "";
-  const storeUrl = getStoreUrl(userAgent);
-
-  // If real user on browser (not a social media crawler/bot), redirect directly to Store
-  if (!isSocialBot(userAgent)) {
-    return res.redirect(302, storeUrl);
-  }
-
-  // If social media bot (WhatsApp, Facebook, Twitter, etc.), render OpenGraph preview HTML
   let reportData: any = null;
+
   if (reportId && mongoose.Types.ObjectId.isValid(reportId)) {
     try {
       reportData = await reportModel
@@ -317,13 +309,6 @@ const inviteShareHandler = async (req: Request, res: Response) => {
     } catch (error) {
       console.error("[Invite] Failed to log device referral:", error);
     }
-  }
-
-  const storeUrl = getStoreUrl(userAgent, referralCode);
-
-  // If real user on browser (not a social media crawler/bot), redirect directly to Store
-  if (!isSocialBot(userAgent)) {
-    return res.redirect(302, storeUrl);
   }
 
   const appStoreUrl = `https://apps.apple.com/app/id${config.appLinks.appleAppStoreId}`;

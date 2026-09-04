@@ -322,7 +322,8 @@ export function reportShareTemplate(data: ReportShareData): string {
       var storeBtn = document.getElementById('storeBtn');
       var openAppBtn = document.getElementById('openAppBtn');
 
-      var androidIntentUrl = "intent://report/${data.id}#Intent;scheme=hesteka;package=com.emmafve.app;end";
+      var fallbackUrl = encodeURIComponent("${data.playStoreUrl}");
+      var androidIntentUrl = "intent://report/${data.id}#Intent;scheme=hesteka;package=com.emmafve.app;S.browser_fallback_url=" + fallbackUrl + ";end";
       var targetAppUrl = isAndroid ? androidIntentUrl : "${data.customSchemeUrl}";
 
       if (openAppBtn) {
@@ -339,10 +340,15 @@ export function reportShareTemplate(data: ReportShareData): string {
         }
       }
 
-      // Automatically attempt to open the app
-      setTimeout(function() {
-        window.location.href = targetAppUrl;
-      }, 300);
+      // Automatically launch app via intent or fallback
+      if (isAndroid) {
+        window.location.replace(androidIntentUrl);
+      } else if (isIOS) {
+        window.location.replace("${data.customSchemeUrl}");
+        setTimeout(function() {
+          window.location.replace("${data.appStoreUrl}");
+        }, 1500);
+      }
     })();
   </script>
 </body>
@@ -507,7 +513,8 @@ export function inviteShareTemplate(data: InviteShareData): string {
       var storeBtn = document.getElementById('storeBtn');
       var openAppBtn = document.getElementById('openAppBtn');
 
-      var androidIntentUrl = "intent://invite/${data.referralCode}#Intent;scheme=hesteka;package=com.emmafve.app;end";
+      var fallbackUrl = encodeURIComponent("${data.playStoreUrl}");
+      var androidIntentUrl = "intent://invite/${data.referralCode}#Intent;scheme=hesteka;package=com.emmafve.app;S.browser_fallback_url=" + fallbackUrl + ";end";
       var targetAppUrl = isAndroid ? androidIntentUrl : "${data.customSchemeUrl}";
 
       if (openAppBtn) {
@@ -524,10 +531,15 @@ export function inviteShareTemplate(data: InviteShareData): string {
         }
       }
 
-      // Automatically attempt to open the app
-      setTimeout(function() {
-        window.location.href = targetAppUrl;
-      }, 300);
+      // Automatically launch app via intent or fallback
+      if (isAndroid) {
+        window.location.replace(androidIntentUrl);
+      } else if (isIOS) {
+        window.location.replace("${data.customSchemeUrl}");
+        setTimeout(function() {
+          window.location.replace("${data.appStoreUrl}");
+        }, 1500);
+      }
     })();
   </script>
 </body>
