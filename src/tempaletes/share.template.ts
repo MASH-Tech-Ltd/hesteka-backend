@@ -175,7 +175,17 @@ export function reportShareTemplate(data: ReportShareData): string {
   <script>
     (function() {
       var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      var isAndroid = /Android/.test(navigator.userAgent);
       var storeBtn = document.getElementById('storeBtn');
+      var openAppBtn = document.getElementById('openAppBtn');
+
+      var androidIntentUrl = "intent://report/${data.id}#Intent;scheme=hesteka;package=com.emmafve.app;end";
+      var targetAppUrl = isAndroid ? androidIntentUrl : "${data.customSchemeUrl}";
+
+      if (openAppBtn) {
+        openAppBtn.href = targetAppUrl;
+      }
+
       if (storeBtn) {
         if (isIOS) {
           storeBtn.href = "${data.appStoreUrl}";
@@ -186,9 +196,9 @@ export function reportShareTemplate(data: ReportShareData): string {
         }
       }
 
-      // Automatically attempt to open the app via custom scheme
+      // Automatically attempt to open the app
       setTimeout(function() {
-        window.location.href = "${data.customSchemeUrl}";
+        window.location.href = targetAppUrl;
       }, 300);
     })();
   </script>
@@ -344,7 +354,17 @@ export function inviteShareTemplate(data: InviteShareData): string {
   <script>
     (function() {
       var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      var isAndroid = /Android/.test(navigator.userAgent);
       var storeBtn = document.getElementById('storeBtn');
+      var openAppBtn = document.getElementById('openAppBtn');
+
+      var androidIntentUrl = "intent://invite/${data.referralCode}#Intent;scheme=hesteka;package=com.emmafve.app;end";
+      var targetAppUrl = isAndroid ? androidIntentUrl : "${data.customSchemeUrl}";
+
+      if (openAppBtn) {
+        openAppBtn.href = targetAppUrl;
+      }
+
       if (storeBtn) {
         if (isIOS) {
           storeBtn.href = "${data.appStoreUrl}";
@@ -355,9 +375,9 @@ export function inviteShareTemplate(data: InviteShareData): string {
         }
       }
 
-      // Automatically attempt to open the app via custom scheme
+      // Automatically attempt to open the app
       setTimeout(function() {
-        window.location.href = "${data.customSchemeUrl}";
+        window.location.href = targetAppUrl;
       }, 300);
     })();
   </script>
