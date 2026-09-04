@@ -203,11 +203,35 @@ const aasaHandler = (req: Request, res: Response) => {
 app.get('/.well-known/apple-app-site-association', aasaHandler);
 app.get('/apple-app-site-association', aasaHandler);
 
+// Helper: Detect social media crawlers / bots for link previews
+const isSocialBot = (ua: string): boolean => {
+  if (!ua) return false;
+  return /facebookexternalhit|facebot|whatsapp|twitterbot|telegrambot|slackbot|discordbot|applebot|googlebot|bingbot|linkedinbot|skypeuripreview|pinterest|meta-externalagent|threads|snapchat|viber|vkshare/i.test(ua);
+};
+
+// Helper: Get direct store URL based on client device
+const getStoreUrl = (ua: string, referralCode?: string): string => {
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  if (isIOS) {
+    return `https://apps.apple.com/app/id${config.appLinks.appleAppStoreId}`;
+  }
+  const referrerQuery = referralCode ? `&referrer=ref%3D${encodeURIComponent(referralCode)}` : "";
+  return `https://play.google.com/store/apps/details?id=${config.appLinks.androidPackageName}${referrerQuery}`;
+};
+
 // 3. Smart Report Landing & Deep Link Fallback Routes
 const reportShareHandler = async (req: Request, res: Response) => {
+  const userAgent = req.headers['user-agent'] || '';
   const reportId = (req.params.id as string) || "";
-  let reportData: any = null;
+  const storeUrl = getStoreUrl(userAgent);
 
+  // If real user on browser (not a social media crawler/bot), redirect directly to Store
+  if (!isSocialBot(userAgent)) {
+    return res.redirect(302, storeUrl);
+  }
+
+  // If social media bot (WhatsApp, Facebook, Twitter, etc.), render OpenGraph preview HTML
+  let reportData: any = null;
   if (reportId && mongoose.Types.ObjectId.isValid(reportId)) {
     try {
       reportData = await reportModel
@@ -293,6 +317,13 @@ const inviteShareHandler = async (req: Request, res: Response) => {
     } catch (error) {
       console.error("[Invite] Failed to log device referral:", error);
     }
+  }
+
+  const storeUrl = getStoreUrl(userAgent, referralCode);
+
+  // If real user on browser (not a social media crawler/bot), redirect directly to Store
+  if (!isSocialBot(userAgent)) {
+    return res.redirect(302, storeUrl);
   }
 
   const appStoreUrl = `https://apps.apple.com/app/id${config.appLinks.appleAppStoreId}`;
