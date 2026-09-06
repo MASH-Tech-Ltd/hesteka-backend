@@ -11,6 +11,7 @@ import { getUluleProjectStats, getUluleProjectDonors } from "../../utils/ululeCl
 import {
   status as UserStatus,
   role as UserRole,
+  authProvider,
 } from "../usersAuth/user.interface";
 import { ReportStatus } from "../reports/report.interface";
 import { DonationProofStatus } from "../donationProofs/donationProof.interface";
@@ -538,7 +539,7 @@ export const adminService = {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [total, active, suspended, newThisMonth, pendingPartners, bothSet, onlyRegionSet, onlyDepartmentSet, noneSet] =
+    const [total, active, suspended, newThisMonth, pendingPartners, bothSet, onlyRegionSet, onlyDepartmentSet, noneSet, verifiedUsers, localVerifiedUsers, unverifiedUsers] =
       await Promise.all([
         userModel.countDocuments(),
         userModel.countDocuments({ status: UserStatus.ACTIVE }),
@@ -566,6 +567,9 @@ export const adminService = {
             { $or: [{ department: { $in: [null, "", "N/A"] } }, { department: { $exists: false } }] }
           ]
         }),
+        userModel.countDocuments({ isVerified: true }),
+        userModel.countDocuments({ isVerified: true, provider: authProvider.LOCAL }),
+        userModel.countDocuments({ isVerified: { $ne: true } }),
       ]);
     return { 
       total, 
@@ -573,7 +577,10 @@ export const adminService = {
       suspended, 
       newThisMonth, 
       pendingPartners,
-      devStats: { bothSet, onlyRegionSet, onlyDepartmentSet, noneSet }
+      devStats: { 
+        bothSet, onlyRegionSet, onlyDepartmentSet, noneSet,
+        verifiedUsers, localVerifiedUsers, unverifiedUsers 
+      }
     };
   },
 

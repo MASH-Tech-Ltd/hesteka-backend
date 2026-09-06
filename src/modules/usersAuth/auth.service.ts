@@ -113,11 +113,15 @@ export const authService = {
       }
     }
 
+    const otp = generateOTP();
+
     const user = await userModel.create({
       ...payload,
       role: role,
       provider: authProvider.LOCAL,
-      isVerified: true, // Direct register bypasses OTP
+      isVerified: false,
+      verificationOtp: otp,
+      verificationOtpExpire: new Date(Date.now() + 10 * 60 * 1000),
       referralCode: generatedReferralCode,
       ...(referredById ? { referredBy: referredById } : {}),
     });
@@ -131,15 +135,15 @@ export const authService = {
       }
     }
 
-    // try {
-    //   await mailer({
-    //     email: user.email,
-    //     subject: "Your HESTEKA verification code",
-    //     template: verificationOtpEmailTemplate(user.firstName, otp),
-    //   });
-    // } catch (error) {
-    //   console.error("[Auth] Failed to send verification email:", error);
-    // }
+    try {
+      await mailer({
+        email: user.email,
+        subject: "Your HESTEKA account verification code",
+        template: verificationOtpEmailTemplate(user.firstName, otp),
+      });
+    } catch (error) {
+      console.error("[Auth] Failed to send verification email:", error);
+    }
 
     return user;
   },
@@ -257,6 +261,8 @@ export const authService = {
         }
       }
 
+      const otp = generateOTP();
+
       const user = (await userModel.create({
         ...partnerData,
         email,
@@ -269,6 +275,9 @@ export const authService = {
         role: role.PARTNERS,
         status: status.PENDING,
         provider: authProvider.LOCAL,
+        isVerified: false,
+        verificationOtp: otp,
+        verificationOtpExpire: new Date(Date.now() + 10 * 60 * 1000),
         referralCode: generatedReferralCode,
         ...(referredById ? { referredBy: referredById } : {}),
       })) as IUser;
@@ -285,6 +294,15 @@ export const authService = {
         `Un nouveau partenaire "${company}" s'est inscrit et nécessite une approbation.`,
         NotificationType.NEW_PARTNER
       ).catch(err => console.error("Admin Notification Error:", err));
+      try {
+        await mailer({
+          email: user.email,
+          subject: "Your HESTEKA verification code",
+          template: verificationOtpEmailTemplate(user.firstName, otp),
+        });
+      } catch (error) {
+        console.error("[Auth] Failed to send verification email to partner:", error);
+      }
 
       return user;
     } catch (error) {

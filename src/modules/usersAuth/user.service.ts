@@ -123,6 +123,8 @@ export const userService = {
       page: pagebody,
       limit: limitbody,
       locationStatus,
+      isTrusted: isTrustedParam,
+      isVerified: isVerifiedParam,
     } = req.query;
 
     const { page, limit, skip } = paginationHelper(pagebody, limitbody);
@@ -213,6 +215,14 @@ export const userService = {
           { $or: [{ department: { $in: [null, "", "N/A"] } }, { department: { $exists: false } }] }
         ];
       }
+    }
+
+    if (isTrustedParam && isTrustedParam !== "all") {
+      filter.isTrusted = isTrustedParam === "true";
+    }
+
+    if (isVerifiedParam && isVerifiedParam !== "all") {
+      filter.isVerified = isVerifiedParam === "true";
     }
 
     if (from || to) {
