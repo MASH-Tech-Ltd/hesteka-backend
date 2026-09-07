@@ -327,10 +327,10 @@ export const authService = {
     if (!user) throw new CustomError(400, "User not found, register again");
 
     if (!user.verificationOtp) throw new CustomError(400, "OTP not found");
-    if (user.verificationOtp !== otp) throw new CustomError(400, "Invalid OTP");
     if (!user.verificationOtpExpire || user.verificationOtpExpire < new Date()) {
       throw new CustomError(400, "OTP has been expired. Please resend a new OTP.");
     }
+    if (user.verificationOtp !== otp) throw new CustomError(400, "Invalid OTP");
 
     user.isVerified = true;
     user.verificationOtp = null;
@@ -437,10 +437,10 @@ export const authService = {
     if (!user) throw new CustomError(400, "User not found");
 
     if (!user.resetPassword.otp) throw new CustomError(400, "OTP not found");
-    if (user.resetPassword.otp !== otp) throw new CustomError(400, "Invalid OTP");
-
-    if (!user.resetPassword.otpExpire || user.resetPassword.otpExpire < new Date(Date.now()))
+    if (!user.resetPassword.otpExpire || user.resetPassword.otpExpire < new Date(Date.now())) {
       throw new CustomError(400, "OTP has been expired");
+    }
+    if (user.resetPassword.otp !== otp) throw new CustomError(400, "Invalid OTP");
 
     user.isVerified = true;
     user.resetPassword.token = user.generateResetPasswordToken();
