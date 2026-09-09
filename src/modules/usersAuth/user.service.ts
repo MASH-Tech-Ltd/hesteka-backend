@@ -524,6 +524,71 @@ export const userService = {
     };
   },
 
+  // get referral stats for admin dashboard
+  async getReferralsStats(req: any) {
+    const { provider, page: pageParam, limit: limitParam } = req.query;
+    const { page, limit, skip } = paginationHelper(pageParam, limitParam);
+
+    const matchStage: any = {
+      referredBy: { $exists: true, $ne: null },
+    };
+
+    if (provider && provider !== "all") {
+      matchStage.provider = provider;
+    }
+
+    const aggregationPipeline: any[] = [
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: "users",
+          localField: "referredBy",
+          foreignField: "_id",
+          as: "referrer",
+        },
+      },
+      { $unwind: "$referrer" },
+      {
+        $group: {
+          _id: "$referrer._id",
+          referrerName: { $first: { $concat: ["$referrer.firstName", " ", "$referrer.lastName"] } },
+          referrerEmail: { $first: "$referrer.email" },
+          referrerCode: { $first: "$referrer.referralCode" },
+          referrerImage: { $first: "$referrer.profileImage" },
+          referralsCount: { $sum: 1 },
+          referredUsers: {
+            $push: {
+              _id: "$_id",
+              name: { $concat: ["$firstName", " ", "$lastName"] },
+              email: "$email",
+              provider: "$provider",
+              profileImage: "$profileImage",
+              createdAt: "$createdAt",
+            },
+          },
+        },
+      },
+      { $sort: { referralsCount: -1 } },
+    ];
+
+    const [data, totalCountResult] = await Promise.all([
+      userModel.aggregate([...aggregationPipeline, { $skip: skip }, { $limit: limit }]),
+      userModel.aggregate([...aggregationPipeline, { $count: "total" }]),
+    ]);
+
+    const total = totalCountResult.length > 0 ? totalCountResult[0].total : 0;
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  },
+
   //get partner stats
   async getPartnerStats(req: any) {
     const partnerId = req.user?._id;

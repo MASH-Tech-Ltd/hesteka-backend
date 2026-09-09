@@ -23,6 +23,7 @@ import {
   getBlockedUsers,
   deleteUserByAdmin,
   getAllLocations,
+  getReferralsStats,
 } from "./user.controller";
 import { allowRole, authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
@@ -54,6 +55,8 @@ router.get("/my-referrals", authGuard, getMyReferrals);
 router.get("/invite-link", authGuard, getInviteLink);
 
 router.post("/resolve-referral", resolveReferral);
+
+router.get("/referrals/stats", authGuard, allowRole("admin"), getReferralsStats);
 
 router.get("/get-partner-stats", authGuard, allowRole("partners"), getPartnerStats);
 

@@ -599,7 +599,7 @@ export const notificationService = {
     }
   },
 
-  async notifySingleUser(userId: string, title: string, body: string, type: NotificationType, data?: Record<string, any>, saveToDb: boolean = true) {
+  async notifySingleUser(userId: string, title: string, body: string, type: NotificationType, data?: Record<string, any>, saveToDb: boolean = true, sendPush: boolean = true) {
     try {
       const user = await userModel.findById(userId).select("_id fcmTokens firstName lastName email language");
       if (!user) return;
@@ -634,7 +634,7 @@ export const notificationService = {
       }
 
       // Send Push Notifications via FCM
-      if (user.fcmTokens && Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
+      if (sendPush && user.fcmTokens && Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
         const translated = translatePushNotification(title, body, user.language || 'fr');
         await sendPushNotification(user.fcmTokens, translated.title, translated.body, { type, ...data });
         fcmSent = true;

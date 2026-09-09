@@ -508,21 +508,55 @@ export const rewardService = {
         pastNotifications.map((n) => n.data?.rewardId?.toString()).filter(Boolean)
       );
 
-      // 3. Notify for new ones
-      for (const reward of eligibleRewards) {
-        if (!notifiedRewardIds.has(reward._id.toString())) {
+      // 3. Filter for new ones
+      const newRewards = eligibleRewards.filter((reward) => !notifiedRewardIds.has(reward._id.toString()));
+
+      if (newRewards.length === 0) return;
+
+      if (newRewards.length === 1) {
+        const reward = newRewards[0];
+        if (!reward) return;
+        const title = "Récompense débloquée !";
+        const body = `Félicitations ! Vous avez suffisamment de points pour obtenir : ${reward.title}.`;
+        
+        await notificationService.notifySingleUser(
+          userId,
+          title,
+          body,
+          NotificationType.REWARD_ELIGIBLE,
+          { rewardId: reward._id.toString() },
+          true, // saveToDb
+          true  // sendPush
+        );
+      } else {
+        // Multiple new rewards available
+        // Save individual DB notifications
+        for (const reward of newRewards) {
           const title = "Récompense débloquée !";
           const body = `Félicitations ! Vous avez suffisamment de points pour obtenir : ${reward.title}.`;
-          
           await notificationService.notifySingleUser(
             userId,
             title,
             body,
             NotificationType.REWARD_ELIGIBLE,
             { rewardId: reward._id.toString() },
-            true
+            true,  // saveToDb
+            false  // sendPush
           );
         }
+
+        // Send one combined push notification
+        const combinedTitle = "Récompenses débloquées !";
+        const combinedBody = `Félicitations ! Vous avez suffisamment de points pour débloquer ${newRewards.length} nouvelles récompenses !`;
+        await notificationService.notifySingleUser(
+          userId,
+          combinedTitle,
+          combinedBody,
+          NotificationType.REWARD_ELIGIBLE,
+          {},
+          false, // saveToDb (already saved individuals)
+          true   // sendPush
+        );
       }
     } catch (error) {
       console.error("[RewardService] checkAndNotifyRewardEligibility Error:", error);

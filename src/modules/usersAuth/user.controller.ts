@@ -66,6 +66,12 @@ export const resolveReferral = asyncHandler(async (req, res) => {
   }
 });
 
+//: get referral stats for admin dashboard
+export const getReferralsStats = asyncHandler(async (req, res) => {
+  const { data, meta } = await userService.getReferralsStats(req);
+  ApiResponse.sendSuccess(res, 200, "Referrals stats fetched successfully", data, meta);
+});
+
 //: get partner stats
 export const getPartnerStats = asyncHandler(async (req, res) => {
   const stats = await userService.getPartnerStats(req);
