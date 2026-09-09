@@ -18,6 +18,7 @@ export const departments = [
   "Charente-Maritime",
   "Cher",
   "Corrèze",
+  "Corse", // it's an island but considate as department
   "Corse-du-Sud",
   "Haute-Corse",
   "Côte-d'Or",

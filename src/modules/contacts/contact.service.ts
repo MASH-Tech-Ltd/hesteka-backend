@@ -2,12 +2,37 @@ import { Request } from "express";
 import CustomError from "../../helpers/CustomError";
 import { deleteCloudinary, uploadCloudinary } from "../../helpers/cloudinary";
 import { paginationHelper } from "../../utils/pagination";
-import { ContactStatus, ContactType, CreateContactPayload, UpdateContactPayload, CreationMethod } from "./contact.interface";
+import {
+  ContactStatus,
+  ContactType,
+  CreateContactPayload,
+  UpdateContactPayload,
+  CreationMethod,
+} from "./contact.interface";
 import { contactModel } from "./contact.models";
 import { userModel } from "../usersAuth/user.models";
 import { role } from "../usersAuth/user.interface";
 import * as xlsx from "xlsx";
 import * as fs from "fs";
+import {
+  departments as frDepartments,
+  regions as frRegions,
+} from "../../utils/franceLocations";
+
+const normalizeString = (str: string) =>
+  str
+    ? str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/gi, "")
+        .toLowerCase()
+    : "";
+const matchLocation = (input: string, list: string[]) => {
+  if (!input) return input;
+  const normalizedInput = normalizeString(input);
+  const match = list.find((item) => normalizeString(item) === normalizedInput);
+  return match || input;
+};
 
 const deleteCloudinaryQuietly = async (publicId?: string): Promise<void> => {
   if (!publicId) return;
@@ -19,16 +44,26 @@ const deleteCloudinaryQuietly = async (publicId?: string): Promise<void> => {
   }
 };
 
-const applyLocationFilters = (filter: any, params: { city?: any, country?: any, region?: any, department?: any }, isPartner: boolean = false) => {
+const applyLocationFilters = (
+  filter: any,
+  params: { city?: any; country?: any; region?: any; department?: any },
+  isPartner: boolean = false,
+) => {
   const { city, country, region, department } = params;
   const andConditions: any[] = [];
 
   if (city) {
-    if (isPartner) andConditions.push({ address: { $regex: `\\b${city}\\b`, $options: "i" } });
+    if (isPartner)
+      andConditions.push({
+        address: { $regex: `\\b${city}\\b`, $options: "i" },
+      });
     else filter.city = { $regex: city, $options: "i" };
   }
   if (country) {
-    if (isPartner) andConditions.push({ address: { $regex: `\\b${country}\\b`, $options: "i" } });
+    if (isPartner)
+      andConditions.push({
+        address: { $regex: `\\b${country}\\b`, $options: "i" },
+      });
     else filter.country = { $regex: country, $options: "i" };
   }
 
@@ -36,21 +71,23 @@ const applyLocationFilters = (filter: any, params: { city?: any, country?: any, 
     andConditions.push({
       $or: [
         { region: { $regex: `\\b${region}\\b`, $options: "i" } },
-        { address: { $regex: `\\b${region}\\b`, $options: "i" } }
-      ]
+        { address: { $regex: `\\b${region}\\b`, $options: "i" } },
+      ],
     });
   }
   if (department && department !== "all") {
     andConditions.push({
       $or: [
         { department: { $regex: `\\b${department}\\b`, $options: "i" } },
-        { address: { $regex: `\\b${department}\\b`, $options: "i" } }
-      ]
+        { address: { $regex: `\\b${department}\\b`, $options: "i" } },
+      ],
     });
   }
 
   if (andConditions.length > 0) {
-    filter.$and = filter.$and ? [...filter.$and, ...andConditions] : andConditions;
+    filter.$and = filter.$and
+      ? [...filter.$and, ...andConditions]
+      : andConditions;
   }
 };
 
@@ -92,9 +129,11 @@ export const contactService = {
 
     const workbook = xlsx.readFile(file.path);
     const sheetName = workbook.SheetNames[0];
-    if (!sheetName) throw new CustomError(400, "The uploaded Excel file is empty");
+    if (!sheetName)
+      throw new CustomError(400, "The uploaded Excel file is empty");
     const sheet = workbook.Sheets[sheetName];
-    if (!sheet) throw new CustomError(400, "The requested sheet could not be found");
+    if (!sheet)
+      throw new CustomError(400, "The requested sheet could not be found");
     const rows = xlsx.utils.sheet_to_json<any>(sheet);
 
     // Default processing results
@@ -102,16 +141,33 @@ export const contactService = {
       total: rows.length,
       success: 0,
       failed: 0,
-      pending: 0, // In synchronous upload, pending might be 0, but included for API structure
+      pending: 0,
+      updated: 0,
       errors: [] as string[],
+      warnings: [] as string[],
     };
 
     const contactsToInsert: any[] = [];
-    
+    const contactsToUpdate: any[] = [];
+
     // Fetch existing identifiers for fast duplicate checking
-    const existingContacts = await contactModel.find({}, { name: 1, email: 1 }).lean();
-    const existingNames = new Set(existingContacts.map(c => c.name?.toLowerCase().trim()));
-    const existingEmails = new Set(existingContacts.map(c => c.email?.toLowerCase().trim()).filter(Boolean));
+    const existingContacts = await contactModel.find({}).lean();
+
+    // Map to keep track of existing contacts to update them if fields are missing
+    const existingNamesMap = new Map<string, any[]>();
+    const existingEmailsMap = new Map<string, any>();
+
+    existingContacts.forEach((c) => {
+      if (c.name) {
+        const n = c.name.toLowerCase().trim();
+        if (!existingNamesMap.has(n)) existingNamesMap.set(n, []);
+        existingNamesMap.get(n)!.push(c);
+      }
+      if (c.email) existingEmailsMap.set(c.email.toLowerCase().trim(), c);
+    });
+
+    const invalidRegionsMap = new Map<string, number>();
+    const invalidDepartmentsMap = new Map<string, number>();
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -120,46 +176,66 @@ export const contactService = {
         // We do basic normalization of column names (lowercase, remove spaces)
         const getVal = (keys: string[]) => {
           for (const key of Object.keys(row)) {
-            const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const normalizedKey = normalizeString(key);
             for (const expected of keys) {
-              if (normalizedKey === expected) return row[key]?.toString().trim();
+              if (normalizedKey === expected)
+                return row[key]?.toString().trim();
             }
           }
           return undefined;
         };
 
-        const name = getVal(["name", "company", "nom", "clinicname", "veterinaryclinic"]);
+        const name = getVal([
+          "name",
+          "company",
+          "nom",
+          "clinicname",
+          "veterinaryclinic",
+        ]);
         const email = getVal(["email", "mail", "courriel"]);
-        const phone = getVal(["phone", "phonenumber", "telephone", "tel", "contactnumber"]);
+        const phone = getVal([
+          "phone",
+          "phonenumber",
+          "telephone",
+          "tel",
+          "contactnumber",
+        ]);
         const address = getVal(["address", "adresse", "location"]);
         let city = getVal(["city", "ville", "town"]) || "";
         const country = getVal(["country", "pays"]);
-        const region = getVal(["region", "province", "state"]);
         const website = getVal(["website", "site", "url"]);
         const description = getVal(["description", "notes", "about"]);
-        let department = getVal(["department", "departement"]);
-        
+        let originalRegion = getVal(["region", "province", "state"]);
+        let region = matchLocation(originalRegion, frRegions);
+
+        let originalDepartment = getVal(["department", "departement"]);
+        let department = matchLocation(originalDepartment, frDepartments);
+
         let zipCode = getVal(["zipcode", "zip", "postalcode", "codepostal"]);
 
         // If city starts with 5 digits (like "78860 Saint-Nom-la-Bretèche"), extract it
         const cityMatch = city.match(/^(\d{5})\s+(.*)$/);
         if (cityMatch) {
-            if (!zipCode) zipCode = cityMatch[1];
-            city = cityMatch[2]; // Leave only the city name
+          if (!zipCode) zipCode = cityMatch[1];
+          city = cityMatch[2]; // Leave only the city name
         }
-        
-        // We will default to extracting the whole zip code into the address if it exists, and using the first 2 chars for department if department is missing.
-        if (zipCode && !department && zipCode.length >= 2) {
-            department = zipCode.substring(0, 2);
+
+        if (originalRegion && !frRegions.includes(region)) {
+            invalidRegionsMap.set(originalRegion, (invalidRegionsMap.get(originalRegion) || 0) + 1);
+        }
+
+        if (originalDepartment && !frDepartments.includes(department)) {
+            invalidDepartmentsMap.set(originalDepartment, (invalidDepartmentsMap.get(originalDepartment) || 0) + 1);
         }
 
         let typeStr = getVal(["type", "category", "contacttype", "role"]);
         let type = ContactType.VETERINARIAN; // Default to veterinarian based on file name "veterinary clinics"
-        
+
         if (typeStr) {
           typeStr = typeStr.toLowerCase();
           if (typeStr.includes("shelter")) type = ContactType.SHELTER;
-          else if (typeStr.includes("csfs") || typeStr.includes("csrf")) type = ContactType.CSFS;
+          else if (typeStr.includes("csfs") || typeStr.includes("csrf"))
+            type = ContactType.CSFS;
           else if (typeStr.includes("partner")) type = ContactType.PARTNER;
           else type = ContactType.VETERINARIAN;
         }
@@ -174,18 +250,106 @@ export const contactService = {
         const normalizedEmail = email?.toLowerCase().trim();
 
         // Check for duplicates
-        if (existingNames.has(normalizedName) || (normalizedEmail && existingEmails.has(normalizedEmail))) {
-          result.pending++; // Consider duplicates as "Skipped" / Pending
+        let existingContact: any = null;
+        if (normalizedEmail) {
+          existingContact = existingEmailsMap.get(normalizedEmail);
+        }
+
+        if (!existingContact && normalizedName) {
+          const potentialMatches = existingNamesMap.get(normalizedName);
+          if (potentialMatches) {
+            existingContact = potentialMatches.find(c => 
+              (department && c.department === department) || 
+              (city && c.city === city) ||
+              (phone && c.phone === phone)
+            );
+            
+            if (!existingContact && potentialMatches.length === 1 && !potentialMatches[0].department && !potentialMatches[0].city) {
+              existingContact = potentialMatches[0];
+            }
+          }
+        }
+
+        if (existingContact) {
+          let needsUpdate = false;
+          const updateData: any = {};
+
+          // Always update department and region if provided and different
+          if (department && existingContact.department !== department) {
+            updateData.department = department;
+            needsUpdate = true;
+          }
+          if (region && existingContact.region !== region) {
+            updateData.region = region;
+            needsUpdate = true;
+          }
+
+          // Check for empty fields to fill for others
+          if (!existingContact.city && city) {
+            updateData.city = city;
+            needsUpdate = true;
+          }
+          if (!existingContact.country && country) {
+            updateData.country = country;
+            needsUpdate = true;
+          }
+          if (!existingContact.phone && phone) {
+            updateData.phone = phone;
+            needsUpdate = true;
+          }
+          if (!existingContact.address && address) {
+            updateData.address = address;
+            needsUpdate = true;
+          }
+          if (!existingContact.website && website) {
+            updateData.website = website;
+            needsUpdate = true;
+          }
+          if (!existingContact.description && description) {
+            updateData.description = description;
+            needsUpdate = true;
+          }
+
+          if (needsUpdate) {
+            contactsToUpdate.push({
+              updateOne: {
+                filter: { _id: existingContact._id },
+                update: { $set: updateData },
+              },
+            });
+            // Update our local map so we don't try to add it again in this batch
+            Object.assign(existingContact, updateData);
+          } else {
+            result.pending++; // Consider exact duplicates with no new info as "Skipped" / Pending
+          }
           continue;
         }
 
         // Register to prevent duplicates within the same file
-        existingNames.add(normalizedName);
-        if (normalizedEmail) existingEmails.add(normalizedEmail);
+        const newContact = {
+          name,
+          email,
+          phone,
+          address,
+          city,
+          country,
+          region,
+          department,
+          website,
+          description,
+        };
+
+        if (normalizedName) {
+          if (!existingNamesMap.has(normalizedName)) existingNamesMap.set(normalizedName, []);
+          existingNamesMap.get(normalizedName)!.push(newContact);
+        }
+        if (normalizedEmail) {
+          existingEmailsMap.set(normalizedEmail, newContact);
+        }
 
         let fullAddress = address || "";
         if (zipCode && !fullAddress.includes(zipCode)) {
-           fullAddress = fullAddress ? `${fullAddress}, ${zipCode}` : zipCode;
+          fullAddress = fullAddress ? `${fullAddress}, ${zipCode}` : zipCode;
         }
 
         contactsToInsert.push({
@@ -203,12 +367,18 @@ export const contactService = {
           creationMethod: "bulk",
           status: ContactStatus.ACTIVE,
         });
-
       } catch (error: any) {
         result.failed++;
         result.errors.push(`Row ${i + 2}: ${error.message}`);
       }
     }
+
+    invalidRegionsMap.forEach((count, regionName) => {
+      result.warnings.push(`Region '${regionName}' not found in system (${count} ${count === 1 ? 'row' : 'rows'}).`);
+    });
+    invalidDepartmentsMap.forEach((count, deptName) => {
+      result.warnings.push(`Department '${deptName}' not found in system (${count} ${count === 1 ? 'row' : 'rows'}).`);
+    });
 
     if (contactsToInsert.length > 0) {
       try {
@@ -217,11 +387,30 @@ export const contactService = {
       } catch (error: any) {
         // If there is a bulk write error, we can extract details
         if (error.writeErrors) {
-           result.success = contactsToInsert.length - error.writeErrors.length;
-           result.failed += error.writeErrors.length;
-           error.writeErrors.forEach((e: any) => result.errors.push(`Bulk Insert Error: ${e.errmsg}`));
+          result.success = contactsToInsert.length - error.writeErrors.length;
+          result.failed += error.writeErrors.length;
+          error.writeErrors.forEach((e: any) =>
+            result.errors.push(`Bulk Insert Error: ${e.errmsg}`),
+          );
         } else {
-           throw error;
+          throw error;
+        }
+      }
+    }
+
+    if (contactsToUpdate.length > 0) {
+      try {
+        await contactModel.bulkWrite(contactsToUpdate, { ordered: false });
+        result.updated = contactsToUpdate.length;
+      } catch (error: any) {
+        if (error.writeErrors) {
+          result.updated = contactsToUpdate.length - error.writeErrors.length;
+          result.failed += error.writeErrors.length;
+          error.writeErrors.forEach((e: any) =>
+            result.errors.push(`Bulk Update Error: ${e.errmsg}`),
+          );
+        } else {
+          throw error;
         }
       }
     }
@@ -257,7 +446,9 @@ export const contactService = {
     } = req.query;
 
     const isAdmin = req.user?.role === role.ADMIN;
-    const status = isAdmin ? (queryStatus || ContactStatus.ACTIVE) : ContactStatus.ACTIVE;
+    const status = isAdmin
+      ? queryStatus || ContactStatus.ACTIVE
+      : ContactStatus.ACTIVE;
 
     const { page, limit, skip } = paginationHelper(
       pagebody as string,
@@ -266,7 +457,12 @@ export const contactService = {
     const filter: any = {};
 
     // Standard contactModel logic
-    if (type && type !== "all" && type !== ContactType.PARTNER && type !== "partners") {
+    if (
+      type &&
+      type !== "all" &&
+      type !== ContactType.PARTNER &&
+      type !== "partners"
+    ) {
       filter.type = type;
     }
     applyLocationFilters(filter, { city, country, region, department });
@@ -274,17 +470,19 @@ export const contactService = {
     if (creationMethod && creationMethod !== "all") {
       if (creationMethod === "manual") {
         filter.$and = filter.$and || [];
-        filter.$and.push({ $or: [{ creationMethod: "manual" }, { creationMethod: { $exists: false } }] });
+        filter.$and.push({
+          $or: [
+            { creationMethod: "manual" },
+            { creationMethod: { $exists: false } },
+          ],
+        });
       } else {
         filter.creationMethod = creationMethod;
       }
     }
     if (search) {
       const searchRegex = new RegExp(search as string, "i");
-      filter.$or = [
-        { name: searchRegex },
-        { address: searchRegex },
-      ];
+      filter.$or = [{ name: searchRegex }, { address: searchRegex }];
     }
 
     if (from || to) {
@@ -294,10 +492,16 @@ export const contactService = {
       };
 
       if (from && !isValidDate(from)) {
-        throw new CustomError(400, "Invalid 'from' date. Format must be YYYY-MM-DD or ISO");
+        throw new CustomError(
+          400,
+          "Invalid 'from' date. Format must be YYYY-MM-DD or ISO",
+        );
       }
       if (to && !isValidDate(to)) {
-        throw new CustomError(400, "Invalid 'to' date. Format must be YYYY-MM-DD or ISO");
+        throw new CustomError(
+          400,
+          "Invalid 'to' date. Format must be YYYY-MM-DD or ISO",
+        );
       }
       let actualFrom = from as string | undefined;
       let actualTo = to as string | undefined;
@@ -342,8 +546,15 @@ export const contactService = {
     const sortOrder = sort === "descending" ? -1 : 1;
 
     // Logic for fetching partners if needed
-    const shouldFetchPartners = !type || type === "all" || type === ContactType.PARTNER || type === "partners";
-    const shouldFetchStandardContacts = !type || type === "all" || (type !== ContactType.PARTNER && type !== "partners");
+    const shouldFetchPartners =
+      !type ||
+      type === "all" ||
+      type === ContactType.PARTNER ||
+      type === "partners";
+    const shouldFetchStandardContacts =
+      !type ||
+      type === "all" ||
+      (type !== ContactType.PARTNER && type !== "partners");
 
     let combinedContacts: any[] = [];
     let totalCount = 0;
@@ -352,17 +563,24 @@ export const contactService = {
       // ONLY partners (existing logic)
       const userFilter: any = { role: role.PARTNERS };
       if (status && status !== "all") userFilter.status = status;
-      if (partnerType && partnerType !== "all") userFilter.partnerType = partnerType;
+      if (partnerType && partnerType !== "all")
+        userFilter.partnerType = partnerType;
       if (creationMethod === "bulk") userFilter._id = null;
       if (latitude && longitude) {
         const rad = Number(radius) || 10;
         userFilter.location = {
-          $geoWithin: { $centerSphere: [[Number(longitude), Number(latitude)], rad / 6371] },
+          $geoWithin: {
+            $centerSphere: [[Number(longitude), Number(latitude)], rad / 6371],
+          },
         };
       }
-      
+
       // Apply city, country, region, and department filters to the address field for partners
-      applyLocationFilters(userFilter, { city, country, region, department }, true);
+      applyLocationFilters(
+        userFilter,
+        { city, country, region, department },
+        true,
+      );
 
       if (search) {
         const searchRegex = new RegExp(search as string, "i");
@@ -376,18 +594,31 @@ export const contactService = {
       }
 
       const [users, total] = await Promise.all([
-        userModel.find(userFilter).sort({ createdAt: sortOrder }).skip(skip).limit(limit).lean(),
+        userModel
+          .find(userFilter)
+          .sort({ createdAt: sortOrder })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
         userModel.countDocuments(userFilter),
       ]);
 
       combinedContacts = users.map((user: any) => ({
         _id: user._id,
-        name: user.company && user.company.trim() !== "" ? user.company : `${user.firstName} ${user.lastName}`,
+        name:
+          user.company && user.company.trim() !== ""
+            ? user.company
+            : `${user.firstName} ${user.lastName}`,
         type: ContactType.PARTNER,
         address: user.address,
         phone: user.phone,
         email: user.email,
-        photo: (user.profileImage && user.profileImage.secure_url) ? user.profileImage : (user.logo && user.logo.secure_url) ? user.logo : null,
+        photo:
+          user.profileImage && user.profileImage.secure_url
+            ? user.profileImage
+            : user.logo && user.logo.secure_url
+              ? user.logo
+              : null,
         location: user.location,
         status: user.status,
         partnerType: user.partnerType || "",
@@ -411,7 +642,12 @@ export const contactService = {
     } else if (shouldFetchStandardContacts && !shouldFetchPartners) {
       // ONLY standard contacts (existing logic)
       const [contacts, total] = await Promise.all([
-        contactModel.find(filter).sort({ [sortField]: sortOrder }).skip(skip).limit(limit).lean(),
+        contactModel
+          .find(filter)
+          .sort({ [sortField]: sortOrder })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
         contactModel.countDocuments(filter),
       ]);
       combinedContacts = contacts;
@@ -420,14 +656,19 @@ export const contactService = {
       // BOTH - Merge case (when type is "all" or undefined)
       // For simplicity and to support pagination/sorting correctly across two collections,
       // we'll fetch both and merge. In a large dataset, this would need a different approach (like a unified view or shared collection).
-      
+
       const userFilter: any = { role: role.PARTNERS };
       if (status && status !== "all") userFilter.status = status;
-      if (partnerType && partnerType !== "all") userFilter.partnerType = partnerType;
+      if (partnerType && partnerType !== "all")
+        userFilter.partnerType = partnerType;
       if (creationMethod === "bulk") userFilter._id = null;
-      
+
       // Apply city, country, region, and department filters to the address field for partners
-      applyLocationFilters(userFilter, { city, country, region, department }, true);
+      applyLocationFilters(
+        userFilter,
+        { city, country, region, department },
+        true,
+      );
 
       if (search) {
         const searchRegex = new RegExp(search as string, "i");
@@ -447,12 +688,20 @@ export const contactService = {
 
       const mappedUsers = users.map((user: any) => ({
         _id: user._id,
-        name: user.company && user.company.trim() !== "" ? user.company : `${user.firstName} ${user.lastName}`,
+        name:
+          user.company && user.company.trim() !== ""
+            ? user.company
+            : `${user.firstName} ${user.lastName}`,
         type: ContactType.PARTNER,
         address: user.address,
         phone: user.phone,
         email: user.email,
-        photo: (user.profileImage && user.profileImage.secure_url) ? user.profileImage : (user.logo && user.logo.secure_url) ? user.logo : null,
+        photo:
+          user.profileImage && user.profileImage.secure_url
+            ? user.profileImage
+            : user.logo && user.logo.secure_url
+              ? user.logo
+              : null,
         location: user.location,
         status: user.status,
         partnerType: user.partnerType,
@@ -474,21 +723,29 @@ export const contactService = {
       }));
 
       const allMerged = [...contacts, ...mappedUsers];
-      
+
       // Sort in memory
       allMerged.sort((a: any, b: any) => {
         let valA = a[sortField] || "";
         let valB = b[sortField] || "";
-        
+
         if (sortField === "name" && a.type === ContactType.PARTNER) {
-          valA = a.company && a.company.trim() !== "" ? a.company : `${a.firstName} ${a.lastName}`;
+          valA =
+            a.company && a.company.trim() !== ""
+              ? a.company
+              : `${a.firstName} ${a.lastName}`;
         }
         if (sortField === "name" && b.type === ContactType.PARTNER) {
-          valB = b.company && b.company.trim() !== "" ? b.company : `${b.firstName} ${b.lastName}`;
+          valB =
+            b.company && b.company.trim() !== ""
+              ? b.company
+              : `${b.firstName} ${b.lastName}`;
         }
 
         if (typeof valA === "string" && typeof valB === "string") {
-          return sortOrder === 1 ? valA.localeCompare(valB) : valB.localeCompare(valA);
+          return sortOrder === 1
+            ? valA.localeCompare(valB)
+            : valB.localeCompare(valA);
         }
         if (valA < valB) return sortOrder === 1 ? -1 : 1;
         if (valA > valB) return sortOrder === 1 ? 1 : -1;
@@ -526,7 +783,9 @@ export const contactService = {
     } = req.query;
 
     const isAdmin = req.user?.role === role.ADMIN;
-    const status = isAdmin ? (queryStatus || ContactStatus.ACTIVE) : ContactStatus.ACTIVE;
+    const status = isAdmin
+      ? queryStatus || ContactStatus.ACTIVE
+      : ContactStatus.ACTIVE;
 
     const { page, limit, skip } = paginationHelper(
       pagebody as string,
@@ -567,9 +826,12 @@ export const contactService = {
         userModel.countDocuments(filter),
       ]);
 
-       const mappedContacts = users.map((user: any) => ({
+      const mappedContacts = users.map((user: any) => ({
         _id: user._id,
-        name: user.company && user.company.trim() !== "" ? user.company : `${user.firstName} ${user.lastName}`,
+        name:
+          user.company && user.company.trim() !== ""
+            ? user.company
+            : `${user.firstName} ${user.lastName}`,
         type: ContactType.PARTNER,
         address: user.address,
         phone: user.phone,
@@ -610,7 +872,12 @@ export const contactService = {
       if (creationMethod && creationMethod !== "all") {
         if (creationMethod === "manual") {
           filter.$and = filter.$and || [];
-          filter.$and.push({ $or: [{ creationMethod: "manual" }, { creationMethod: { $exists: false } }] });
+          filter.$and.push({
+            $or: [
+              { creationMethod: "manual" },
+              { creationMethod: { $exists: false } },
+            ],
+          });
         } else {
           filter.creationMethod = creationMethod;
         }
@@ -627,10 +894,7 @@ export const contactService = {
       }
       if (search) {
         const searchRegex = new RegExp(search as string, "i");
-        filter.$or = [
-          { name: searchRegex },
-          { address: searchRegex },
-        ];
+        filter.$or = [{ name: searchRegex }, { address: searchRegex }];
       }
 
       const [contacts, total] = await Promise.all([
@@ -657,12 +921,20 @@ export const contactService = {
       if (user && user.role === role.PARTNERS) {
         contact = {
           _id: user._id,
-          name: user.company && user.company.trim() !== "" ? user.company : `${user.firstName} ${user.lastName}`,
+          name:
+            user.company && user.company.trim() !== ""
+              ? user.company
+              : `${user.firstName} ${user.lastName}`,
           type: ContactType.PARTNER,
           address: user.address,
           phone: user.phone,
           email: user.email,
-          photo: (user.profileImage && user.profileImage.secure_url) ? user.profileImage : (user.logo && user.logo.secure_url) ? user.logo : null,
+          photo:
+            user.profileImage && user.profileImage.secure_url
+              ? user.profileImage
+              : user.logo && user.logo.secure_url
+                ? user.logo
+                : null,
           location: user.location,
           status: user.status,
           partnerType: user.partnerType || "",
@@ -742,10 +1014,22 @@ export const contactService = {
           $group: {
             _id: null,
             total: { $sum: 1 },
-            active: { $sum: { $cond: [{ $eq: ["$status", ContactStatus.ACTIVE] }, 1, 0] } },
-            shelter: { $sum: { $cond: [{ $eq: ["$type", ContactType.SHELTER] }, 1, 0] } },
-            vet: { $sum: { $cond: [{ $eq: ["$type", ContactType.VETERINARIAN] }, 1, 0] } },
-            csfs: { $sum: { $cond: [{ $eq: ["$type", ContactType.CSFS] }, 1, 0] } },
+            active: {
+              $sum: {
+                $cond: [{ $eq: ["$status", ContactStatus.ACTIVE] }, 1, 0],
+              },
+            },
+            shelter: {
+              $sum: { $cond: [{ $eq: ["$type", ContactType.SHELTER] }, 1, 0] },
+            },
+            vet: {
+              $sum: {
+                $cond: [{ $eq: ["$type", ContactType.VETERINARIAN] }, 1, 0],
+              },
+            },
+            csfs: {
+              $sum: { $cond: [{ $eq: ["$type", ContactType.CSFS] }, 1, 0] },
+            },
           },
         },
       ]),
@@ -761,7 +1045,13 @@ export const contactService = {
       ]),
     ]);
 
-    const s = standardStats[0] || { total: 0, active: 0, shelter: 0, vet: 0, csfs: 0 };
+    const s = standardStats[0] || {
+      total: 0,
+      active: 0,
+      shelter: 0,
+      vet: 0,
+      csfs: 0,
+    };
     const p = partnerStats[0] || { total: 0, active: 0 };
 
     return {
