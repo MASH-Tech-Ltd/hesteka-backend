@@ -24,6 +24,7 @@ import {
   deleteUserByAdmin,
   getAllLocations,
   getReferralsStats,
+  getCommunityLiveCount,
 } from "./user.controller";
 import { allowRole, authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
@@ -40,11 +41,23 @@ import { rateLimiter } from "../../middleware/rateLimiter.middleware";
 
 const router = Router();
 
+router.get("/community/live-count", getCommunityLiveCount);
+
 router.get("/get-all-user", authGuard, allowRole("admin"), getalluser);
 
-router.get("/get-all-locations", authGuard, allowRole("admin"), getAllLocations);
+router.get(
+  "/get-all-locations",
+  authGuard,
+  allowRole("admin"),
+  getAllLocations,
+);
 
-router.get("/get-unique-locations", authGuard, allowRole("admin"), getUniqueLocations);
+router.get(
+  "/get-unique-locations",
+  authGuard,
+  allowRole("admin"),
+  getUniqueLocations,
+);
 
 router.get("/get-single-user/:userId", authGuard, getSingleUser);
 
@@ -56,9 +69,19 @@ router.get("/invite-link", authGuard, getInviteLink);
 
 router.post("/resolve-referral", resolveReferral);
 
-router.get("/referrals/stats", authGuard, allowRole("admin"), getReferralsStats);
+router.get(
+  "/referrals/stats",
+  authGuard,
+  allowRole("admin"),
+  getReferralsStats,
+);
 
-router.get("/get-partner-stats", authGuard, allowRole("partners"), getPartnerStats);
+router.get(
+  "/get-partner-stats",
+  authGuard,
+  allowRole("partners"),
+  getPartnerStats,
+);
 
 router.patch(
   "/update-user",
@@ -130,11 +153,7 @@ router.patch(
   updateLanguage,
 );
 
-router.get(
-  "/get-language",
-  authGuard,
-  getLanguage,
-);
+router.get("/get-language", authGuard, getLanguage);
 
 router.patch(
   "/update-fcm-token",
@@ -145,7 +164,12 @@ router.patch(
 
 // ─── Admin User Actions ────────────────────────────────────────────────────────
 
-router.delete("/delete-user/:userId", authGuard, allowRole("admin"), deleteUserByAdmin);
+router.delete(
+  "/delete-user/:userId",
+  authGuard,
+  allowRole("admin"),
+  deleteUserByAdmin,
+);
 
 // ─── Block System ─────────────────────────────────────────────────────────────
 

@@ -299,13 +299,13 @@ const getGlobalChat = async (query: {
   const [messages, total] = await Promise.all([
     chatModel
       .find(filter)
-      .populate("user", "firstName lastName email profileImage address location")
+      .populate("user", "firstName lastName email profileImage address location isTrusted isVerified badge")
       .populate({
         path: "replyTo",
         select: "content user",
         populate: {
           path: "user",
-          select: "firstName lastName email profileImage",
+          select: "firstName lastName email profileImage isTrusted isVerified badge",
         },
       })
       .sort({ createdAt: -1 })

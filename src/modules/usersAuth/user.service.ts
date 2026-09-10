@@ -40,6 +40,27 @@ import { BadgeModel } from "../badges/badge.model";
 import { AppAnalytics } from "../appAnalytics/appAnalytics.models";
 
 export const userService = {
+  // get community live count
+  async getCommunityLiveCount() {
+    const count = await userModel.countDocuments();
+    const goal = Math.ceil((count + 1) / 5000) * 5000;
+    const partnersCount = await userModel.countDocuments({ role: "partners" });
+    return { count, goal, partnersCount };
+  },
+
+  async emitCommunityCountUpdate() {
+    try {
+      const data = await this.getCommunityLiveCount();
+      const { getIo } = require("../../socket/server");
+      const io = getIo();
+      if (io) {
+        io.emit("communityCountUpdate", data);
+      }
+    } catch (error) {
+      console.error("[User Service] Failed to emit community count:", error);
+    }
+  },
+
   // get unique cities for targeting
   async getUniqueCities() {
     const cities = await userModel.distinct("city", {

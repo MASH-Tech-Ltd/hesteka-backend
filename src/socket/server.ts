@@ -84,6 +84,11 @@ export const initSocket = (httpServer: http.Server): Server => {
         return next();
       }
 
+      const isGuest = socket.handshake.query?.isGuest === 'true';
+      if (isGuest) {
+        return next(); // Allow connection without userId
+      }
+
       // Neither token nor userId — reject
       return next(new Error("Authentication required"));
     } catch (error) {

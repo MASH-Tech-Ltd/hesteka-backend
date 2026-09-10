@@ -16,6 +16,7 @@ import { pointTransactionModel } from "../points/point.models";
 import { PointTransactionType, PointTransactionSource } from "../points/point.interface";
 import { pointService } from "../points/point.service";
 import { deviceReferralModel } from "./deviceReferral.models";
+import { userService } from "./user.service";
 
 async function awardWelcomePoints(userId: string) {
   try {
@@ -125,6 +126,8 @@ export const authService = {
       referralCode: generatedReferralCode,
       ...(referredById ? { referredBy: referredById } : {}),
     });
+
+    userService.emitCommunityCountUpdate().catch(() => {});
 
     if (user.role === "user") {
       await awardWelcomePoints(user._id.toString());
@@ -283,6 +286,7 @@ export const authService = {
       })) as IUser;
 
       cleanupFiles();
+      userService.emitCommunityCountUpdate().catch(() => {});
 
       if (referredById) {
         await pointService.awardPointsForReferral(user._id.toString());
@@ -574,6 +578,8 @@ export const authService = {
         ...(extraData?.fcmToken ? { fcmTokens: [extraData.fcmToken] } : {}),
       });
 
+      userService.emitCommunityCountUpdate().catch(() => {});
+
       if (user.role === "user" || !user.role) {
         await awardWelcomePoints(user._id.toString());
         if (referredById) {
@@ -685,6 +691,8 @@ export const authService = {
         ...(extraData?.country ? { country: extraData.country } : {}),
         ...(extraData?.fcmToken ? { fcmTokens: [extraData.fcmToken] } : {}),
       });
+
+      userService.emitCommunityCountUpdate().catch(() => {});
 
       if (user.role === "user" || !user.role) {
         await awardWelcomePoints(user._id.toString());

@@ -13,6 +13,12 @@ export const getalluser = asyncHandler(async (req, res) => {
   ApiResponse.sendSuccess(res, 200, "User fetched successfully", users, meta);
 });
 
+//: get community live count
+export const getCommunityLiveCount = asyncHandler(async (req, res) => {
+  const data = await userService.getCommunityLiveCount();
+  ApiResponse.sendSuccess(res, 200, "Live count fetched successfully", data);
+});
+
 //: get all user locations for map
 export const getAllLocations = asyncHandler(async (req, res) => {
   const users = await userService.getAllLocations();
@@ -69,7 +75,13 @@ export const resolveReferral = asyncHandler(async (req, res) => {
 //: get referral stats for admin dashboard
 export const getReferralsStats = asyncHandler(async (req, res) => {
   const { data, meta } = await userService.getReferralsStats(req);
-  ApiResponse.sendSuccess(res, 200, "Referrals stats fetched successfully", data, meta);
+  ApiResponse.sendSuccess(
+    res,
+    200,
+    "Referrals stats fetched successfully",
+    data,
+    meta,
+  );
 });
 
 //: get partner stats

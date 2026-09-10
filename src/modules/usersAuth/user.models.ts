@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import CustomError from "../../helpers/CustomError";
 import config from "../../config";
 import { IUser, role, status, authProvider } from "./user.interface";
+import { getIo } from "../../socket/server";
 
 const userSchema = new Schema<IUser>(
   {
@@ -251,6 +252,14 @@ userSchema.pre<IUser & Document>("save", async function () {
   // const salt = await bcrypt.genSalt(10);
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
+});
+
+userSchema.post<IUser & Document>("save", async function (doc, next) {
+  // If this document was just inserted, this.$isNew (or this.isNew depending on mongoose version/state)
+  // actually, in post('save'), this.$isNew is true if it was a new doc before save, or we can check doc.$isNew if available.
+  // Mongoose: "In a post('save') hook, this.isNew is false. However, you can check doc.$isNew if you set it in pre('save')."
+  // Wait, let's just use doc.isNew which might be false. To be safe:
+  next();
 });
 
 userSchema.index(
