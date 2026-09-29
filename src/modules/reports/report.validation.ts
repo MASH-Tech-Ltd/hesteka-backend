@@ -57,6 +57,10 @@ export const createReportSchema = z
       return val;
     }, locationSchema),
     images: z.any().optional(),
+    thanksHesteka: z.preprocess(
+      (val) => (val === "true" || val === true ? true : val === "false" || val === false ? false : val),
+      z.boolean()
+    ).optional(),
   })
   .strict();
 

@@ -139,6 +139,10 @@ const reportSchema = new Schema<IReport>(
       type: Boolean,
       default: false,
     },
+    thanksHesteka: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

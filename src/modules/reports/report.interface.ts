@@ -68,6 +68,7 @@ export interface IReport extends Document {
   comments: (Types.ObjectId | string)[];
   isPointApproved: boolean;
   isDeleted?: boolean; // Soft delete flag
+  thanksHesteka?: boolean;
 }
 
 export interface CreateReportPayload {
@@ -101,4 +102,6 @@ export interface CreateReportPayload {
   };
 }
 
-export interface UpdateReportPayload extends Partial<CreateReportPayload> {}
+export interface UpdateReportPayload extends Partial<CreateReportPayload> {
+  thanksHesteka?: boolean;
+}

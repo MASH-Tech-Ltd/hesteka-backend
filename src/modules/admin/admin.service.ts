@@ -585,16 +585,17 @@ export const adminService = {
   },
 
   async getReportStats() {
-    const [total, resolved, lost, sighted] = await Promise.all([
+    const [total, resolved, lost, sighted, thanksHesteka] = await Promise.all([
       reportModel.countDocuments(),
       reportModel.countDocuments({
         status: { $in: [ReportStatus.FOUND, ReportStatus.RESCUED, ReportStatus.RECOVERED] },
       }),
       reportModel.countDocuments({ status: ReportStatus.LOST }),
       reportModel.countDocuments({ status: ReportStatus.SIGHTED }),
+      reportModel.countDocuments({ thanksHesteka: true }),
     ]);
     const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
-    return { total, resolved, lost, sighted, resolutionRate };
+    return { total, resolved, lost, sighted, resolutionRate, thanksHesteka };
   },
 
   async getPartnerStats() {
